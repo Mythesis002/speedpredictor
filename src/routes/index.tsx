@@ -248,20 +248,8 @@ function NeoPrixGame() {
           : cars[selected].colorName;
 
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden text-white">
+    <div className="relative h-[100dvh] w-full overflow-hidden text-white flex flex-col">
       <Background intense={hyperMode || phase === "finish"} />
-
-      {/* Hero highway zone */}
-      <div className="absolute inset-0">
-        <Highway
-          cars={cars}
-          phase={phase}
-          progress={progress}
-          lightsOn={lightsOn}
-          winnerLane={winner}
-          hyperMode={hyperMode}
-        />
-      </div>
 
       <Header
         balance={balance}
@@ -270,24 +258,36 @@ function NeoPrixGame() {
         online={online}
       />
 
-      {/* Hyper alert */}
-      {hyperMode && phase !== "finish" && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-40">
-          <div
-            className="px-3 py-1 rounded-full glass font-display text-[10px] tracking-[0.3em] animate-pulse-glow"
-            style={{
-              color: "#ffd66b",
-              boxShadow: "0 0 24px #ffd66b55",
-              borderColor: "#ffd66b55",
-            }}
-          >
-            ⚡ HYPERCAR IN RACE · 5× PAYOUT
+      {/* Hero highway zone — fills between header and controls */}
+      <div className="relative flex-1 min-h-0 mt-[68px] z-10">
+        <Highway
+          cars={cars}
+          phase={phase}
+          progress={progress}
+          lightsOn={lightsOn}
+          winnerLane={winner}
+          hyperMode={hyperMode}
+        />
+
+        {/* Hyper alert */}
+        {hyperMode && phase !== "finish" && (
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40">
+            <div
+              className="px-3 py-1 rounded-full glass font-display text-[10px] tracking-[0.3em] animate-pulse-glow"
+              style={{
+                color: "#ffd66b",
+                boxShadow: "0 0 24px #ffd66b55",
+                borderColor: "#ffd66b55",
+              }}
+            >
+              ⚡ HYPERCAR · 5× PAYOUT
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Bottom stack */}
-      <div className="absolute bottom-0 left-0 right-0 z-30 pb-3 pt-2 space-y-2.5">
+      <div className="relative z-30 pb-3 pt-2 space-y-2.5 shrink-0">
         <History entries={history} />
         <PredictionCards
           cars={cars}
