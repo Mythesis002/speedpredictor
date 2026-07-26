@@ -294,10 +294,13 @@ function NeoPrixGame() {
           selected={selected}
           onSelect={(i) => {
             if (locked) return;
+            if (confirmed) return;
+            if (amount > balance) return;
             setSelected(i);
-            setConfirmed(false);
+            setBalance((b) => b - amount);
+            setConfirmed(true);
           }}
-          locked={locked}
+          locked={locked || confirmed}
           winner={winner}
         />
         <BettingPanel
