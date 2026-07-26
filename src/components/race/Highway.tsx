@@ -226,23 +226,9 @@ export function Highway({
         </div>
       )}
 
-      {/* subtle floating particles */}
-      <div className="pointer-events-none absolute inset-0">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <span
-            key={i}
-            className="absolute rounded-full"
-            style={{
-              left: `${(i * 8.3) % 100}%`,
-              bottom: `${Math.random() * 40}%`,
-              width: 2,
-              height: 2,
-              background: "oklch(0.85 0.19 195 / 0.7)",
-              animation: `float-particle ${6 + Math.random() * 6}s linear ${Math.random() * 4}s infinite`,
-            }}
-          />
-        ))}
-      </div>
+      {/* subtle floating particles (client only to avoid hydration mismatch) */}
+      <Particles />
+
 
       {/* Suppress unused var warning */}
       <span className="hidden">{h}</span>
