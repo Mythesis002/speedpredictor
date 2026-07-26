@@ -35,14 +35,14 @@ export const Route = createFileRoute("/")({
   component: NeoPrix,
 });
 
-// Phase durations (seconds)
+// Phase durations (seconds) — simplified continuous loop
 const PHASE_DUR: Record<RacePhase, number> = {
-  waiting: 3,
-  prep: 4,
-  lock: 1.5,
-  launch: 0.8,
-  race: 4.5,
-  finish: 3.5,
+  waiting: 6, // betting window — pick a colour
+  prep: 0.01,
+  lock: 0.01,
+  launch: 0.4,
+  race: 4.2,
+  finish: 2.8,
 };
 
 function NeoPrix() {
@@ -230,9 +230,9 @@ function NeoPrixGame() {
   const hyperMode = cars.some((c) => c.kind === "hyper");
 
   const phaseLabel: Record<RacePhase, string> = {
-    waiting: "PREDICTIONS OPEN",
-    prep: "LIGHTS OUT SOON",
-    lock: "PREDICTIONS CLOSED",
+    waiting: "PICK A COLOUR",
+    prep: "STARTING",
+    lock: "STARTING",
     launch: "LAUNCH",
     race: "RACING",
     finish: "RESULTS",
@@ -294,10 +294,13 @@ function NeoPrixGame() {
           selected={selected}
           onSelect={(i) => {
             if (locked) return;
+            if (confirmed) return;
+            if (amount > balance) return;
             setSelected(i);
-            setConfirmed(false);
+            setBalance((b) => b - amount);
+            setConfirmed(true);
           }}
-          locked={locked}
+          locked={locked || confirmed}
           winner={winner}
         />
         <BettingPanel
