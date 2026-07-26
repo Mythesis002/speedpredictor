@@ -230,9 +230,9 @@ function NeoPrixGame() {
   const hyperMode = cars.some((c) => c.kind === "hyper");
 
   const phaseLabel: Record<RacePhase, string> = {
-    waiting: "PREDICTIONS OPEN",
-    prep: "LIGHTS OUT SOON",
-    lock: "PREDICTIONS CLOSED",
+    waiting: "PICK A COLOUR",
+    prep: "STARTING",
+    lock: "STARTING",
     launch: "LAUNCH",
     race: "RACING",
     finish: "RESULTS",
