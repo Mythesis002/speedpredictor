@@ -46,6 +46,24 @@ const PHASE_DUR: Record<RacePhase, number> = {
 };
 
 function NeoPrix() {
+  const hydrated = useHydratedGuard();
+  if (!hydrated) {
+    return (
+      <div className="relative h-[100dvh] w-full overflow-hidden text-white">
+        <Background />
+      </div>
+    );
+  }
+  return <NeoPrixGame />;
+}
+
+function useHydratedGuard() {
+  const [h, setH] = useState(false);
+  useEffect(() => setH(true), []);
+  return h;
+}
+
+function NeoPrixGame() {
   const [phase, setPhase] = useState<RacePhase>("waiting");
   const [phaseStart, setPhaseStart] = useState(() => performance.now());
   const [roundId, setRoundId] = useState(1042);
