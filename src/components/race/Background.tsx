@@ -1,28 +1,35 @@
 import { useMemo } from "react";
+import { useHydrated } from "@/lib/use-hydrated";
 
 export function Background({ intense = false }: { intense?: boolean }) {
+  const hydrated = useHydrated();
+
   const stars = useMemo(
     () =>
-      Array.from({ length: 40 }, (_, i) => ({
-        id: i,
-        left: Math.random() * 100,
-        top: Math.random() * 55,
-        size: Math.random() * 1.6 + 0.4,
-        delay: Math.random() * 6,
-      })),
-    [],
+      hydrated
+        ? Array.from({ length: 40 }, (_, i) => ({
+            id: i,
+            left: Math.random() * 100,
+            top: Math.random() * 55,
+            size: Math.random() * 1.6 + 0.4,
+            delay: Math.random() * 6,
+          }))
+        : [],
+    [hydrated],
   );
 
   const buildings = useMemo(
     () =>
-      Array.from({ length: 22 }, (_, i) => ({
-        id: i,
-        left: (i / 22) * 100 + (Math.random() - 0.5) * 3,
-        w: Math.random() * 5 + 3,
-        h: Math.random() * 22 + 12,
-        hue: 195 + Math.random() * 140,
-      })),
-    [],
+      hydrated
+        ? Array.from({ length: 22 }, (_, i) => ({
+            id: i,
+            left: (i / 22) * 100 + (Math.random() - 0.5) * 3,
+            w: Math.random() * 5 + 3,
+            h: Math.random() * 22 + 12,
+            hue: 195 + Math.random() * 140,
+          }))
+        : [],
+    [hydrated],
   );
 
   return (
