@@ -1,6 +1,42 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Car, type CarSpec } from "./Car";
+import { useHydrated } from "@/lib/use-hydrated";
 import type { RacePhase } from "@/lib/race-engine";
+
+function Particles() {
+  const hydrated = useHydrated();
+  const items = useMemo(
+    () =>
+      hydrated
+        ? Array.from({ length: 12 }, (_, i) => ({
+            left: (i * 8.3) % 100,
+            bottom: Math.random() * 40,
+            dur: 6 + Math.random() * 6,
+            delay: Math.random() * 4,
+          }))
+        : [],
+    [hydrated],
+  );
+  return (
+    <div className="pointer-events-none absolute inset-0">
+      {items.map((p, i) => (
+        <span
+          key={i}
+          className="absolute rounded-full"
+          style={{
+            left: `${p.left}%`,
+            bottom: `${p.bottom}%`,
+            width: 2,
+            height: 2,
+            background: "oklch(0.85 0.19 195 / 0.7)",
+            animation: `float-particle ${p.dur}s linear ${p.delay}s infinite`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 
 interface Props {
   cars: [CarSpec, CarSpec, CarSpec];
