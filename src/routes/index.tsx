@@ -275,7 +275,7 @@ function Game() {
         />
       </div>
 
-      <div className="mt-2 mx-2">
+      <div className="mt-2 mx-2 pb-2">
         <History entries={history} />
       </div>
 

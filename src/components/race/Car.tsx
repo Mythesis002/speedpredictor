@@ -116,7 +116,7 @@ export const Car = memo(function Car({
               ? "M44 68 q10-24 56-24 t56 24 l10 44 q4 22 -6 30 l-14 6 h-92 l-14-6 q-10-8 -6-30 z"
               : isHyper
                 ? "M22 62 q14-32 78-32 t78 32 l12 54 q4 24 -10 30 l-18 6 h-124 l-18-6 q-14-6 -10-30 z"
-                : "M28 64 q14-30 72-30 t72 30 l11 50 q4 23 -8 30 l-17 6 h-116 l-17-6 q-12-7 -8-30 z"
+                : "M26 70 q16-30 74-30 t74 30 l10 44 q4 23 -8 30 l-17 6 h-118 l-17-6 q-12-7 -8-30 z"
           }
           fill={`url(#paint-${uid})`}
         />
@@ -136,6 +136,9 @@ export const Car = memo(function Car({
           }
           fill={`url(#glass2-${uid})`}
         />
+        {/* side mirrors */}
+        <path d="M46 74 q-12-2 -14 6 q10 4 16 0 z" fill={dark} />
+        <path d="M154 74 q12-2 14 6 q-10 4 -16 0 z" fill={dark} />
         {/* window highlight */}
         <path d="M62 60 q40-16 76 0 l2 6 q-40-14 -80 0 z" fill="#8fd4ff" opacity="0.18" />
 

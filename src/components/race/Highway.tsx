@@ -178,9 +178,9 @@ export function Highway({ cars, phase, progress, winnerLane, hyperMode, countdow
       {/* ---------- Cars ---------- */}
       {cars.map((car, i) => {
         const p = progress[i];
-        const scale = 1 - p * 0.82;
+        const scale = 1 - p * 0.78;
         const bottom = 4 + p * 46; // % from bottom of the stage
-        const x = 50 + (LANE_X[i] - 50) * (1 - p * 0.86);
+        const x = 50 + (LANE_X[i] - 50) * (1 - p * 0.5);
         const isWinner = winnerLane === i && phase === "finish";
         return (
           <div
