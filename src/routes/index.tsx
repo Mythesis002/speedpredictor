@@ -1,60 +1,56 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Background } from "@/components/race/Background";
 import { Highway } from "@/components/race/Highway";
 import { PredictionCards } from "@/components/race/PredictionCards";
 import { BettingPanel } from "@/components/race/BettingPanel";
 import { Header } from "@/components/race/Header";
-import { History, type HistoryEntry } from "@/components/race/History";
 import {
-  accelCurve,
-  makeRaceLineup,
-  type RacePhase,
-} from "@/lib/race-engine";
+  History,
+  RecentRounds,
+  LiveStats,
+  type HistoryEntry,
+} from "@/components/race/History";
+import { accelCurve, makeRaceLineup, type RacePhase } from "@/lib/race-engine";
 import type { CarSpec } from "@/components/race/Car";
+import { BarChart3, Gift, Home, Settings, Trophy } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Neo Prix — Live Race Prediction" },
+      { title: "Speed Predict — Live Neon Car Racing Predictions" },
       {
         name: "description",
         content:
-          "A premium three-lane futuristic racing prediction experience. Watch live races, feel the anticipation, predict the winning colour.",
+          "Watch three neon cars battle down a futuristic highway every round and predict the winning colour. Live odds, instant payouts, premium racing visuals.",
       },
-      { property: "og:title", content: "Neo Prix — Live Race Prediction" },
+      { property: "og:title", content: "Speed Predict — Live Neon Car Racing" },
       {
         property: "og:description",
         content:
-          "Watch a live futuristic three-lane highway and predict the winning colour. Anticipation, speed, luxury.",
+          "Pick a colour, watch the live three-lane race and win up to 5×. A AAA-style racing prediction experience.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: NeoPrix,
+  component: SpeedPredict,
 });
 
-// Phase durations (seconds) — simplified continuous loop
 const PHASE_DUR: Record<RacePhase, number> = {
-  waiting: 6, // betting window — pick a colour
+  waiting: 8,
   prep: 0.01,
   lock: 0.01,
-  launch: 0.4,
-  race: 4.2,
-  finish: 2.8,
+  launch: 0.5,
+  race: 5,
+  finish: 3,
 };
 
-function NeoPrix() {
+function SpeedPredict() {
   const hydrated = useHydratedGuard();
   if (!hydrated) {
-    return (
-      <div className="relative h-[100dvh] w-full overflow-hidden text-white">
-        <Background />
-      </div>
-    );
+    return <div className="h-[100dvh] w-full bg-[#04060c]" />;
   }
-  return <NeoPrixGame />;
+  return <Game />;
 }
 
 function useHydratedGuard() {
@@ -63,13 +59,11 @@ function useHydratedGuard() {
   return h;
 }
 
-function NeoPrixGame() {
+function Game() {
   const [phase, setPhase] = useState<RacePhase>("waiting");
   const [phaseStart, setPhaseStart] = useState(() => performance.now());
-  const [roundId, setRoundId] = useState(1042);
-  const [cars, setCars] = useState<[CarSpec, CarSpec, CarSpec]>(() =>
-    makeRaceLineup(),
-  );
+  const [roundId, setRoundId] = useState(328451);
+  const [cars, setCars] = useState<[CarSpec, CarSpec, CarSpec]>(() => makeRaceLineup());
   const curves = useRef<Array<(t: number) => number>>([
     accelCurve(1),
     accelCurve(2),
@@ -79,20 +73,20 @@ function NeoPrixGame() {
   const [progress, setProgress] = useState<[number, number, number]>([0, 0, 0]);
   const [now, setNow] = useState(performance.now());
 
-  const [balance, setBalance] = useState(25000);
-  const [amount, setAmount] = useState(500);
+  const [balance, setBalance] = useState(12450);
+  const [amount, setAmount] = useState(100);
   const [selected, setSelected] = useState<number | null>(null);
   const [confirmed, setConfirmed] = useState(false);
-  const [online, setOnline] = useState(12483);
+  const [players, setPlayers] = useState(1245);
+  const [totalBets, setTotalBets] = useState(89540);
   const [history, setHistory] = useState<HistoryEntry[]>(() =>
-    Array.from({ length: 12 }, (_, i) => ({
-      id: 1041 - i,
+    Array.from({ length: 30 }, (_, i) => ({
+      id: 328450 - i,
       car: makeRaceLineup()[Math.floor(Math.random() * 3)],
       ago: `${i + 1}m`,
     })),
   );
 
-  // rAF loop
   useEffect(() => {
     let raf = 0;
     const tick = () => {
@@ -103,11 +97,11 @@ function NeoPrixGame() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // Online users subtle drift
   useEffect(() => {
     const id = setInterval(() => {
-      setOnline((n) => Math.max(8000, n + Math.round((Math.random() - 0.5) * 60)));
-    }, 1800);
+      setPlayers((n) => Math.max(600, n + Math.round((Math.random() - 0.5) * 24)));
+      setTotalBets((n) => Math.max(10000, n + Math.round((Math.random() - 0.4) * 900)));
+    }, 1600);
     return () => clearInterval(id);
   }, []);
 
@@ -115,31 +109,29 @@ function NeoPrixGame() {
   const dur = PHASE_DUR[phase];
   const t = Math.min(1, elapsed / dur);
 
-  // Compute progress from phase
   useEffect(() => {
     if (phase === "race" || phase === "launch") {
-      const localT = phase === "launch" ? t * 0.08 : 0.08 + t * 0.92;
-      const p = [
+      const localT = phase === "launch" ? t * 0.06 : 0.06 + t * 0.94;
+      setProgress([
         curves.current[0](localT),
         curves.current[1](localT),
         curves.current[2](localT),
-      ] as [number, number, number];
-      setProgress(p);
-    } else if (phase === "finish") {
-      setProgress([1, 1, 1].map((_, i) => (i === finishOrder.current[0] ? 1 : 0.9)) as [
-        number,
-        number,
-        number,
       ]);
+    } else if (phase === "finish") {
+      setProgress(
+        [0, 1, 2].map((i) => (i === finishOrder.current[0] ? 1 : 0.94)) as [
+          number,
+          number,
+          number,
+        ],
+      );
     } else {
       setProgress([0, 0, 0]);
     }
   }, [now, phase, t]);
 
-  // Phase advancement
   useEffect(() => {
     if (elapsed < dur) return;
-    // transition
     const nextMap: Record<RacePhase, RacePhase> = {
       waiting: "prep",
       prep: "lock",
@@ -151,37 +143,19 @@ function NeoPrixGame() {
     const next = nextMap[phase];
 
     if (phase === "race") {
-      // Determine winner from curves at t=1
-      const finals = [0, 1, 2].map((i) => curves.current[i](1)) as number[];
-      // Introduce tiny jitter for drama
-      const scored = finals.map((v, i) => v + Math.random() * 0.03 - 0.015);
+      const finals = [0, 1, 2].map((i) => curves.current[i](1));
+      const scored = finals.map((v) => v + Math.random() * 0.03 - 0.015);
       const order = [0, 1, 2].sort((a, b) => scored[b] - scored[a]);
       finishOrder.current = order as [number, number, number];
 
-      // settle bet
-      if (confirmed && selected !== null) {
-        if (selected === order[0]) {
-          setBalance((b) => b + Math.round(amount * cars[selected].multiplier));
-        }
+      if (confirmed && selected !== null && selected === order[0]) {
+        setBalance((b) => b + Math.round(amount * cars[selected].multiplier));
       }
-
-      // History
-      setHistory((h) =>
-        [
-          {
-            id: roundId,
-            car: cars[order[0]],
-            ago: "now",
-          },
-          ...h,
-        ].slice(0, 50),
-      );
+      setHistory((h) => [{ id: roundId, car: cars[order[0]], ago: "now" }, ...h].slice(0, 50));
     }
 
     if (phase === "finish") {
-      // reset for next round
-      const lineup = makeRaceLineup();
-      setCars(lineup);
+      setCars(makeRaceLineup());
       curves.current = [
         accelCurve(Math.floor(Math.random() * 100000)),
         accelCurve(Math.floor(Math.random() * 100000)),
@@ -197,88 +171,64 @@ function NeoPrixGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elapsed, dur, phase]);
 
-  // Countdown value & lights
-  const totalPrepWindow =
-    PHASE_DUR.waiting + PHASE_DUR.prep + PHASE_DUR.lock;
-  const timeIntoStart =
+  const totalPrep = PHASE_DUR.waiting + PHASE_DUR.prep + PHASE_DUR.lock;
+  const into =
     phase === "waiting"
       ? elapsed
       : phase === "prep"
         ? PHASE_DUR.waiting + elapsed
         : phase === "lock"
           ? PHASE_DUR.waiting + PHASE_DUR.prep + elapsed
-          : totalPrepWindow;
-  const countdown = Math.max(0, totalPrepWindow - timeIntoStart);
-
-  // lights fill during prep (0 → 5)
-  const prepT =
-    phase === "prep"
-      ? Math.min(1, elapsed / PHASE_DUR.prep)
-      : phase === "lock"
-        ? 1
-        : phase === "launch" || phase === "race" || phase === "finish"
-          ? 1
-          : 0;
-  const lightsOn = (Math.floor(prepT * 5) as 0 | 1 | 2 | 3 | 4 | 5);
+          : totalPrep;
+  const countdown = Math.max(0, totalPrep - into);
 
   const locked =
-    phase === "lock" ||
-    phase === "launch" ||
-    phase === "race" ||
-    phase === "finish";
+    phase === "lock" || phase === "launch" || phase === "race" || phase === "finish";
   const winner = phase === "finish" ? finishOrder.current[0] : null;
   const hyperMode = cars.some((c) => c.kind === "hyper");
-
-  const phaseLabel: Record<RacePhase, string> = {
-    waiting: "PICK A COLOUR",
-    prep: "STARTING",
-    lock: "STARTING",
-    launch: "LAUNCH",
-    race: "RACING",
-    finish: "RESULTS",
-  };
 
   const selectedLabel =
     selected === null
       ? null
       : cars[selected].kind === "hyper"
-        ? "Black Hyper"
+        ? "BLACK"
         : cars[selected].kind === "small"
-          ? `Mini ${cars[selected].colorName}`
-          : cars[selected].colorName;
+          ? "SMALL"
+          : cars[selected].colorName.toUpperCase();
+
+  const placeBet = () => {
+    if (selected === null || locked || confirmed) return;
+    if (amount > balance) return;
+    setBalance((b) => b - amount);
+    setConfirmed(true);
+  };
 
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden text-white flex flex-col">
-      <Background intense={hyperMode || phase === "finish"} />
+    <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-[#04060c] text-white flex flex-col">
+      <Header balance={balance} roundId={roundId} />
 
-      <Header
-        balance={balance}
-        roundId={roundId}
-        countdown={countdown}
-        online={online}
-      />
-
-      {/* Hero highway zone — fills between header and controls */}
-      <div className="relative flex-1 min-h-0 mt-[68px] z-10">
+      {/* Race stage */}
+      <div className="relative mx-2 rounded-2xl overflow-hidden border border-white/10 h-[46vh] min-h-[280px] shrink-0">
         <Highway
           cars={cars}
           phase={phase}
           progress={progress}
-          lightsOn={lightsOn}
           winnerLane={winner}
           hyperMode={hyperMode}
+          countdown={countdown}
         />
+        <div className="absolute left-1.5 top-1.5 z-30">
+          <RecentRounds entries={history} />
+        </div>
+        <div className="absolute right-1.5 top-1.5 z-30">
+          <LiveStats players={players} totalBets={totalBets} biggestWin={45000} />
+        </div>
 
-        {/* Hyper alert */}
         {hyperMode && phase !== "finish" && (
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40">
+          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 z-30">
             <div
-              className="px-3 py-1 rounded-full glass font-display text-[10px] tracking-[0.3em] animate-pulse-glow"
-              style={{
-                color: "#ffd66b",
-                boxShadow: "0 0 24px #ffd66b55",
-                borderColor: "#ffd66b55",
-              }}
+              className="px-3 py-1 rounded-full glass font-display text-[9px] tracking-[0.28em] animate-pulse-glow"
+              style={{ color: "#ffd66b", borderColor: "#ffd66b55" }}
             >
               ⚡ HYPERCAR · 5× PAYOUT
             </div>
@@ -286,23 +236,33 @@ function NeoPrixGame() {
         )}
       </div>
 
-      {/* Bottom stack */}
-      <div className="relative z-30 pb-3 pt-2 space-y-2.5 shrink-0">
-        <History entries={history} />
+      {/* Bet panel */}
+      <div className="mt-2 mx-2 glass rounded-2xl p-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-white/45 font-display tracking-[0.15em]">
+            HOW TO PLAY?
+          </span>
+          <span className="font-display text-[12px] tracking-[0.15em] text-white">
+            PLACE YOUR BET
+          </span>
+          <span
+            className={`text-[10px] font-display tracking-[0.15em] ${locked ? "text-white/40" : "text-[#26ff9a]"}`}
+          >
+            {locked ? "CLOSED" : "OPEN"}
+          </span>
+        </div>
+
         <PredictionCards
           cars={cars}
           selected={selected}
           onSelect={(i) => {
-            if (locked) return;
-            if (confirmed) return;
-            if (amount > balance) return;
+            if (locked || confirmed) return;
             setSelected(i);
-            setBalance((b) => b - amount);
-            setConfirmed(true);
           }}
-          locked={locked || confirmed}
+          locked={locked}
           winner={winner}
         />
+
         <BettingPanel
           amount={amount}
           balance={balance}
@@ -310,14 +270,37 @@ function NeoPrixGame() {
           onChange={setAmount}
           selectedLabel={selectedLabel}
           confirmed={confirmed}
-          phaseLabel={phaseLabel[phase]}
-          onConfirm={() => {
-            if (selected === null || locked) return;
-            if (amount > balance) return;
-            setBalance((b) => b - amount);
-            setConfirmed(true);
-          }}
+          phaseLabel={phase}
+          onConfirm={placeBet}
         />
+      </div>
+
+      <div className="mt-2 mx-2">
+        <History entries={history} />
+      </div>
+
+      {/* Bottom nav */}
+      <div className="sticky bottom-0 mt-2 z-40 bg-gradient-to-t from-[#04060c] via-[#04060c] to-transparent pt-3 pb-2 px-2">
+        <div className="glass rounded-2xl grid grid-cols-5 py-1.5">
+          {[
+            { icon: Home, label: "Home", active: true },
+            { icon: BarChart3, label: "Stats" },
+            { icon: Trophy, label: "Leaders" },
+            { icon: Gift, label: "Rewards" },
+            { icon: Settings, label: "Settings" },
+          ].map(({ icon: Icon, label, active }) => (
+            <button
+              key={label}
+              className={`flex flex-col items-center gap-0.5 py-1 rounded-xl ${
+                active ? "text-[#a24bff]" : "text-white/45"
+              }`}
+              style={active ? { background: "rgba(162,75,255,0.12)" } : undefined}
+            >
+              <Icon size={16} />
+              <span className="text-[9px] font-display tracking-wide">{label}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
