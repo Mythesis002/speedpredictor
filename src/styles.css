@@ -185,7 +185,7 @@
   }
   12% { opacity: 0.9; }
   100% {
-    transform: translate3d(calc(var(--dash-x) * 130px), 100cqh, 0) scale(1.9);
+    transform: translate3d(calc(var(--dash-x) * 150px), 260px, 0) scale(2);
     opacity: 0.95;
   }
 }
