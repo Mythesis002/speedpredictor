@@ -10,74 +10,64 @@ interface Props {
 
 export function PredictionCards({ cars, selected, onSelect, locked, winner }: Props) {
   return (
-    <div className="grid grid-cols-3 gap-2 px-3">
+    <div className="grid grid-cols-3 gap-2">
       {cars.map((car, i) => {
         const isSelected = selected === i;
         const isWinner = winner === i;
         const isLoser = winner !== null && winner !== i;
+        const label =
+          car.kind === "hyper"
+            ? "BLACK"
+            : car.kind === "small"
+              ? "SMALL"
+              : car.colorName.toUpperCase();
         return (
           <button
             key={car.id}
             disabled={locked}
             onClick={() => onSelect(i)}
-            className={`group relative rounded-2xl p-2.5 glass overflow-hidden transition-all duration-300 active:scale-[0.97] ${
-              isSelected ? "translate-y-[-2px]" : ""
-            } ${isLoser ? "opacity-40" : ""} ${locked && !isSelected ? "opacity-60" : ""}`}
+            className={`relative rounded-2xl overflow-hidden border transition-all duration-300 active:scale-[0.97] ${
+              isLoser ? "opacity-40" : ""
+            } ${locked && !isSelected ? "opacity-70" : ""}`}
             style={{
-              borderColor: isSelected ? car.color : undefined,
+              borderColor: isSelected ? car.color : `${car.color}55`,
+              background: `linear-gradient(160deg, ${car.color}26, rgba(10,12,20,0.9) 65%)`,
               boxShadow: isSelected
-                ? `0 0 0 1.5px ${car.color}, 0 0 22px ${car.color}66, inset 0 0 16px ${car.color}22`
+                ? `0 0 0 1.5px ${car.color}, 0 0 26px ${car.color}66`
                 : isWinner
                   ? `0 0 0 2px #ffd83a, 0 0 30px #ffd83a99`
-                  : undefined,
+                  : `inset 0 0 24px ${car.color}18`,
             }}
           >
-            {/* color glow */}
-            <div
-              className="absolute -top-6 left-1/2 -translate-x-1/2 h-14 w-14 rounded-full blur-2xl opacity-70 group-hover:opacity-100 transition-opacity"
-              style={{ background: car.color }}
-            />
-
-            {/* multiplier chip */}
-            <div className="absolute top-1.5 right-1.5 font-display text-[10px] tracking-widest px-1.5 py-0.5 rounded-md bg-black/40 border border-white/10">
-              <span
+            <div className="relative flex flex-col items-center px-1 pt-1 pb-2">
+              <div className="scale-[0.92] -mt-1">
+                <Car spec={car} size={78} glow={isSelected || isWinner} reflection={false} />
+              </div>
+              <div className="-mt-3 font-display text-[11px] tracking-[0.18em] text-white">
+                {label}
+              </div>
+              <div
+                className="mt-1 px-2 py-0.5 rounded-full text-[10px] font-display tabular"
                 style={{
-                  color:
+                  background:
                     car.kind === "hyper"
-                      ? "#ffd66b"
+                      ? "linear-gradient(90deg,#8a6a12,#ffd66b)"
                       : car.kind === "small"
-                        ? "#8be9ff"
-                        : "#fff",
+                        ? "rgba(255,255,255,0.1)"
+                        : "linear-gradient(90deg,#7e1020,#ff3b4d)",
+                  color: car.kind === "hyper" ? "#1a1405" : "#fff",
+                  border: "1px solid rgba(255,255,255,0.15)",
                 }}
               >
-                {car.multiplier}×
-              </span>
-            </div>
-
-            <div className="relative flex flex-col items-center pt-4 pb-1">
-              <Car spec={car} size={38} idle glow={isSelected || isWinner} />
-              <div className="mt-2 font-display text-[10px] uppercase tracking-widest text-white/80">
-                {car.kind === "hyper"
-                  ? "Hyper"
-                  : car.kind === "small"
-                    ? "Mini"
-                    : car.colorName}
+                {car.multiplier}x
               </div>
             </div>
 
-            {/* selected pulse ring */}
             {isSelected && (
               <div
                 className="pointer-events-none absolute inset-0 rounded-2xl animate-pulse-glow"
-                style={{
-                  boxShadow: `inset 0 0 20px ${car.color}55`,
-                }}
+                style={{ boxShadow: `inset 0 0 22px ${car.color}66` }}
               />
-            )}
-
-            {/* shimmer when selectable */}
-            {!locked && !isSelected && (
-              <div className="pointer-events-none absolute inset-0 animate-shimmer" />
             )}
           </button>
         );
