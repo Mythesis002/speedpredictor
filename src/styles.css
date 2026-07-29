@@ -176,3 +176,28 @@
 /* Hide scrollbar */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ---------- Perspective road motion ---------- */
+@keyframes dash-run {
+  0% {
+    transform: translate3d(calc(var(--dash-x) * 2px), 0, 0) scale(0.12);
+    opacity: 0;
+  }
+  12% { opacity: 0.9; }
+  100% {
+    transform: translate3d(calc(var(--dash-x) * 130px), 100cqh, 0) scale(1.9);
+    opacity: 0.95;
+  }
+}
+@keyframes streak {
+  0% { transform: translateY(0) scaleY(0.4); opacity: 0; }
+  30% { opacity: 0.8; }
+  100% { transform: translateY(-70vh) scaleY(1.6); opacity: 0; }
+}
+@keyframes shake {
+  0%, 100% { transform: translate3d(0,0,0); }
+  25% { transform: translate3d(-0.6px, 0.6px, 0); }
+  50% { transform: translate3d(0.5px, -0.4px, 0); }
+  75% { transform: translate3d(-0.4px, -0.5px, 0); }
+}
+.animate-shake { animation: shake 0.12s linear infinite; }
