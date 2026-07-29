@@ -1,260 +1,253 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import { Car, type CarSpec } from "./Car";
 import { useHydrated } from "@/lib/use-hydrated";
+import { useMemo } from "react";
 import type { RacePhase } from "@/lib/race-engine";
-
-function Particles() {
-  const hydrated = useHydrated();
-  const items = useMemo(
-    () =>
-      hydrated
-        ? Array.from({ length: 12 }, (_, i) => ({
-            left: (i * 8.3) % 100,
-            bottom: Math.random() * 40,
-            dur: 6 + Math.random() * 6,
-            delay: Math.random() * 4,
-          }))
-        : [],
-    [hydrated],
-  );
-  return (
-    <div className="pointer-events-none absolute inset-0">
-      {items.map((p, i) => (
-        <span
-          key={i}
-          className="absolute rounded-full"
-          style={{
-            left: `${p.left}%`,
-            bottom: `${p.bottom}%`,
-            width: 2,
-            height: 2,
-            background: "oklch(0.85 0.19 195 / 0.7)",
-            animation: `float-particle ${p.dur}s linear ${p.delay}s infinite`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
 
 interface Props {
   cars: [CarSpec, CarSpec, CarSpec];
   phase: RacePhase;
   progress: [number, number, number]; // 0..1
-  lightsOn: 0 | 1 | 2 | 3 | 4 | 5; // 0..5 lights
   winnerLane: number | null;
   hyperMode: boolean;
+  countdown: number;
 }
 
-const LANE_LEFTS = ["18%", "50%", "82%"];
+const LANE_X = [22, 50, 78]; // % of stage width at the bottom
 
-export function Highway({
-  cars,
-  phase,
-  progress,
-  lightsOn,
-  winnerLane,
-  hyperMode,
-}: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [h, setH] = useState(420);
+export function Highway({ cars, phase, progress, winnerLane, hyperMode, countdown }: Props) {
+  const hydrated = useHydrated();
+  const racing = phase === "launch" || phase === "race";
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const ro = new ResizeObserver((entries) => {
-      const cr = entries[0].contentRect;
-      setH(cr.height);
-    });
-    ro.observe(containerRef.current);
-    return () => ro.disconnect();
-  }, []);
+  const sparks = useMemo(
+    () =>
+      hydrated
+        ? Array.from({ length: 14 }, (_, i) => ({
+            left: (i * 7.3 + 4) % 96,
+            dur: 2.4 + ((i * 37) % 30) / 10,
+            delay: ((i * 53) % 40) / 10,
+            size: 1 + ((i * 17) % 3),
+          }))
+        : [],
+    [hydrated],
+  );
 
-  // Track drawn as CSS trapezoid with perspective.
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full h-full overflow-hidden"
-      style={{
-        perspective: 800,
-      }}
-    >
-      {/* Grandstands background */}
+    <div className="relative w-full h-full overflow-hidden bg-[#04060c]">
+      {/* ---------- Night city vanishing point ---------- */}
       <div
-        className="absolute left-0 right-0 top-0 h-[38%] pointer-events-none"
+        className="absolute inset-x-0 top-0 h-[46%]"
         style={{
           background:
-            "linear-gradient(180deg, transparent 60%, oklch(0.14 0.05 275 / 0.7) 100%)",
+            "radial-gradient(120% 90% at 50% 100%, oklch(0.32 0.14 300 / 0.55), transparent 70%), linear-gradient(180deg,#05060d 0%, #0a0a18 60%, #100d22 100%)",
         }}
-      >
-        {/* LED banner */}
-        <div className="absolute left-1/2 top-[42%] -translate-x-1/2 w-[46%] max-w-56 h-6 rounded-md glass flex items-center justify-center overflow-hidden">
-          <div className="animate-shimmer w-full text-center text-[10px] font-display tracking-widest text-[oklch(0.85_0.19_195)]">
-            NEO PRIX · LIVE
-          </div>
-        </div>
-        {/* spectator dots */}
-        <div
-          className="absolute left-0 right-0 bottom-2 h-4 opacity-70"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle, oklch(0.85 0.19 195 / 0.7) 0.6px, transparent 1.2px)",
-            backgroundSize: "6px 6px",
-          }}
-        />
-      </div>
-
-      {/* Trapezoid road (perspective) */}
-      <div
-        className="absolute left-1/2 -translate-x-1/2 bottom-0"
-        style={{
-          width: "150%",
-          height: "82%",
-          transform: "translateX(-50%) rotateX(58deg)",
-          transformOrigin: "50% 100%",
-        }}
-      >
-        <div className="absolute inset-0 road-surface" />
-
-        {/* lane dividers */}
-        <div
-          className={`absolute top-0 bottom-0 lane-dash ${phase === "waiting" || phase === "prep" || phase === "lock" ? "slow" : ""}`}
-          style={{ left: "33.33%", width: 4 }}
-        />
-        <div
-          className={`absolute top-0 bottom-0 lane-dash ${phase === "waiting" || phase === "prep" || phase === "lock" ? "slow" : ""}`}
-          style={{ left: "66.66%", width: 4 }}
-        />
-
-        {/* road edges LED */}
-        <div
-          className="absolute top-0 bottom-0 left-[10%] w-[2px]"
-          style={{
-            background:
-              "linear-gradient(180deg, transparent, oklch(0.85 0.19 195 / 0.9), transparent)",
-            boxShadow: "0 0 12px oklch(0.85 0.19 195 / 0.6)",
-          }}
-        />
-        <div
-          className="absolute top-0 bottom-0 right-[10%] w-[2px]"
-          style={{
-            background:
-              "linear-gradient(180deg, transparent, oklch(0.68 0.28 330 / 0.9), transparent)",
-            boxShadow: "0 0 12px oklch(0.68 0.28 330 / 0.6)",
-          }}
-        />
-
-        {/* start line */}
-        <div
-          className="absolute left-[10%] right-[10%] h-2"
-          style={{
-            bottom: "10%",
-            backgroundImage:
-              "repeating-linear-gradient(90deg,#fff 0 8px,#000 8px 16px)",
-            opacity: 0.9,
-          }}
-        />
-
-        {/* finish gate (distant) */}
-        <div
-          className="absolute left-[15%] right-[15%] h-3 rounded-sm"
-          style={{
-            top: "6%",
-            backgroundImage:
-              "repeating-linear-gradient(90deg,#fff 0 6px,#111 6px 12px)",
-            filter: "drop-shadow(0 0 6px #fff8)",
-          }}
-        />
-      </div>
-
-      {/* Traffic lights */}
-      <div className="absolute left-1/2 -translate-x-1/2 top-[6%] flex gap-1 z-10">
-        {[0, 1, 2, 3, 4].map((i) => {
-          const on = i < lightsOn && lightsOn <= 5;
-          const cleared = phase === "launch" || phase === "race" || phase === "finish";
+      />
+      {/* skyline blocks */}
+      <div className="absolute inset-x-0 top-[10%] h-[30%] opacity-70">
+        {Array.from({ length: 18 }).map((_, i) => {
+          const l = (i * 5.6) % 100;
+          const bh = 20 + ((i * 29) % 60);
           return (
             <div
               key={i}
-              className="w-3 h-3 rounded-full transition-all duration-300"
+              className="absolute bottom-0 rounded-t-sm"
               style={{
-                background: cleared
-                  ? "oklch(0.28 0.14 145)"
-                  : on
-                    ? "oklch(0.7 0.24 25)"
-                    : "oklch(0.2 0.02 265)",
-                boxShadow: cleared
-                  ? "0 0 12px oklch(0.7 0.22 145 / 0.9)"
-                  : on
-                    ? "0 0 12px oklch(0.72 0.25 25 / 0.9)"
-                    : "inset 0 0 3px #000",
-                border: "1px solid oklch(1 0 0 / 0.15)",
+                left: `${l}%`,
+                width: `${3 + (i % 3)}%`,
+                height: `${bh}%`,
+                background: "linear-gradient(180deg,#131a2e,#080b16)",
+                boxShadow: `0 0 12px ${i % 3 === 0 ? "#3ad8ff33" : "#ff3ac833"}`,
               }}
-            />
+            >
+              <div
+                className="absolute inset-0 opacity-60"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(circle, #7fe9ff 0.5px, transparent 1px)",
+                  backgroundSize: "6px 8px",
+                }}
+              />
+            </div>
           );
         })}
       </div>
 
-      {/* Cars — positioned in 2D over perspective road */}
+      {/* grandstand glow band */}
+      <div
+        className="absolute inset-x-0 top-[36%] h-[10%]"
+        style={{
+          background:
+            "linear-gradient(180deg, transparent, oklch(0.5 0.2 320 / 0.25), transparent)",
+        }}
+      />
+
+      {/* finish gantry */}
+      <div className="absolute left-1/2 -translate-x-1/2 top-[40%] w-[34%] h-2 rounded-sm bg-[#0d1220] border border-white/10 flex items-center justify-around">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#26ff9a] shadow-[0_0_8px_#26ff9a]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-[#26ff9a] shadow-[0_0_8px_#26ff9a]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-[#26ff9a] shadow-[0_0_8px_#26ff9a]" />
+      </div>
+
+      {/* ---------- Road (perspective) ---------- */}
+      <div className="absolute inset-x-0 bottom-0 top-[42%] overflow-hidden">
+        {/* tarmac trapezoid */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg,#0b0f1a 0%, #12141f 40%, #171a26 100%)",
+            clipPath: "polygon(42% 0%, 58% 0%, 128% 100%, -28% 100%)",
+          }}
+        />
+        {/* wet sheen */}
+        <div
+          className="absolute inset-0 mix-blend-screen opacity-40"
+          style={{
+            background:
+              "radial-gradient(80% 60% at 50% 0%, oklch(0.6 0.2 300 / 0.35), transparent 70%)",
+            clipPath: "polygon(42% 0%, 58% 0%, 128% 100%, -28% 100%)",
+          }}
+        />
+
+        {/* neon edge rails */}
+        <div
+          className="absolute inset-0"
+          style={{
+            clipPath: "polygon(41.4% 0%, 42.6% 0%, -25% 100%, -32% 100%)",
+            background: "linear-gradient(180deg, transparent, #b14bff)",
+            filter: "blur(0.4px) drop-shadow(0 0 10px #b14bffaa)",
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            clipPath: "polygon(57.4% 0%, 58.6% 0%, 132% 100%, 125% 100%)",
+            background: "linear-gradient(180deg, transparent, #35e6ff)",
+            filter: "blur(0.4px) drop-shadow(0 0 10px #35e6ffaa)",
+          }}
+        />
+
+        {/* lane dashes (perspective, continuously scrolling) */}
+        {[0, 1].map((k) => (
+          <div key={k} className="absolute inset-0 overflow-hidden">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <span
+                key={i}
+                className="absolute left-1/2 block rounded-full bg-white/85"
+                style={{
+                  top: 0,
+                  width: 6,
+                  height: 22,
+                  transformOrigin: "50% 0%",
+                  animation: `dash-run ${racing ? 0.75 : 2.6}s linear ${(i * (racing ? 0.75 : 2.6)) / 9}s infinite`,
+                  ["--dash-x" as string]: k === 0 ? "-1" : "1",
+                }}
+              />
+            ))}
+          </div>
+        ))}
+
+        {/* tarmac grain */}
+        <div
+          className="absolute inset-0 opacity-[0.12] pointer-events-none"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle, #ffffff 0.4px, transparent 0.9px)",
+            backgroundSize: "4px 4px",
+          }}
+        />
+      </div>
+
+      {/* speed streaks while racing */}
+      {racing &&
+        sparks.map((s, i) => (
+          <span
+            key={i}
+            className="absolute rounded-full pointer-events-none"
+            style={{
+              left: `${s.left}%`,
+              bottom: 0,
+              width: s.size,
+              height: 40,
+              background:
+                "linear-gradient(180deg, transparent, oklch(0.9 0.15 195 / 0.7), transparent)",
+              animation: `streak ${0.6 + (i % 4) / 10}s linear ${(i % 5) / 10}s infinite`,
+            }}
+          />
+        ))}
+
+      {/* ---------- Cars ---------- */}
       {cars.map((car, i) => {
-        // vertical position: bottom (start) 12% → top (finish) 40%
         const p = progress[i];
-        const bottomPct = 12 + p * 50; // 12% -> 62% (of container from bottom)
-        const scale = 1 - p * 0.55;
+        const scale = 1 - p * 0.82;
+        const bottom = 4 + p * 46; // % from bottom of the stage
+        const x = 50 + (LANE_X[i] - 50) * (1 - p * 0.86);
         const isWinner = winnerLane === i && phase === "finish";
         return (
           <div
             key={car.id}
-            className="absolute z-20 transition-none"
+            className="absolute z-20"
             style={{
-              left: LANE_LEFTS[i],
-              bottom: `${bottomPct}%`,
-              transform: `translate(-50%, 50%) scale(${scale})`,
+              left: `${x}%`,
+              bottom: `${bottom}%`,
+              transform: `translate(-50%, 0) scale(${scale})`,
+              transformOrigin: "50% 100%",
+              opacity: p > 0.95 ? 0.85 : 1,
             }}
           >
-            <Car
-              spec={car}
-              size={72}
-              idle={phase === "waiting" || phase === "prep" || phase === "lock"}
-              racing={phase === "launch" || phase === "race"}
-              glow={isWinner || (car.kind === "hyper" && hyperMode)}
-            />
+            <div className={racing ? "animate-shake" : "animate-idle"}>
+              <Car
+                spec={car}
+                size={118}
+                racing={racing}
+                glow={isWinner || (car.kind === "hyper" && hyperMode)}
+              />
+            </div>
             {isWinner && (
-              <div className="absolute -top-6 left-1/2 -translate-x-1/2 font-display text-[10px] tracking-widest text-[oklch(0.85_0.17_90)] text-neon">
-                WIN
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 font-display text-[10px] tracking-[0.3em] text-[#ffd66b] text-neon">
+                WINNER
               </div>
             )}
           </div>
         );
       })}
 
-      {/* Motion blur overlay during race */}
-      {(phase === "launch" || phase === "race") && (
-        <div
-          className="pointer-events-none absolute inset-0 z-10"
-          style={{
-            background:
-              "linear-gradient(180deg, transparent 30%, oklch(0.85 0.19 195 / 0.06) 70%, transparent 100%)",
-            mixBlendMode: "screen",
-          }}
-        />
+      {/* ---------- Countdown pill ---------- */}
+      {(phase === "waiting" || phase === "prep" || phase === "lock") && (
+        <div className="absolute left-1/2 -translate-x-1/2 top-2 z-30">
+          <div className="glass rounded-2xl px-5 py-2 text-center min-w-[140px]">
+            <div className="text-[9px] tracking-[0.25em] text-white/55 font-display">
+              GAME STARTS IN
+            </div>
+            <div className="font-display text-2xl tabular text-[#ffc32b] leading-tight">
+              {countdown.toFixed(2)}
+            </div>
+          </div>
+        </div>
+      )}
+      {racing && (
+        <div className="absolute left-1/2 -translate-x-1/2 top-2 z-30">
+          <div className="glass rounded-2xl px-5 py-2 font-display text-sm tracking-[0.35em] text-[#35e6ff] text-neon animate-pulse-glow">
+            RACING
+          </div>
+        </div>
       )}
 
-      {/* Confetti on finish */}
+      {/* finish flash */}
       {phase === "finish" && (
         <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
-          {Array.from({ length: 40 }).map((_, i) => {
+          {Array.from({ length: 30 }).map((_, i) => {
             const hue = [195, 90, 330, 25, 145][i % 5];
             return (
               <span
                 key={i}
                 className="absolute block"
                 style={{
-                  left: `${Math.random() * 100}%`,
+                  left: `${(i * 3.7) % 100}%`,
                   top: "-5%",
-                  width: 6,
-                  height: 10,
+                  width: 5,
+                  height: 9,
                   background: `oklch(0.8 0.2 ${hue})`,
-                  animation: `confetti-fall ${1.6 + Math.random() * 1.4}s ${Math.random() * 0.3}s linear forwards`,
+                  animation: `confetti-fall ${1.6 + ((i * 13) % 14) / 10}s ${((i * 7) % 4) / 10}s linear forwards`,
                 }}
               />
             );
@@ -262,12 +255,15 @@ export function Highway({
         </div>
       )}
 
-      {/* subtle floating particles (client only to avoid hydration mismatch) */}
-      <Particles />
-
-
-      {/* Suppress unused var warning */}
-      <span className="hidden">{h}</span>
+      {/* vignette */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(120% 80% at 50% 60%, transparent 40%, #000 100%)",
+          opacity: 0.75,
+        }}
+      />
     </div>
   );
 }
