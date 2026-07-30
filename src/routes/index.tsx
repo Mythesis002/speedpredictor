@@ -87,15 +87,41 @@ function Game() {
     })),
   );
 
+  // Single 60fps loop: writes race progress into a ref (no re-render),
+  // and only nudges React state ~12x/s for countdown + phase logic.
   useEffect(() => {
     let raf = 0;
-    const tick = () => {
-      setNow(performance.now());
+    let lastPush = 0;
+    const tick = (ts: number) => {
+      const n = performance.now();
+      const e = (n - phaseStart) / 1000;
+      const localDur = PHASE_DUR[phase];
+      const tt = Math.min(1, e / localDur);
+
+      if (phase === "race" || phase === "launch") {
+        const localT = phase === "launch" ? tt * 0.06 : 0.06 + tt * 0.94;
+        progressRef.current = [
+          curves.current[0](localT),
+          curves.current[1](localT),
+          curves.current[2](localT),
+        ];
+      } else if (phase === "finish") {
+        progressRef.current = [0, 1, 2].map((i) =>
+          i === finishOrder.current[0] ? 1 : 0.94,
+        ) as [number, number, number];
+      } else {
+        progressRef.current = [0, 0, 0];
+      }
+
+      if (ts - lastPush > 80) {
+        lastPush = ts;
+        setNow(n);
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [phase, phaseStart]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -107,28 +133,7 @@ function Game() {
 
   const elapsed = (now - phaseStart) / 1000;
   const dur = PHASE_DUR[phase];
-  const t = Math.min(1, elapsed / dur);
 
-  useEffect(() => {
-    if (phase === "race" || phase === "launch") {
-      const localT = phase === "launch" ? t * 0.06 : 0.06 + t * 0.94;
-      setProgress([
-        curves.current[0](localT),
-        curves.current[1](localT),
-        curves.current[2](localT),
-      ]);
-    } else if (phase === "finish") {
-      setProgress(
-        [0, 1, 2].map((i) => (i === finishOrder.current[0] ? 1 : 0.94)) as [
-          number,
-          number,
-          number,
-        ],
-      );
-    } else {
-      setProgress([0, 0, 0]);
-    }
-  }, [now, phase, t]);
 
   useEffect(() => {
     if (elapsed < dur) return;
