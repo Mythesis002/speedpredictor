@@ -201,3 +201,24 @@
   75% { transform: translate3d(-0.4px, -0.5px, 0); }
 }
 .animate-shake { animation: shake 0.12s linear infinite; }
+
+/* ---------- Continuous traffic (GPU-only transforms) ---------- */
+@keyframes traffic-x {
+  from { transform: translate3d(calc(var(--tx) * 0.1), 0, 0); }
+  to   { transform: translate3d(var(--tx), 0, 0); }
+}
+@keyframes traffic-approach {
+  0%   { transform: translate3d(-50%, calc(var(--far) * -1), 0) scale(0.05); opacity: 0; }
+  10%  { opacity: 0.65; }
+  85%  { opacity: 0.95; }
+  100% { transform: translate3d(-50%, -46px, 0) scale(0.8); opacity: 0; }
+}
+.traffic-layer { will-change: transform; contain: layout paint; }
+.traffic-x { animation: traffic-x linear infinite; will-change: transform; }
+.traffic-y { animation: traffic-approach linear infinite; will-change: transform, opacity; }
+
+.gpu { transform: translateZ(0); will-change: transform; backface-visibility: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .traffic-x, .traffic-y, .animate-shake { animation: none !important; }
+}
