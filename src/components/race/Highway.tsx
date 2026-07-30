@@ -70,6 +70,7 @@ const Traffic = memo(function Traffic({ fast }: { fast: boolean }) {
             <div
               className="traffic-y"
               style={{
+                ["--far" as string]: "25vh",
                 animationDuration: dur,
                 animationDelay: `${it.delay}s`,
                 filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.6))",
