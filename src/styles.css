@@ -210,8 +210,8 @@
 @keyframes traffic-approach {
   0%   { transform: translate3d(-50%, calc(var(--far) * -1), 0) scale(0.05); opacity: 0; }
   8%   { opacity: 0.5; }
-  75%  { opacity: 0.85; }
-  100% { transform: translate3d(-50%, 40px, 0) scale(1.3); opacity: 0; }
+  70%  { opacity: 0.9; }
+  100% { transform: translate3d(-50%, -18px, 0) scale(0.95); opacity: 0; }
 }
 .traffic-layer { will-change: transform; contain: layout paint; }
 .traffic-x { animation: traffic-x linear infinite; will-change: transform; }
