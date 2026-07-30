@@ -40,7 +40,7 @@ const Traffic = memo(function Traffic({ fast }: { fast: boolean }) {
         const spread = [-1, 1, -1, 1, -0.55, 0.55][i % 6];
         return {
           key: i,
-          tx: `${(spread * (30 + ((i * 13) % 16))).toFixed(1)}vw`,
+          tx: `${(spread * (14 + ((i * 13) % 16))).toFixed(1)}vw`,
           dur: 5.2 + ((i * 37) % 45) / 10,
           delay: -((i * 17) % 60) / 10,
           color: TRAFFIC_COLORS[i % TRAFFIC_COLORS.length],
@@ -69,7 +69,7 @@ const Traffic = memo(function Traffic({ fast }: { fast: boolean }) {
             <div
               className="traffic-y"
               style={{
-                ["--far" as string]: "24vh",
+                ["--far" as string]: "21vh",
                 animationDuration: dur,
                 animationDelay: `${it.delay}s`,
                 filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.6))",
