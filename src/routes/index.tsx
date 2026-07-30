@@ -70,7 +70,7 @@ function Game() {
     accelCurve(3),
   ]);
   const finishOrder = useRef<[number, number, number]>([0, 1, 2]);
-  const [progress, setProgress] = useState<[number, number, number]>([0, 0, 0]);
+  const progressRef = useRef<[number, number, number]>([0, 0, 0]);
   const [now, setNow] = useState(performance.now());
 
   const [balance, setBalance] = useState(12450);

@@ -6,7 +6,7 @@ import type { RacePhase } from "@/lib/race-engine";
 interface Props {
   cars: [CarSpec, CarSpec, CarSpec];
   phase: RacePhase;
-  /** live progress 0..1 per lane, mutated每 frame outside React for 60fps */
+  /** live progress 0..1 per lane, mutated each frame outside React for 60fps */
   progressRef: { current: [number, number, number] };
   winnerLane: number | null;
   hyperMode: boolean;
