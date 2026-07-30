@@ -217,7 +217,7 @@ function Game() {
         <Highway
           cars={cars}
           phase={phase}
-          progress={progress}
+          progressRef={progressRef}
           winnerLane={winner}
           hyperMode={hyperMode}
           countdown={countdown}
