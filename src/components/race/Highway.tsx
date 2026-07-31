@@ -64,7 +64,7 @@ export function Highway({
 
         // depth = how far behind the leader (0 = leading, near camera-far)
         const gap = leader - p[i];
-        const target = Math.min(1, Math.max(0, gap * 4.2));
+        const target = Math.min(1, Math.max(0, gap * 11));
         smooth.current[i] += (target - smooth.current[i]) * Math.min(1, dt * 7);
         const d = smooth.current[i];
 
