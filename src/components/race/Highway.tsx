@@ -52,7 +52,7 @@ export function Highway({
       const hgt = stage?.clientHeight ?? 300;
       const ph = phaseRef.current;
       const p = progressRef.current;
-      const leader = Math.max(p[0], p[1], p[2]);
+      const trailer = Math.min(p[0], p[1], p[2]);
 
       // running order (0 = P1)
       const order = [0, 1, 2].sort((a, b) => p[b] - p[a]);
@@ -62,11 +62,13 @@ export function Highway({
         const speed = Math.max(0, (p[i] - lastP.current[i]) / dt);
         lastP.current[i] = p[i];
 
-        // depth = how far behind the leader (0 = leading, near camera-far)
-        const gap = leader - p[i];
-        const target = Math.min(1, Math.max(0, Math.sqrt(gap) * 3.4));
+        // camera sits behind the pack: the leader is further up the road
+        // (smaller, higher), the last car is closest to the lens.
+        const gap = Math.max(0, p[i] - trailer);
+        const target = Math.min(1, Math.sqrt(gap) * 3.4);
         smooth.current[i] += (target - smooth.current[i]) * Math.min(1, dt * 7);
         const d = smooth.current[i];
+
 
         const scale = (1 - d * 0.46) * (ph === "waiting" || ph === "prep" ? 1 : 1);
         const y = -d * hgt * 0.34;
