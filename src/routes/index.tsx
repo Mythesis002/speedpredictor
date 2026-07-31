@@ -40,10 +40,11 @@ const PHASE_DUR: Record<RacePhase, number> = {
   waiting: 8,
   prep: 0.01,
   lock: 0.01,
-  launch: 0.5,
-  race: 5,
-  finish: 3,
+  launch: 0.9,
+  race: 7,
+  finish: 3.5,
 };
+
 
 function SpeedPredict() {
   const hydrated = useHydratedGuard();
@@ -106,12 +107,16 @@ function Game() {
           curves.current[2](localT),
         ];
       } else if (phase === "finish") {
-        progressRef.current = [0, 1, 2].map((i) =>
-          i === finishOrder.current[0] ? 1 : 0.94,
-        ) as [number, number, number];
+        const gaps = [1, 0.972, 0.946];
+        const out: [number, number, number] = [0, 0, 0];
+        finishOrder.current.forEach((lane, rank) => {
+          out[lane] = gaps[rank];
+        });
+        progressRef.current = out;
       } else {
         progressRef.current = [0, 0, 0];
       }
+
 
       if (ts - lastPush > 80) {
         lastPush = ts;

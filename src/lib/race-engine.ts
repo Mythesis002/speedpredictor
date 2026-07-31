@@ -77,12 +77,18 @@ export function makeRaceLineup(): [CarSpec, CarSpec, CarSpec] {
 
 /** Non-linear acceleration curve per lane; returns 0..1 progress at time t (0..1). */
 export function accelCurve(seed: number) {
-  // parameters vary the shape
-  const power = 1.4 + (seed % 100) / 100; // 1.4..2.4
-  const wobble = ((seed >> 3) % 30) / 300; // small mid-race variation
+  const power = 1.35 + (seed % 100) / 90; // launch bite varies
+  const wobble = 0.05 + ((seed >> 3) % 40) / 400; // mid-race lead swings
+  const phase = ((seed >> 7) % 100) / 100; // when the surge lands
+  const late = ((seed >> 11) % 50) / 500; // late-race kick
   return (t: number) => {
-    const base = Math.pow(t, 1 / power); // ease-out-ish
-    const mid = Math.sin(t * Math.PI) * wobble;
-    return Math.max(0, Math.min(1, base + mid));
+    const base = Math.pow(t, 1 / power);
+    const surge = Math.sin((t + phase) * Math.PI * 1.6) * wobble * (1 - t * 0.5);
+    const kick = Math.pow(t, 6) * late;
+    const v = base + surge + kick;
+    // always converge to a clean 0 and 1 at the ends so starts/finishes read true
+    const clamp = t < 0.04 ? t / 0.04 : 1;
+    return Math.max(0, Math.min(1, v * clamp));
   };
 }
+
