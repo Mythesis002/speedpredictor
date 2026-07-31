@@ -40,10 +40,11 @@ const PHASE_DUR: Record<RacePhase, number> = {
   waiting: 8,
   prep: 0.01,
   lock: 0.01,
-  launch: 0.5,
-  race: 5,
-  finish: 3,
+  launch: 0.9,
+  race: 7,
+  finish: 3.5,
 };
+
 
 function SpeedPredict() {
   const hydrated = useHydratedGuard();
