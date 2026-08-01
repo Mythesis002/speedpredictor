@@ -10,6 +10,7 @@ import {
   LiveStats,
   type HistoryEntry,
 } from "@/components/race/History";
+import { WinModal } from "@/components/race/WinModal";
 import { accelCurve, makeRaceLineup, type RacePhase } from "@/lib/race-engine";
 import type { CarSpec } from "@/components/race/Car";
 import { BarChart3, Gift, Home, Settings, Trophy } from "lucide-react";
@@ -78,6 +79,7 @@ function Game() {
   const [amount, setAmount] = useState(100);
   const [selected, setSelected] = useState<number | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [win, setWin] = useState<{ amount: number; colorName: string; color: string } | null>(null);
   const [players, setPlayers] = useState(1245);
   const [totalBets, setTotalBets] = useState(89540);
   const [history, setHistory] = useState<HistoryEntry[]>(() =>
@@ -159,7 +161,13 @@ function Game() {
       finishOrder.current = order as [number, number, number];
 
       if (confirmed && selected !== null && selected === order[0]) {
-        setBalance((b) => b + Math.round(amount * cars[selected].multiplier));
+        const payout = Math.round(amount * cars[selected].multiplier);
+        setBalance((b) => b + payout);
+        setWin({
+          amount: payout,
+          colorName: cars[selected].colorName.toUpperCase(),
+          color: cars[selected].color,
+        });
       }
       setHistory((h) => [{ id: roundId, car: cars[order[0]], ago: "now" }, ...h].slice(0, 50));
     }
@@ -216,6 +224,14 @@ function Game() {
   return (
     <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-[#04060c] text-white flex flex-col">
       <Header balance={balance} roundId={roundId} />
+
+      <WinModal
+        amount={win?.amount ?? null}
+        colorName={win?.colorName}
+        color={win?.color}
+        onClose={() => setWin(null)}
+      />
+
 
       {/* Race stage */}
       <div className="relative mx-2 rounded-2xl overflow-hidden border border-white/10 h-[46vh] min-h-[280px] shrink-0">
