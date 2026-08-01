@@ -39,8 +39,10 @@ function shade(hex: string, amt: number) {
 }
 
 /**
- * Rear view hyper-sports car. Pure SVG, drawn on a 240x210 stage so the
- * proportions stay wide-and-low like a real GT car seen from behind.
+ * Rear-view widebody GT. Modelled on the reference render: muscular haunches,
+ * tall swan-neck GT wing, C-signature LED tail blades, quad exhausts in
+ * carbon pods, full-width diffuser and a single central rain lamp.
+ * Stage is 260x210 so the car reads wide-and-low.
  */
 export const Car = memo(function Car({
   spec,
@@ -52,25 +54,23 @@ export const Car = memo(function Car({
 }: Props) {
   const isHyper = spec.kind === "hyper";
   const isSmall = spec.kind === "small";
-  const w = size * (isSmall ? 0.8 : isHyper ? 1.06 : 1);
-  const h = w * 0.9;
+  const w = size * (isSmall ? 0.82 : isHyper ? 1.08 : 1);
+  const h = w * 0.82;
   const c = spec.color;
-  const light = shade(c, isHyper ? 52 : 66);
-  const mid = shade(c, isHyper ? 14 : 6);
-  const dark = shade(c, -84);
-  const deep = shade(c, -110);
+  const hi = shade(c, isHyper ? 70 : 92);
+  const light = shade(c, isHyper ? 44 : 58);
+  const mid = shade(c, isHyper ? 10 : 4);
+  const dark = shade(c, -70);
+  const deep = shade(c, -108);
   const uid = spec.id;
 
   const t = Math.max(0, Math.min(1, throttle));
-  const lampOpacity = braking ? 1 : 0.55 + t * 0.4;
-  const bloom = braking ? 0.5 : 0.14 + t * 0.3;
+  const lampOpacity = braking ? 1 : 0.6 + t * 0.4;
+  const bloom = braking ? 0.55 : 0.12 + t * 0.32;
 
-  // body silhouette per class
-  const body = isSmall
-    ? "M52 84 q10-30 68-30 t68 30 l10 40 q6 24 -8 30 l-16 6 h-108 l-16-6 q-14-6 -8-30 z"
-    : isHyper
-      ? "M26 82 q16-40 94-40 t94 40 l12 44 q8 26 -12 32 l-20 6 h-148 l-20-6 q-20-6 -12-32 z"
-      : "M34 84 q18-36 86-36 t86 36 l11 42 q7 25 -10 31 l-18 6 h-138 l-18-6 q-17-6 -10-31 z";
+  // widebody silhouette (shared shape, scaled by class via viewBox usage)
+  const body =
+    "M20 100 q6-24 30-32 q18-26 80-26 t80 26 q24 8 30 32 l8 34 q4 22 -16 26 l-26 5 h-152 l-26-5 q-20-4 -16-26 z";
 
   return (
     <div
@@ -79,202 +79,207 @@ export const Car = memo(function Car({
         width: w,
         height: h,
         filter: glow
-          ? `drop-shadow(0 0 20px ${c}) drop-shadow(0 0 48px ${c}55)`
-          : `drop-shadow(0 12px 18px rgba(0,0,0,0.7))`,
+          ? `drop-shadow(0 0 22px ${c}) drop-shadow(0 0 54px ${c}55)`
+          : `drop-shadow(0 14px 20px rgba(0,0,0,0.72))`,
       }}
     >
-      <svg viewBox="0 0 240 210" width={w} height={h} style={{ display: "block" }}>
+      <svg viewBox="0 0 260 210" width={w} height={h} style={{ display: "block" }}>
         <defs>
-          {/* body paint: sky reflection top, saturated flank, dark sill */}
+          {/* metallic paint: bright crown, saturated flank, near-black sill */}
           <linearGradient id={`paint-${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={light} />
-            <stop offset="0.22" stopColor={mid} />
-            <stop offset="0.62" stopColor={c} />
+            <stop offset="0" stopColor={hi} />
+            <stop offset="0.16" stopColor={light} />
+            <stop offset="0.42" stopColor={mid} />
+            <stop offset="0.72" stopColor={c} />
             <stop offset="1" stopColor={deep} />
           </linearGradient>
+          {/* wrap-around body curvature */}
           <linearGradient id={`flank-${uid}`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor={deep} stopOpacity="0.95" />
-            <stop offset="0.18" stopColor={dark} stopOpacity="0.35" />
-            <stop offset="0.5" stopColor={light} stopOpacity="0.12" />
-            <stop offset="0.82" stopColor={dark} stopOpacity="0.35" />
-            <stop offset="1" stopColor={deep} stopOpacity="0.95" />
+            <stop offset="0" stopColor={deep} stopOpacity="0.98" />
+            <stop offset="0.1" stopColor={dark} stopOpacity="0.5" />
+            <stop offset="0.3" stopColor={hi} stopOpacity="0.2" />
+            <stop offset="0.5" stopColor={light} stopOpacity="0.06" />
+            <stop offset="0.7" stopColor={hi} stopOpacity="0.2" />
+            <stop offset="0.9" stopColor={dark} stopOpacity="0.5" />
+            <stop offset="1" stopColor={deep} stopOpacity="0.98" />
           </linearGradient>
           <linearGradient id={`glass-${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#0a1119" />
-            <stop offset="0.45" stopColor="#20304a" />
-            <stop offset="1" stopColor="#05080e" />
-          </linearGradient>
-          <linearGradient id={`lamp-${uid}`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#ff1e33" stopOpacity="0.4" />
-            <stop offset="0.5" stopColor="#ff9aa2" />
-            <stop offset="1" stopColor="#ff1e33" stopOpacity="0.4" />
+            <stop offset="0" stopColor="#0b1017" />
+            <stop offset="0.4" stopColor="#141b26" />
+            <stop offset="1" stopColor="#04060a" />
           </linearGradient>
           <linearGradient id={`carbon-${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#1c2029" />
-            <stop offset="1" stopColor="#070a0f" />
+            <stop offset="0" stopColor="#22262f" />
+            <stop offset="0.5" stopColor="#12151b" />
+            <stop offset="1" stopColor="#05070b" />
+          </linearGradient>
+          <linearGradient id={`tail-${uid}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#ff5a63" />
+            <stop offset="0.45" stopColor="#ff1226" />
+            <stop offset="1" stopColor="#8d0713" />
           </linearGradient>
           <radialGradient id={`floor-${uid}`} cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0" stopColor="#ff2b3b" stopOpacity={0.2 + t * 0.4} />
+            <stop offset="0" stopColor="#ff2b3b" stopOpacity={0.22 + t * 0.38} />
             <stop offset="1" stopColor="#ff2b3b" stopOpacity="0" />
           </radialGradient>
           <linearGradient id={`refl-${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={c} stopOpacity="0.32" />
+            <stop offset="0" stopColor={c} stopOpacity="0.3" />
             <stop offset="1" stopColor={c} stopOpacity="0" />
           </linearGradient>
           <linearGradient id={`tyre-${uid}`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#04050a" />
-            <stop offset="0.45" stopColor="#191d26" />
-            <stop offset="1" stopColor="#04050a" />
+            <stop offset="0" stopColor="#030408" />
+            <stop offset="0.42" stopColor="#1b202a" />
+            <stop offset="1" stopColor="#030408" />
           </linearGradient>
         </defs>
 
         {/* contact shadow + taillight bloom on tarmac */}
-        <ellipse cx="120" cy="176" rx="96" ry="13" fill="#000" opacity="0.6" />
-        <ellipse cx="120" cy="186" rx="102" ry="24" fill={`url(#floor-${uid})`} />
+        <ellipse cx="130" cy="178" rx="104" ry="13" fill="#000" opacity="0.62" />
+        <ellipse cx="130" cy="188" rx="112" ry="24" fill={`url(#floor-${uid})`} />
 
-        {/* rear tyres (behind body) */}
+        {/* ---- rear tyres, wide and squat ---- */}
         <g>
-          <path d="M20 110 q-9 28 0 54 h30 q-8-28 -2-56 z" fill={`url(#tyre-${uid})`} />
-          <path d="M220 110 q9 28 0 54 h-30 q8-28 2-56 z" fill={`url(#tyre-${uid})`} />
-          {/* tread bands — blur into motion at speed */}
-          <g opacity={0.75 - t * 0.55}>
-            {[122, 134, 146, 158].map((y) => (
+          <path d="M14 104 q-10 32 -1 62 h34 q-9-32 -3-64 z" fill={`url(#tyre-${uid})`} />
+          <path d="M246 104 q10 32 1 62 h-34 q9-32 3-64 z" fill={`url(#tyre-${uid})`} />
+          <g opacity={0.7 - t * 0.55}>
+            {[116, 128, 140, 152, 162].map((y) => (
               <g key={y}>
-                <rect x="20" y={y} width="26" height="2.4" rx="1.2" fill="#2b3140" opacity="0.7" />
-                <rect x="194" y={y} width="26" height="2.4" rx="1.2" fill="#2b3140" opacity="0.7" />
+                <rect x="14" y={y} width="30" height="2.2" rx="1.1" fill="#333a49" opacity="0.75" />
+                <rect x="216" y={y} width="30" height="2.2" rx="1.1" fill="#333a49" opacity="0.75" />
               </g>
             ))}
           </g>
-          {/* sidewall speed smear */}
-          <g opacity={t * 0.5}>
-            <rect x="20" y="118" width="28" height="44" rx="6" fill="#7f8aa3" opacity="0.25" />
-            <rect x="192" y="118" width="28" height="44" rx="6" fill="#7f8aa3" opacity="0.25" />
+          <g opacity={t * 0.55}>
+            <rect x="14" y="112" width="32" height="52" rx="8" fill="#8b96ad" opacity="0.22" />
+            <rect x="214" y="112" width="32" height="52" rx="8" fill="#8b96ad" opacity="0.22" />
           </g>
         </g>
 
-        {/* main body */}
+        {/* ---- main body ---- */}
         <path d={body} fill={`url(#paint-${uid})`} />
-        {/* flank shaping over the lower half */}
         <path d={body} fill={`url(#flank-${uid})`} />
 
-        {/* shoulder highlight line */}
-        <path
-          d={
-            isSmall
-              ? "M58 88 q60-26 124 0"
-              : "M42 90 q78-30 156 0"
-          }
-          fill="none"
-          stroke={light}
-          strokeOpacity="0.5"
-          strokeWidth="2"
-        />
+        {/* shoulder highlight running across the haunches */}
+        <path d="M34 100 q96-30 192 0" fill="none" stroke={hi} strokeOpacity="0.55" strokeWidth="2.2" />
+        {/* haunch crease */}
+        <path d="M40 126 q32 12 90 12 t90-12" fill="none" stroke={deep} strokeOpacity="0.5" strokeWidth="3" />
 
-        {/* haunch shadow creases */}
-        <path d="M46 116 q26 10 74 10 t74-10" fill="none" stroke={deep} strokeOpacity="0.55" strokeWidth="3" />
+        {/* side mirrors on stalks */}
+        <path d="M64 82 q-22-8 -30 2 q11 8 28 4 z" fill="#0d1117" />
+        <path d="M196 82 q22-8 30 2 q-11 8 -28 4 z" fill="#0d1117" />
 
-        {/* greenhouse: roof + rear screen */}
-        <path
-          d={
-            isSmall
-              ? "M78 74 q42-20 84 0 l8 30 q-50-13 -100 0 z"
-              : "M68 70 q52-24 104 0 l9 32 q-61-16 -122 0 z"
-          }
-          fill={`url(#glass-${uid})`}
-        />
-        <path
-          d={isSmall ? "M84 76 q36-15 72 0 l2 6 q-38-13 -76 0 z" : "M74 72 q46-19 92 0 l3 7 q-49-15 -98 0 z"}
-          fill="#9fdcff"
-          opacity="0.16"
-        />
-        {/* roof strip */}
-        <path
-          d={isSmall ? "M80 74 q40-18 80 0" : "M70 70 q50-22 100 0"}
-          fill="none"
-          stroke={light}
-          strokeOpacity="0.35"
-          strokeWidth="2.5"
-        />
+        {/* ---- greenhouse: low, wide, steeply raked rear screen ---- */}
+        <path d="M72 102 q10-34 58-34 t58 34 q-58-13 -116 0 z" fill={`url(#glass-${uid})`} />
+        <path d="M84 86 q46-15 92 0 l2 6 q-48-14 -96 0 z" fill="#9fdcff" opacity="0.1" />
+        {/* body-colour roof rail above the glass */}
+        <path d="M80 74 q50-14 100 0 l-5 -7 q-45-11 -90 0 z" fill={hi} opacity="0.9" />
 
-        {/* side mirrors */}
-        <path d="M52 92 q-16-4 -19 6 q13 5 21 0 z" fill={dark} />
-        <path d="M188 92 q16-4 19 6 q-13 5 -21 0 z" fill={dark} />
 
-        {/* rear wing */}
+        {/* ---- GT wing: posts, blade, endplates ---- */}
         {!isSmall && (
           <g>
+            {/* swan-neck posts */}
+            <path d="M96 104 l7 0 l1 -34 l-7 0 z" fill="#0c1016" />
+            <path d="M157 104 l7 0 l-1 -34 l-7 0 z" fill="#0c1016" />
+            {/* main blade */}
+            <rect x={isHyper ? 14 : 22} y="64" width={isHyper ? 232 : 216} height="8" rx="4" fill={`url(#carbon-${uid})`} />
             <rect
-              x={isHyper ? 24 : 34}
-              y="100"
-              width={isHyper ? 192 : 172}
-              height="9"
-              rx="4.5"
-              fill={`url(#carbon-${uid})`}
+              x={isHyper ? 18 : 26}
+              y="65.2"
+              width={isHyper ? 224 : 208}
+              height="2"
+              rx="1"
+              fill={isHyper ? "#ffd66b" : "#7d8798"}
+              opacity="0.6"
             />
-            <rect
-              x={isHyper ? 30 : 40}
-              y="101.5"
-              width={isHyper ? 180 : 160}
-              height="2.5"
-              rx="1.2"
-              fill={isHyper ? "#ffd66b" : light}
-              opacity="0.55"
-            />
-            <path d={`M${isHyper ? 44 : 52} 108 l6 0 l3 16 l-9 0 z`} fill="#0b0e14" />
-            <path d={`M${isHyper ? 190 : 182} 108 l6 0 l-3 16 l-9 0 z`} fill="#0b0e14" />
+            {/* endplates */}
+            <rect x={isHyper ? 8 : 16} y="58" width="10" height="21" rx="4" fill="#0c1016" />
+            <rect x={isHyper ? 242 : 234} y="58" width="10" height="21" rx="4" fill="#0c1016" />
           </g>
         )}
 
-        {/* full-width light bar */}
-        <g>
-          <rect x="46" y="132" width="148" height="10" rx="5" fill={`url(#lamp-${uid})`} opacity={lampOpacity} />
-          <rect x="46" y="132" width="148" height="10" rx="5" fill="#ff2233" opacity={braking ? 0.85 : 0.3 + t * 0.35} />
-          <rect x="46" y="133.5" width="148" height="2.4" rx="1.2" fill="#ffd9dc" opacity={lampOpacity * 0.8} />
-          <rect
-            x="34"
-            y="127"
-            width="172"
-            height="20"
-            rx="10"
-            fill="#ff2b3b"
-            opacity={bloom}
-            style={{ filter: "blur(7px)" }}
+
+        {/* ---- deck / spoiler lip across the boot ---- */}
+        <path d="M46 104 q84-16 168 0 l2 8 q-86-16 -172 0 z" fill={dark} opacity="0.55" />
+
+        {/* ---- C-signature LED tail blades ---- */}
+        <g opacity={lampOpacity}>
+          {/* left */}
+          <path
+            d="M40 116 l64 -6 l10 10 l-10 10 l-64 -4 z"
+            fill="#180205"
           />
+          <path
+            d="M45 118 l56 -5 l6 6 l-6 6 l-56 -3 z"
+            fill={`url(#tail-${uid})`}
+          />
+          <path
+            d="M47 118.5 l53 -4.5"
+            stroke="#ffd3d6"
+            strokeWidth="2"
+            strokeLinecap="round"
+            opacity={braking ? 1 : 0.7}
+          />
+          {/* right (mirrored) */}
+          <g transform="translate(260,0) scale(-1,1)">
+            <path d="M40 116 l64 -6 l10 10 l-10 10 l-64 -4 z" fill="#180205" />
+            <path d="M45 118 l56 -5 l6 6 l-6 6 l-56 -3 z" fill={`url(#tail-${uid})`} />
+            <path
+              d="M47 118.5 l53 -4.5"
+              stroke="#ffd3d6"
+              strokeWidth="2"
+              strokeLinecap="round"
+              opacity={braking ? 1 : 0.7}
+            />
+          </g>
+        </g>
+        {/* tail bloom */}
+        <g style={{ filter: "blur(8px)" }} opacity={bloom}>
+          <rect x="36" y="108" width="82" height="20" rx="10" fill="#ff2233" />
+          <rect x="142" y="108" width="82" height="20" rx="10" fill="#ff2233" />
         </g>
 
-        {/* rear deck vents */}
-        <g opacity="0.55">
-          {[62, 72, 82].map((x) => (
-            <rect key={x} x={x} y="120" width="4" height="8" rx="2" fill="#05070c" />
-          ))}
-          {[154, 164, 174].map((x) => (
-            <rect key={x} x={x} y="120" width="4" height="8" rx="2" fill="#05070c" />
+        {/* ---- centre black panel between the lights ---- */}
+        <path d="M112 110 q18-4 36 0 l4 14 q-22 4 -44 0 z" fill="#0a0d12" />
+        <rect x="118" y="114" width="24" height="6" rx="1.5" fill="#dfe5ef" opacity="0.55" />
+
+        {/* ---- lower bumper: carbon pods, quad exhausts, diffuser ---- */}
+        <path d="M34 132 h192 q10 14 4 30 h-200 q-6-16 4-30 z" fill={`url(#carbon-${uid})`} />
+        {/* body-colour bumper shoulders */}
+        <path d="M34 132 q26-8 56-6 l-4 12 q-30-2 -54 6 z" fill={mid} opacity="0.7" />
+        <path d="M226 132 q-26-8 -56-6 l4 12 q30-2 54 6 z" fill={mid} opacity="0.7" />
+
+        {/* exhaust pods */}
+        <g>
+          <rect x="46" y="140" width="52" height="22" rx="7" fill="#0a0d13" stroke="#4a5262" strokeWidth="1.2" />
+          <rect x="162" y="140" width="52" height="22" rx="7" fill="#0a0d13" stroke="#4a5262" strokeWidth="1.2" />
+          {[60, 82, 176, 198].map((x) => (
+            <g key={x}>
+              <circle cx={x} cy="151" r="7.5" fill="#171b23" stroke="#59616f" strokeWidth="1.4" />
+              <circle cx={x} cy="151" r="4" fill="#05070b" />
+              {t > 0.2 && (
+                <circle cx={x} cy="151" r="3" fill={isHyper ? "#ffb03a" : "#7fd8ff"} opacity={t * 0.5} />
+              )}
+            </g>
           ))}
         </g>
 
-        {/* bumper + carbon diffuser */}
-        <path d="M42 150 h156 q8 10 0 16 h-156 q-8-6 0-16 z" fill={`url(#carbon-${uid})`} />
-        <g opacity="0.85">
-          {[80, 96, 112, 128, 144, 160].map((x) => (
-            <rect key={x} x={x} y="153" width="4" height="11" rx="1.6" fill="#02040a" />
+        {/* diffuser fins */}
+        <g>
+          <rect x="104" y="140" width="52" height="22" rx="4" fill="#0b0e14" />
+          {[110, 122, 134, 146].map((x) => (
+            <rect key={x} x={x} y="158" width="3.4" height="12" rx="1.4" fill="#080b10" />
           ))}
         </g>
-        {/* fog / reverse lamp */}
-        <rect x="112" y="146" width="16" height="4" rx="2" fill="#ff3344" opacity={braking ? 1 : 0.35} />
-
-        {/* exhausts */}
-        <circle cx="62" cy="159" r="5" fill="#12161e" stroke="#39404e" strokeWidth="1" />
-        <circle cx="178" cy="159" r="5" fill="#12161e" stroke="#39404e" strokeWidth="1" />
-
-        {/* plate */}
-        <rect x="104" y="120" width="32" height="10" rx="2" fill="#e9edf5" opacity="0.7" />
+        {/* central rain lamp */}
+        <path d="M122 156 h16 l-3 10 h-10 z" fill="#ff2634" opacity={braking ? 1 : 0.4 + t * 0.35} />
 
         {/* hypercar underglow */}
-        {isHyper && <ellipse cx="120" cy="172" rx="92" ry="9" fill="#ffd66b" opacity={0.28 + t * 0.25} />}
+        {isHyper && <ellipse cx="130" cy="174" rx="98" ry="9" fill="#ffd66b" opacity={0.26 + t * 0.26} />}
 
         {/* wet-road reflection */}
         {reflection && (
-          <g transform="translate(0,352) scale(1,-1)" opacity="0.2">
+          <g transform="translate(0,356) scale(1,-1)" opacity="0.18">
             <path d={body} fill={`url(#refl-${uid})`} />
           </g>
         )}
@@ -286,8 +291,8 @@ export const Car = memo(function Car({
           <span
             className="absolute rounded-full"
             style={{
-              left: "24%",
-              bottom: "9%",
+              left: "22%",
+              bottom: "10%",
               width: 9 + t * 5,
               height: 9 + t * 5,
               background: isHyper
@@ -299,8 +304,8 @@ export const Car = memo(function Car({
           <span
             className="absolute rounded-full"
             style={{
-              right: "24%",
-              bottom: "9%",
+              right: "22%",
+              bottom: "10%",
               width: 9 + t * 5,
               height: 9 + t * 5,
               background: isHyper
