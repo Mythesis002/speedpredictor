@@ -130,7 +130,7 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
       }
       setReveals((r) => ({ ...r, [id]: reveal }));
       setOutcomes((o) => ({ ...o, [id]: outcomeFromReveal(reveal) }));
-      console.log("[fair] resolve", id, ok, known);
+      console.log("[fair] resolve", id, ok);
       setVerifiedMap((v) => ({ ...v, [id]: ok }));
     },
     [fetchReveal],
