@@ -130,7 +130,6 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
       }
       setReveals((r) => ({ ...r, [id]: reveal }));
       setOutcomes((o) => ({ ...o, [id]: outcomeFromReveal(reveal) }));
-      console.log("[fair] resolve", id, ok);
       setVerifiedMap((v) => ({ ...v, [id]: ok }));
     },
     [fetchReveal],
@@ -186,6 +185,12 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, []);
+
+  // refresh commitments whenever a new round opens, so the grid on screen is
+  // always backed by a commitment the client saw before betting.
+  useEffect(() => {
+    void sync();
+  }, [roundId, sync]);
 
   const cars = useMemo(() => lineupForRound(roundId), [roundId]);
   const outcome = outcomes[roundId] ?? null;
