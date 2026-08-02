@@ -222,30 +222,6 @@ export interface Outcome {
 
 export type Curve = (t: number) => number;
 
-/**
- * Physically-flavoured pace curve: launch bite, mid-race slipstream swings and
- * a late kick, normalised so every lane starts at exactly 0 and ends at its
- * own final margin.
- */
-export function paceCurve(seed: number, finalMargin: number): Curve {
-  const bite = 1.25 + (seed % 100) / 120;
-  const swing = 0.035 + ((seed >>> 3) % 40) / 620;
-  const phase = ((seed >>> 7) % 100) / 100;
-  const kick = ((seed >>> 11) % 50) / 900;
-
-  return (t: number) => {
-    const tc = Math.max(0, Math.min(1, t));
-    const base = Math.pow(tc, 1 / bite);
-    const surge = Math.sin((tc + phase) * Math.PI * 1.7) * swing * (1 - tc * 0.55);
-    const late = Math.pow(tc, 6) * kick;
-    const ease = tc < 0.05 ? tc / 0.05 : 1;
-    const v = (base + surge + late) * ease;
-    // converge exactly onto the finishing margin at t = 1
-    return Math.max(0, v * (1 - tc) + finalMargin * tc * Math.pow(tc, 0.35) + v * 0 + tc * 0) ||
-      Math.max(0, v);
-  };
-}
-
 /** Build the full outcome from a revealed per-round secret. */
 export function outcomeFromReveal(reveal: string): Outcome {
   const rnd = rngFrom(`outcome:${reveal}`);
