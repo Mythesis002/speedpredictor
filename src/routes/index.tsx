@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Highway } from "@/components/race/Highway";
 import { PredictionCards } from "@/components/race/PredictionCards";
 import { BettingPanel } from "@/components/race/BettingPanel";
@@ -11,9 +11,9 @@ import {
   type HistoryEntry,
 } from "@/components/race/History";
 import { WinModal } from "@/components/race/WinModal";
-import { accelCurve, makeRaceLineup, type RacePhase } from "@/lib/race-engine";
-import type { CarSpec } from "@/components/race/Car";
-import { BarChart3, Gift, Home, Settings, Trophy } from "lucide-react";
+import { lineupForRound } from "@/lib/round-engine";
+import { useRaceRound } from "@/lib/use-race-round";
+import { BarChart3, Gift, Home, Settings, ShieldCheck, Trophy } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,13 +22,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Watch three neon cars battle down a futuristic highway every round and predict the winning colour. Live odds, instant payouts, premium racing visuals.",
+          "Watch three neon cars battle down a futuristic highway every round and predict the winning colour. Provably fair rounds, live odds, instant payouts.",
       },
       { property: "og:title", content: "Speed Predict — Live Neon Car Racing" },
       {
         property: "og:description",
         content:
-          "Pick a colour, watch the live three-lane race and win up to 5×. A AAA-style racing prediction experience.",
+          "Pick a colour, watch the live three-lane race and win up to 5×. Server-timed, provably fair racing predictions.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -37,98 +37,100 @@ export const Route = createFileRoute("/")({
   component: SpeedPredict,
 });
 
-const PHASE_DUR: Record<RacePhase, number> = {
-  waiting: 8,
-  prep: 0.01,
-  lock: 0.01,
-  launch: 0.9,
-  race: 7,
-  finish: 3.5,
-};
-
+const WALLET_KEY = "sp.wallet.v1";
+const START_BALANCE = 12450;
 
 function SpeedPredict() {
-  const hydrated = useHydratedGuard();
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   if (!hydrated) {
     return <div className="h-[100dvh] w-full bg-[#04060c]" />;
   }
   return <Game />;
 }
 
-function useHydratedGuard() {
-  const [h, setH] = useState(false);
-  useEffect(() => setH(true), []);
-  return h;
+interface Bet {
+  roundId: number;
+  lane: number;
+  amount: number;
+}
+
+function buzz(pattern: number | number[]) {
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      /* haptics are best-effort */
+    }
+  }
 }
 
 function Game() {
-  const [phase, setPhase] = useState<RacePhase>("waiting");
-  const [phaseStart, setPhaseStart] = useState(() => performance.now());
-  const [roundId, setRoundId] = useState(328451);
-  const [cars, setCars] = useState<[CarSpec, CarSpec, CarSpec]>(() => makeRaceLineup());
-  const curves = useRef<Array<(t: number) => number>>([
-    accelCurve(1),
-    accelCurve(2),
-    accelCurve(3),
-  ]);
-  const finishOrder = useRef<[number, number, number]>([0, 1, 2]);
-  const progressRef = useRef<[number, number, number]>([0, 0, 0]);
-  const [now, setNow] = useState(performance.now());
-
-  const [balance, setBalance] = useState(12450);
+  const [balance, setBalance] = useState(START_BALANCE);
   const [amount, setAmount] = useState(100);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [confirmed, setConfirmed] = useState(false);
+  const [bet, setBet] = useState<Bet | null>(null);
+  const betRef = useRef<Bet | null>(null);
+  betRef.current = bet;
+
   const [win, setWin] = useState<{ amount: number; colorName: string; color: string } | null>(null);
   const [players, setPlayers] = useState(1245);
   const [totalBets, setTotalBets] = useState(89540);
-  const [history, setHistory] = useState<HistoryEntry[]>(() =>
-    Array.from({ length: 30 }, (_, i) => ({
-      id: 328450 - i,
-      car: makeRaceLineup()[Math.floor(Math.random() * 3)],
-      ago: `${i + 1}m`,
-    })),
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  /* wallet persistence */
+  useEffect(() => {
+    const raw = localStorage.getItem(WALLET_KEY);
+    if (raw) {
+      const n = Number(raw);
+      if (Number.isFinite(n) && n >= 0) setBalance(n);
+    }
+  }, []);
+  useEffect(() => {
+    localStorage.setItem(WALLET_KEY, String(balance));
+  }, [balance]);
+
+  /* settlement — fired once per round by the engine when the race ends */
+  const onSettle = useCallback(
+    (roundId: number, order: [number, number, number]) => {
+      const cars = lineupForRound(roundId);
+      const winnerCar = cars[order[0]];
+      setHistory((h) => [{ id: roundId, car: winnerCar, ago: "now" }, ...h].slice(0, 50));
+
+      const b = betRef.current;
+      if (b && b.roundId === roundId && b.lane === order[0]) {
+        const payout = Math.round(b.amount * cars[b.lane].multiplier);
+        setBalance((v) => v + payout);
+        setWin({
+          amount: payout,
+          colorName: cars[b.lane].colorName.toUpperCase(),
+          color: cars[b.lane].color,
+        });
+        buzz([18, 40, 18, 40, 60]);
+      }
+    },
+    [],
   );
 
-  // Single 60fps loop: writes race progress into a ref (no re-render),
-  // and only nudges React state ~12x/s for countdown + phase logic.
+  const { roundId, phase, countdown, locked, cars, progressRef, winner, fairness } =
+    useRaceRound(onSettle);
+
+  /* clear the ticket when a new round opens; seed history on first load */
   useEffect(() => {
-    let raf = 0;
-    let lastPush = 0;
-    const tick = (ts: number) => {
-      const n = performance.now();
-      const e = (n - phaseStart) / 1000;
-      const localDur = PHASE_DUR[phase];
-      const tt = Math.min(1, e / localDur);
+    setBet((b) => (b && b.roundId !== roundId ? null : b));
+  }, [roundId]);
 
-      if (phase === "race" || phase === "launch") {
-        const localT = phase === "launch" ? tt * 0.06 : 0.06 + tt * 0.94;
-        progressRef.current = [
-          curves.current[0](localT),
-          curves.current[1](localT),
-          curves.current[2](localT),
-        ];
-      } else if (phase === "finish") {
-        const gaps = [1, 0.972, 0.946];
-        const out: [number, number, number] = [0, 0, 0];
-        finishOrder.current.forEach((lane, rank) => {
-          out[lane] = gaps[rank];
-        });
-        progressRef.current = out;
-      } else {
-        progressRef.current = [0, 0, 0];
-      }
-
-
-      if (ts - lastPush > 80) {
-        lastPush = ts;
-        setNow(n);
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [phase, phaseStart]);
+  useEffect(() => {
+    setHistory((h) =>
+      h.length
+        ? h
+        : Array.from({ length: 24 }, (_, i) => {
+            const id = roundId - 1 - i;
+            const lineup = lineupForRound(id);
+            return { id, car: lineup[(id * 7) % 3], ago: `${i + 1}m` };
+          }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -138,92 +140,35 @@ function Game() {
     return () => clearInterval(id);
   }, []);
 
-  const elapsed = (now - phaseStart) / 1000;
-  const dur = PHASE_DUR[phase];
+  const [selected, setSelected] = useState<number | null>(null);
+  useEffect(() => setSelected(null), [roundId]);
 
-
-  useEffect(() => {
-    if (elapsed < dur) return;
-    const nextMap: Record<RacePhase, RacePhase> = {
-      waiting: "prep",
-      prep: "lock",
-      lock: "launch",
-      launch: "race",
-      race: "finish",
-      finish: "waiting",
-    };
-    const next = nextMap[phase];
-
-    if (phase === "race") {
-      const finals = [0, 1, 2].map((i) => curves.current[i](1));
-      const scored = finals.map((v) => v + Math.random() * 0.03 - 0.015);
-      const order = [0, 1, 2].sort((a, b) => scored[b] - scored[a]);
-      finishOrder.current = order as [number, number, number];
-
-      if (confirmed && selected !== null && selected === order[0]) {
-        const payout = Math.round(amount * cars[selected].multiplier);
-        setBalance((b) => b + payout);
-        setWin({
-          amount: payout,
-          colorName: cars[selected].colorName.toUpperCase(),
-          color: cars[selected].color,
-        });
-      }
-      setHistory((h) => [{ id: roundId, car: cars[order[0]], ago: "now" }, ...h].slice(0, 50));
-    }
-
-    if (phase === "finish") {
-      setCars(makeRaceLineup());
-      curves.current = [
-        accelCurve(Math.floor(Math.random() * 100000)),
-        accelCurve(Math.floor(Math.random() * 100000)),
-        accelCurve(Math.floor(Math.random() * 100000)),
-      ];
-      setSelected(null);
-      setConfirmed(false);
-      setRoundId((r) => r + 1);
-    }
-
-    setPhase(next);
-    setPhaseStart(performance.now());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elapsed, dur, phase]);
-
-  const totalPrep = PHASE_DUR.waiting + PHASE_DUR.prep + PHASE_DUR.lock;
-  const into =
-    phase === "waiting"
-      ? elapsed
-      : phase === "prep"
-        ? PHASE_DUR.waiting + elapsed
-        : phase === "lock"
-          ? PHASE_DUR.waiting + PHASE_DUR.prep + elapsed
-          : totalPrep;
-  const countdown = Math.max(0, totalPrep - into);
-
-  const locked =
-    phase === "lock" || phase === "launch" || phase === "race" || phase === "finish";
-  const winner = phase === "finish" ? finishOrder.current[0] : null;
+  const confirmed = bet?.roundId === roundId;
   const hyperMode = cars.some((c) => c.kind === "hyper");
+  const selectedLane = confirmed ? bet!.lane : selected;
 
   const selectedLabel =
-    selected === null
+    selectedLane === null
       ? null
-      : cars[selected].kind === "hyper"
+      : cars[selectedLane].kind === "hyper"
         ? "BLACK"
-        : cars[selected].kind === "small"
+        : cars[selectedLane].kind === "small"
           ? "SMALL"
-          : cars[selected].colorName.toUpperCase();
+          : cars[selectedLane].colorName.toUpperCase();
 
   const placeBet = () => {
     if (selected === null || locked || confirmed) return;
-    if (amount > balance) return;
+    if (amount > balance || amount <= 0) return;
     setBalance((b) => b - amount);
-    setConfirmed(true);
+    setBet({ roundId, lane: selected, amount });
+    buzz(22);
   };
 
   return (
-    <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-[#04060c] text-white flex flex-col">
-      <Header balance={balance} roundId={roundId} />
+    <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden overscroll-none bg-[#04060c] text-white flex flex-col [scrollbar-width:none]">
+      <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
+        <Header balance={balance} roundId={roundId} />
+      </div>
 
       <WinModal
         amount={win?.amount ?? null}
@@ -232,9 +177,8 @@ function Game() {
         onClose={() => setWin(null)}
       />
 
-
       {/* Race stage */}
-      <div className="relative mx-2 rounded-2xl overflow-hidden border border-white/10 h-[46vh] min-h-[280px] shrink-0">
+      <div className="relative mx-2 rounded-2xl overflow-hidden border border-white/10 h-[42vh] min-h-[260px] max-h-[420px] shrink-0">
         <Highway
           cars={cars}
           phase={phase}
@@ -264,9 +208,9 @@ function Game() {
 
       {/* Bet panel */}
       <div className="mt-2 mx-2 glass rounded-2xl p-3 space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-[10px] text-white/45 font-display tracking-[0.15em]">
-            HOW TO PLAY?
+            ROUND #{roundId}
           </span>
           <span className="font-display text-[12px] tracking-[0.15em] text-white">
             PLACE YOUR BET
@@ -280,10 +224,11 @@ function Game() {
 
         <PredictionCards
           cars={cars}
-          selected={selected}
+          selected={selectedLane}
           onSelect={(i) => {
             if (locked || confirmed) return;
             setSelected(i);
+            buzz(10);
           }}
           locked={locked}
           winner={winner}
@@ -299,6 +244,21 @@ function Game() {
           phaseLabel={phase}
           onConfirm={placeBet}
         />
+
+        {/* provably-fair status */}
+        <div className="flex items-center gap-1.5 text-[9px] font-display tracking-[0.14em] text-white/40">
+          <ShieldCheck
+            size={12}
+            className={fairness.verified ? "text-[#26ff9a]" : "text-white/35"}
+          />
+          <span className="truncate">
+            {fairness.verified
+              ? "PROVABLY FAIR · RESULT VERIFIED"
+              : fairness.online
+                ? `COMMIT ${fairness.commit?.slice(0, 12) ?? "…"}`
+                : "OFFLINE MODE · LOCAL SIMULATION"}
+          </span>
+        </div>
       </div>
 
       <div className="mt-2 mx-2 pb-2">
@@ -306,7 +266,10 @@ function Game() {
       </div>
 
       {/* Bottom nav */}
-      <div className="sticky bottom-0 mt-2 z-40 bg-gradient-to-t from-[#04060c] via-[#04060c] to-transparent pt-3 pb-2 px-2">
+      <div
+        className="sticky bottom-0 mt-auto z-40 bg-gradient-to-t from-[#04060c] via-[#04060c] to-transparent pt-3 px-2"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
+      >
         <div className="glass rounded-2xl grid grid-cols-5 py-1.5">
           {[
             { icon: Home, label: "Home", active: true },
@@ -317,7 +280,7 @@ function Game() {
           ].map(({ icon: Icon, label, active }) => (
             <button
               key={label}
-              className={`flex flex-col items-center gap-0.5 py-1 rounded-xl ${
+              className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] ${
                 active ? "text-[#a24bff]" : "text-white/45"
               }`}
               style={active ? { background: "rgba(162,75,255,0.12)" } : undefined}
