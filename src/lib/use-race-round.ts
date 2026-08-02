@@ -64,10 +64,18 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
   const [commits, setCommits] = useState<Record<number, string>>({});
   const [outcomes, setOutcomes] = useState<Record<number, Outcome>>({});
   const [reveals, setReveals] = useState<Record<number, string>>({});
-  const [verified, setVerified] = useState<boolean | null>(null);
+  const [verifiedMap, setVerifiedMap] = useState<Record<number, boolean | null>>({});
   const [online, setOnline] = useState(false);
   const requested = useRef<Set<number>>(new Set());
   const settled = useRef<Set<number>>(new Set());
+
+  // refs mirror state so the render loop never has to restart
+  const outcomesRef = useRef(outcomes);
+  outcomesRef.current = outcomes;
+  const commitsRef = useRef(commits);
+  commitsRef.current = commits;
+  const settleRef = useRef(onSettle);
+  settleRef.current = onSettle;
 
   /* ---- clock sync (mount + on refocus, with drift correction) ---- */
   const sync = useCallback(async () => {
@@ -110,8 +118,10 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
       try {
         const res = await fetchReveal({ data: { roundId: id } });
         reveal = res.reveal;
-        const expected = commits[id] ?? res.commit;
-        ok = (await sha256Hex(reveal)) === expected;
+        const known = commitsRef.current[id];
+        // sha256(reveal) must equal the commitment, and that commitment must
+        // match the one published before betting opened (when we have it).
+        ok = (await sha256Hex(reveal)) === res.commit && (!known || known === res.commit);
         setOnline(true);
       } catch {
         reveal = localReveal(id); // offline fallback keeps the race running
@@ -120,17 +130,19 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
       }
       setReveals((r) => ({ ...r, [id]: reveal }));
       setOutcomes((o) => ({ ...o, [id]: outcomeFromReveal(reveal) }));
-      setVerified(ok);
+      setVerifiedMap((v) => ({ ...v, [id]: ok }));
     },
-    [commits, fetchReveal],
+    [fetchReveal],
   );
+  const resolveRef = useRef(resolve);
+  resolveRef.current = resolve;
 
-  /* ---- single animation loop ---- */
+  /* ---- single animation loop (never restarts) ---- */
   useEffect(() => {
     let raf = 0;
     let lastPhase: RacePhase | null = null;
     let lastRound = -1;
-    let lastTick = 0;
+    let lastTick = -1;
 
     const loop = () => {
       const now = Date.now() + offsetRef.current;
@@ -139,15 +151,14 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
       if (tl.roundId !== lastRound) {
         lastRound = tl.roundId;
         setRoundId(tl.roundId);
-        setVerified(null);
       }
       if (tl.phase !== lastPhase) {
         lastPhase = tl.phase;
         setPhase(tl.phase);
       }
-      if (isLocked(tl.phase)) void resolve(tl.roundId);
+      if (isLocked(tl.phase)) void resolveRef.current(tl.roundId);
 
-      const outcome = outcomes[tl.roundId];
+      const outcome = outcomesRef.current[tl.roundId];
       if (outcome && tl.raceT > 0) {
         progressRef.current = [
           outcome.curves[0](tl.raceT),
@@ -156,9 +167,9 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
         ];
         if (tl.raceT >= 1 && !settled.current.has(tl.roundId)) {
           settled.current.add(tl.roundId);
-          onSettle?.(tl.roundId, outcome.order);
+          settleRef.current?.(tl.roundId, outcome.order);
         }
-      } else {
+      } else if (tl.raceT === 0) {
         progressRef.current = [0, 0, 0];
       }
 
@@ -173,7 +184,7 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [outcomes, resolve, onSettle]);
+  }, []);
 
   const cars = useMemo(() => lineupForRound(roundId), [roundId]);
   const outcome = outcomes[roundId] ?? null;
@@ -191,7 +202,7 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
     fairness: {
       commit: commits[roundId] ?? null,
       reveal: reveals[roundId] ?? null,
-      verified,
+      verified: verifiedMap[roundId] ?? null,
       online,
     },
   } satisfies RaceRound;
