@@ -164,12 +164,15 @@ export function Highway({
         warp.style.setProperty("--warp-speed", `${(0.62 - intensity * 0.4).toFixed(3)}s`);
       }
 
-      // ---- road flow rate follows the pack speed ----
+      // ---- road flow: only moves when the cars actually move ----
       const road = roadRef.current;
       if (road) {
-        const dur = racing ? Math.max(0.34, 0.95 - Math.min(fastest, 0.45) * 1.4) : 1.9;
+        const moving = racing && fastest > 0.0015;
+        const dur = moving ? Math.max(0.34, 0.95 - Math.min(fastest, 0.45) * 1.4) : 1.9;
         road.style.setProperty("--dash-dur", `${dur.toFixed(3)}s`);
+        road.style.setProperty("--dash-play", moving ? "running" : "paused");
       }
+
 
       // ---- launch flash decay ----
       const fl = flashRef.current;
@@ -197,7 +200,7 @@ export function Highway({
   );
 
   const throttle =
-    phase === "launch" ? 1 : phase === "race" ? 0.85 : phase === "finish" ? 0.15 : 0.05;
+    phase === "launch" ? 1 : phase === "race" ? 0.85 : phase === "finish" ? 0.06 : 0.02;
 
   // F1 start lights: 5 lights arm across `prep`, all out at lights-out.
   const prepSecs = PHASE_MS.prep / 1000;
