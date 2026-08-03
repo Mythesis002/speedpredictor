@@ -164,12 +164,15 @@ export function Highway({
         warp.style.setProperty("--warp-speed", `${(0.62 - intensity * 0.4).toFixed(3)}s`);
       }
 
-      // ---- road flow rate follows the pack speed ----
+      // ---- road flow: only moves when the cars actually move ----
       const road = roadRef.current;
       if (road) {
-        const dur = racing ? Math.max(0.34, 0.95 - Math.min(fastest, 0.45) * 1.4) : 1.9;
+        const moving = racing && fastest > 0.0015;
+        const dur = moving ? Math.max(0.34, 0.95 - Math.min(fastest, 0.45) * 1.4) : 1.9;
         road.style.setProperty("--dash-dur", `${dur.toFixed(3)}s`);
+        road.style.setProperty("--dash-play", moving ? "running" : "paused");
       }
+
 
       // ---- launch flash decay ----
       const fl = flashRef.current;
