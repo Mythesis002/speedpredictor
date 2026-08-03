@@ -139,21 +139,75 @@ export const Car = memo(function Car({
 
         {/* ---- rear tyres, wide and squat ---- */}
         <g>
+          <clipPath id={`tyreL-${uid}`}>
+            <path d="M14 104 q-10 32 -1 62 h34 q-9-32 -3-64 z" />
+          </clipPath>
+          <clipPath id={`tyreR-${uid}`}>
+            <path d="M246 104 q10 32 1 62 h-34 q9-32 3-64 z" />
+          </clipPath>
           <path d="M14 104 q-10 32 -1 62 h34 q-9-32 -3-64 z" fill={`url(#tyre-${uid})`} />
           <path d="M246 104 q10 32 1 62 h-34 q9-32 3-64 z" fill={`url(#tyre-${uid})`} />
-          <g opacity={0.7 - t * 0.55}>
-            {[116, 128, 140, 152, 162].map((y) => (
-              <g key={y}>
-                <rect x="14" y={y} width="30" height="2.2" rx="1.1" fill="#333a49" opacity="0.75" />
-                <rect x="216" y={y} width="30" height="2.2" rx="1.1" fill="#333a49" opacity="0.75" />
+
+          {/* rolling tread: ribs scroll down the sidewall, rate follows throttle */}
+          {[`tyreL-${uid}`, `tyreR-${uid}`].map((clip, side) => (
+            <g key={clip} clipPath={`url(#${clip})`}>
+              <g
+                style={{
+                  animation: `tread-roll ${wheelDur}s linear infinite`,
+                  animationPlayState: rolling ? "running" : "paused",
+                }}
+                opacity={0.72 - t * 0.42}
+              >
+                {[92, 104, 116, 128, 140, 152, 164].map((y) => (
+                  <rect
+                    key={y}
+                    x={side === 0 ? 8 : 210}
+                    y={y}
+                    width="42"
+                    height="3"
+                    rx="1.5"
+                    fill="#3b4354"
+                  />
+                ))}
               </g>
-            ))}
-          </g>
+              {/* hub marker rotating with the wheel makes the spin readable */}
+              <ellipse
+                cx={side === 0 ? 30 : 230}
+                cy="134"
+                rx="9"
+                ry="9"
+                fill="#0a0d13"
+                stroke="#5b6579"
+                strokeWidth="1.2"
+                opacity={0.9 - t * 0.5}
+              />
+              <g
+                style={{
+                  transformOrigin: `${side === 0 ? 30 : 230}px 134px`,
+                  animation: `spin ${Math.max(0.12, wheelDur * 1.6)}s linear infinite`,
+                  animationPlayState: rolling ? "running" : "paused",
+                }}
+                opacity={0.85 - t * 0.55}
+              >
+                <rect
+                  x={side === 0 ? 29 : 229}
+                  y="126"
+                  width="2"
+                  height="16"
+                  rx="1"
+                  fill="#78welp"
+                />
+              </g>
+            </g>
+          ))}
+
+          {/* speed blur over the wheels at high throttle */}
           <g opacity={t * 0.55}>
             <rect x="14" y="112" width="32" height="52" rx="8" fill="#8b96ad" opacity="0.22" />
             <rect x="214" y="112" width="32" height="52" rx="8" fill="#8b96ad" opacity="0.22" />
           </g>
         </g>
+
 
         {/* ---- main body ---- */}
         <path d={body} fill={`url(#paint-${uid})`} />
