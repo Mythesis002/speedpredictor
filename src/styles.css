@@ -193,7 +193,14 @@
 .dash {
   --dash-dur: 1.9s;
   animation: dash-run var(--dash-dur) linear infinite;
+  animation-play-state: var(--dash-play, running);
 }
+/* wheel tread scroll — sells real rolling motion */
+@keyframes tread-roll {
+  from { transform: translateY(0); }
+  to   { transform: translateY(12px); }
+}
+
 @keyframes streak {
   0% { transform: translateY(0) scaleY(0.4); opacity: 0; }
   30% { opacity: 0.8; }
