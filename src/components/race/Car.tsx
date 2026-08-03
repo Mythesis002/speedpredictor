@@ -195,7 +195,7 @@ export const Car = memo(function Car({
                   width="2"
                   height="16"
                   rx="1"
-                  fill="#78welp"
+                  fill="#8f9ab0"
                 />
               </g>
             </g>
