@@ -68,14 +68,6 @@ export const Car = memo(function Car({
   const lampOpacity = braking ? 1 : 0.6 + t * 0.4;
   const bloom = braking ? 0.55 : 0.12 + t * 0.32;
 
-  // tread scroll: stopped when the car is stopped, faster as throttle rises
-  const rolling = t > 0.06;
-  const wheelAnim: React.CSSProperties = {
-    animation: `wheel-roll ${Math.max(0.07, 0.62 - t * 0.56).toFixed(3)}s linear infinite`,
-    animationPlayState: rolling ? "running" : "paused",
-    willChange: "transform",
-  };
-
   // widebody silhouette (shared shape, scaled by class via viewBox usage)
   const body =
     "M20 100 q6-24 30-32 q18-26 80-26 t80 26 q24 8 30 32 l8 34 q4 22 -16 26 l-26 5 h-152 l-26-5 q-20-4 -16-26 z";
@@ -145,39 +137,18 @@ export const Car = memo(function Car({
         <ellipse cx="130" cy="178" rx="104" ry="13" fill="#000" opacity="0.62" />
         <ellipse cx="130" cy="188" rx="112" ry="24" fill={`url(#floor-${uid})`} />
 
-        {/* ---- rear tyres, wide and squat (tread rolls with speed) ---- */}
+        {/* ---- rear tyres, wide and squat ---- */}
         <g>
-          <clipPath id={`tyreL-${uid}`}>
-            <path d="M14 104 q-10 32 -1 62 h34 q-9-32 -3-64 z" />
-          </clipPath>
-          <clipPath id={`tyreR-${uid}`}>
-            <path d="M246 104 q10 32 1 62 h-34 q9-32 3-64 z" />
-          </clipPath>
           <path d="M14 104 q-10 32 -1 62 h34 q-9-32 -3-64 z" fill={`url(#tyre-${uid})`} />
           <path d="M246 104 q10 32 1 62 h-34 q9-32 3-64 z" fill={`url(#tyre-${uid})`} />
-
-          {[
-            { clip: `tyreL-${uid}`, x: 6 },
-            { clip: `tyreR-${uid}`, x: 208 },
-          ].map(({ clip, x }) => (
-            <g key={clip} clipPath={`url(#${clip})`}>
-              <g style={wheelAnim} opacity={0.8 - t * 0.45}>
-                {Array.from({ length: 14 }, (_, k) => 96 + k * 12).map((y) => (
-                  <rect
-                    key={y}
-                    x={x}
-                    y={y}
-                    width="46"
-                    height="3"
-                    rx="1.5"
-                    fill="#39414f"
-                    opacity="0.8"
-                  />
-                ))}
+          <g opacity={0.7 - t * 0.55}>
+            {[116, 128, 140, 152, 162].map((y) => (
+              <g key={y}>
+                <rect x="14" y={y} width="30" height="2.2" rx="1.1" fill="#333a49" opacity="0.75" />
+                <rect x="216" y={y} width="30" height="2.2" rx="1.1" fill="#333a49" opacity="0.75" />
               </g>
-            </g>
-          ))}
-
+            ))}
+          </g>
           <g opacity={t * 0.55}>
             <rect x="14" y="112" width="32" height="52" rx="8" fill="#8b96ad" opacity="0.22" />
             <rect x="214" y="112" width="32" height="52" rx="8" fill="#8b96ad" opacity="0.22" />
