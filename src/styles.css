@@ -192,7 +192,14 @@
 /* flow rate is written from the render loop via --dash-dur */
 .dash {
   --dash-dur: 1.9s;
+  --dash-play: paused;
   animation: dash-run var(--dash-dur) linear infinite;
+  animation-play-state: var(--dash-play);
+}
+/* tyre tread scroll — 12px is the bar pitch in the car SVG */
+@keyframes wheel-roll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(12px); }
 }
 @keyframes streak {
   0% { transform: translateY(0) scaleY(0.4); opacity: 0; }
