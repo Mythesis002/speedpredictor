@@ -67,6 +67,10 @@ export const Car = memo(function Car({
   const t = Math.max(0, Math.min(1, throttle));
   const lampOpacity = braking ? 1 : 0.6 + t * 0.4;
   const bloom = braking ? 0.55 : 0.12 + t * 0.32;
+  // wheels only turn when there is throttle — a parked car must look parked
+  const rolling = t > 0.12;
+  const wheelDur = Math.max(0.07, 0.5 - t * 0.42);
+
 
   // widebody silhouette (shared shape, scaled by class via viewBox usage)
   const body =
