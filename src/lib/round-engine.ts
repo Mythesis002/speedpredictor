@@ -23,13 +23,14 @@ export type RacePhase = "waiting" | "prep" | "lock" | "launch" | "race" | "finis
 
 /** Phase durations in ms. The sum is one full round. */
 export const PHASE_MS: Record<RacePhase, number> = {
-  waiting: 9000,
+  waiting: 3000,
   prep: 3000,
   lock: 600,
   launch: 1400,
-  race: 7600,
-  finish: 4400,
+  race: 9600,
+  finish: 4000,
 };
+
 
 export const PHASE_ORDER: RacePhase[] = [
   "waiting",
