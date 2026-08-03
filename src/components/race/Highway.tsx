@@ -200,7 +200,7 @@ export function Highway({
   );
 
   const throttle =
-    phase === "launch" ? 1 : phase === "race" ? 0.85 : phase === "finish" ? 0.15 : 0.05;
+    phase === "launch" ? 1 : phase === "race" ? 0.85 : phase === "finish" ? 0.06 : 0.02;
 
   // F1 start lights: 5 lights arm across `prep`, all out at lights-out.
   const prepSecs = PHASE_MS.prep / 1000;
