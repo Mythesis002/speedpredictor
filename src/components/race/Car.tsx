@@ -68,6 +68,14 @@ export const Car = memo(function Car({
   const lampOpacity = braking ? 1 : 0.6 + t * 0.4;
   const bloom = braking ? 0.55 : 0.12 + t * 0.32;
 
+  // tread scroll: stopped when the car is stopped, faster as throttle rises
+  const rolling = t > 0.06;
+  const wheelAnim: React.CSSProperties = {
+    animation: `wheel-roll ${Math.max(0.07, 0.62 - t * 0.56).toFixed(3)}s linear infinite`,
+    animationPlayState: rolling ? "running" : "paused",
+    willChange: "transform",
+  };
+
   // widebody silhouette (shared shape, scaled by class via viewBox usage)
   const body =
     "M20 100 q6-24 30-32 q18-26 80-26 t80 26 q24 8 30 32 l8 34 q4 22 -16 26 l-26 5 h-152 l-26-5 q-20-4 -16-26 z";
