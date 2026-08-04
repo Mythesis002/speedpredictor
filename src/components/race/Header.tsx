@@ -44,9 +44,14 @@ export function Header({ balance, roundId, onTopUp }: Props) {
         <span className="font-display text-[12px] tabular text-white">
           ₹<RollingNumber value={balance} />
         </span>
-        <span className="w-6 h-6 rounded-lg grid place-items-center bg-[#1db954] text-black">
+        <button
+          onClick={onTopUp}
+          aria-label="Add funds"
+          className="w-6 h-6 rounded-lg grid place-items-center bg-[#1db954] text-black active:scale-95"
+        >
           <Plus size={13} />
-        </span>
+        </button>
+
       </div>
 
       <button className="h-8 w-8 rounded-xl glass grid place-items-center shrink-0">
