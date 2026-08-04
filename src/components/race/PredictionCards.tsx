@@ -49,16 +49,17 @@ export function PredictionCards({
                   : `inset 0 0 24px ${car.color}18`,
             }}
           >
-            {tag && (
+            {tag && !(isSelected && confirmed) && (
               <span className="absolute left-1 top-1 z-10 rounded-md bg-black/55 px-1.5 py-[1px] text-[7.5px] font-display tracking-[0.16em] text-white/70">
                 {tag}
               </span>
             )}
             {isSelected && confirmed && (
-              <span className="absolute right-1 top-1 z-10 rounded-md bg-[#26ff9a] px-1.5 py-[1px] text-[7.5px] font-display tracking-[0.12em] text-black">
+              <span className="absolute left-1 top-1 z-10 rounded-md bg-[#26ff9a] px-1.5 py-[1px] text-[7.5px] font-display tracking-[0.12em] text-black">
                 YOUR PICK
               </span>
             )}
+
 
             <div className="relative flex flex-col items-center px-1 pt-2.5 pb-2">
               <div className="scale-[0.92] -mt-1">
