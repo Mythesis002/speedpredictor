@@ -235,13 +235,14 @@ function Game() {
         )}
 
         {hyperMode && phase !== "finish" && (
-          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 z-30">
+          <div className="absolute bottom-1.5 right-2 z-30">
             <div
-              className="px-3 py-1 rounded-full glass font-display text-[9px] tracking-[0.28em] animate-pulse-glow"
+              className="whitespace-nowrap rounded-full glass px-2.5 py-1 font-display text-[8px] tracking-[0.2em] animate-pulse-glow"
               style={{ color: "#ffd66b", borderColor: "#ffd66b55" }}
             >
-              ⚡ HYPERCAR · {cars.find((c) => c.kind === "hyper")?.multiplier ?? 5}× PAYOUT
+              ⚡ HYPER {cars.find((c) => c.kind === "hyper")?.multiplier ?? 5}×
             </div>
+
           </div>
         )}
       </div>
