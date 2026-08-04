@@ -12,7 +12,9 @@ import {
 } from "@/components/race/History";
 import { WinModal } from "@/components/race/WinModal";
 import { lineupForRound } from "@/lib/round-engine";
+import { carLabel, formatINR } from "@/lib/car-label";
 import { useRaceRound } from "@/lib/use-race-round";
+
 import { BarChart3, Gift, Home, Settings, ShieldCheck, Trophy } from "lucide-react";
 
 export const Route = createFileRoute("/")({
