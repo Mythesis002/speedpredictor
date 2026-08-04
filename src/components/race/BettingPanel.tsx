@@ -78,17 +78,18 @@ export function BettingPanel({
               : "0 10px 26px -12px rgba(255,190,40,0.9)",
           }}
         >
-          <span className="relative z-10">
+          <span className="relative z-10 block truncate px-1">
             {confirmed
-              ? `BET PLACED · ${selectedLabel}`
+              ? "BET PLACED"
               : locked
                 ? "BETS CLOSED"
                 : insufficient
                   ? "LOW BALANCE"
                   : selectedLabel
-                    ? `BET ${formatINR(amount)} · ${selectedLabel}`
+                    ? `BET ${formatINR(amount)}`
                     : "SELECT A CAR"}
           </span>
+
           {!disabled && <span className="absolute inset-0 animate-shimmer" />}
         </button>
       </div>
