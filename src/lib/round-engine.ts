@@ -246,17 +246,41 @@ export interface Outcome {
 
 export type Curve = (t: number) => number;
 
-/** Build the full outcome from a revealed per-round secret. */
-export function outcomeFromReveal(reveal: string): Outcome {
+/**
+ * Build the full outcome from a revealed per-round secret.
+ *
+ * When `roundId` is supplied the finishing order is drawn against the public
+ * per-lane win probabilities, so the published odds are the real odds.
+ */
+export function outcomeFromReveal(reveal: string, roundId?: number): Outcome {
   const rnd = rngFrom(`outcome:${reveal}`);
   const seeds = [0, 1, 2].map(() => Math.floor(rnd() * 0xffffffff));
 
-  // deterministic finishing order (Fisher–Yates on the same stream)
-  const order = [0, 1, 2];
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(rnd() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
+  // deterministic finishing order, weighted by each lane's win probability
+  const probs =
+    roundId === undefined
+      ? [1 / 3, 1 / 3, 1 / 3]
+      : winWeights(lineupForRound(roundId).map((c) => c.kind));
+
+  const pool = [0, 1, 2];
+  const weights = [...probs];
+  const order: number[] = [];
+  while (pool.length) {
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = rnd() * total;
+    let pick = pool.length - 1;
+    for (let i = 0; i < pool.length; i++) {
+      r -= weights[i];
+      if (r <= 0) {
+        pick = i;
+        break;
+      }
+    }
+    order.push(pool[pick]);
+    pool.splice(pick, 1);
+    weights.splice(pick, 1);
   }
+
 
   // final margins: P1 = 1.0, then tight, race-like gaps
   const margins: number[] = [0, 0, 0];
