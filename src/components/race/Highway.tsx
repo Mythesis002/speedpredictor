@@ -11,6 +11,8 @@ interface Props {
   winnerLane: number | null;
   hyperMode: boolean;
   countdown: number;
+  /** lane the player has money on, so they can follow it at a glance */
+  myLane?: number | null;
   /** seconds elapsed inside the current phase, for VFX timing */
   phaseElapsedRef?: { current: number };
 }
@@ -24,7 +26,9 @@ export function Highway({
   winnerLane,
   hyperMode,
   countdown,
+  myLane = null,
 }: Props) {
+
   const hydrated = useHydrated();
   const racing = phase === "launch" || phase === "race";
   const staging = phase === "prep" || phase === "lock";
