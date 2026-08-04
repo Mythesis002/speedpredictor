@@ -240,7 +240,7 @@ function Game() {
               className="px-3 py-1 rounded-full glass font-display text-[9px] tracking-[0.28em] animate-pulse-glow"
               style={{ color: "#ffd66b", borderColor: "#ffd66b55" }}
             >
-              ⚡ HYPERCAR · 5× PAYOUT
+              ⚡ HYPERCAR · {cars.find((c) => c.kind === "hyper")?.multiplier ?? 5}× PAYOUT
             </div>
           </div>
         )}
