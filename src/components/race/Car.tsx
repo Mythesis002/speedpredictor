@@ -157,9 +157,13 @@ export const Car = memo(function Car({
             <g key={clip} clipPath={`url(#${clip})`}>
               <g
                 style={{
-                  animation: `tread-roll ${wheelDur}s linear infinite`,
+                  animationName: "tread-roll",
+                  animationDuration: `${wheelDur}s`,
+                  animationTimingFunction: "linear",
+                  animationIterationCount: "infinite",
                   animationPlayState: rolling ? "running" : "paused",
                 }}
+
                 opacity={0.72 - t * 0.42}
               >
                 {[92, 104, 116, 128, 140, 152, 164].map((y) => (
