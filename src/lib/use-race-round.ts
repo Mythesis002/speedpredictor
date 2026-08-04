@@ -129,7 +129,7 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
         setOnline(false);
       }
       setReveals((r) => ({ ...r, [id]: reveal }));
-      setOutcomes((o) => ({ ...o, [id]: outcomeFromReveal(reveal) }));
+      setOutcomes((o) => ({ ...o, [id]: outcomeFromReveal(reveal, id) }));
       setVerifiedMap((v) => ({ ...v, [id]: ok }));
     },
     [fetchReveal],
@@ -156,7 +156,11 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
         lastPhase = tl.phase;
         setPhase(tl.phase);
       }
-      if (isLocked(tl.phase)) void resolveRef.current(tl.roundId);
+      // small grace period after lock: the server refuses (425) if our clock
+      // is a few ms ahead of its own lock boundary.
+      if (isLocked(tl.phase) && (tl.phase !== "lock" || tl.elapsed > 0.35))
+        void resolveRef.current(tl.roundId);
+
 
       const outcome = outcomesRef.current[tl.roundId];
       if (outcome && tl.raceT > 0) {

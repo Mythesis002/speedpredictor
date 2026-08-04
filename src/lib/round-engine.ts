@@ -164,32 +164,52 @@ export const COLORS: { name: string; hex: string }[] = [
   { name: "Silver", hex: "#c9d1dc" },
 ];
 
-export const MULTIPLIER: Record<CarKind, number> = {
-  normal: 1.5,
-  small: 0.5,
-  hyper: 5,
+/**
+ * Odds model.
+ *
+ * Every car on the grid has a *different chance* of winning, and the payout is
+ * derived from that chance rather than being an arbitrary number:
+ *
+ *   multiplier = RTP / winProbability
+ *
+ * This keeps the house edge constant and — crucially — guarantees every payout
+ * is greater than the stake, so "winning" can never lose a player money.
+ * Because the grid is public before betting opens, anyone can recompute both
+ * the odds and the win probabilities for a round.
+ */
+export const RTP = 0.95;
+
+export const KIND_WEIGHT: Record<CarKind, number> = {
+  normal: 1,
+  small: 1.4, // lighter car, wins more often, pays less
+  hyper: 0.45, // rare winner, big payout
 };
+
+/** Win probability per lane for a grid, in lane order. */
+export function winWeights(kinds: CarKind[]): number[] {
+  const w = kinds.map((k) => KIND_WEIGHT[k]);
+  const total = w.reduce((a, b) => a + b, 0);
+  return w.map((x) => x / total);
+}
+
+const roundOdds = (p: number) => Math.round((RTP / p) * 100) / 100;
 
 /** Publicly derivable grid for a round — identical on server and client. */
 export function lineupForRound(roundId: number): [CarSpec, CarSpec, CarSpec] {
   const rnd = rngFrom(`grid:${roundId}`);
   const used = new Set<string>();
   let hyperUsed = false;
-  const cars: CarSpec[] = [];
+  const kinds: CarKind[] = [];
+  const paint: { color: string; colorName: string }[] = [];
 
   for (let lane = 0; lane < 3; lane++) {
     const roll = rnd();
-    let kind: CarKind = roll < 0.035 && !hyperUsed ? "hyper" : roll < 0.18 ? "small" : "normal";
+    const kind: CarKind = roll < 0.035 && !hyperUsed ? "hyper" : roll < 0.18 ? "small" : "normal";
     if (kind === "hyper") hyperUsed = true;
+    kinds.push(kind);
 
     if (kind === "hyper") {
-      cars.push({
-        id: `r${roundId}-l${lane}`,
-        color: "#0b0b10",
-        colorName: "Black",
-        kind: "hyper",
-        multiplier: MULTIPLIER.hyper,
-      });
+      paint.push({ color: "#0b0b10", colorName: "Black" });
       continue;
     }
 
@@ -199,16 +219,19 @@ export function lineupForRound(roundId: number): [CarSpec, CarSpec, CarSpec] {
       c = COLORS[Math.floor(rnd() * COLORS.length)];
     }
     used.add(c.name);
-    cars.push({
-      id: `r${roundId}-l${lane}`,
-      color: c.hex,
-      colorName: c.name,
-      kind,
-      multiplier: MULTIPLIER[kind],
-    });
+    paint.push({ color: c.hex, colorName: c.name });
   }
-  return cars as [CarSpec, CarSpec, CarSpec];
+
+  const probs = winWeights(kinds);
+  return kinds.map((kind, lane) => ({
+    id: `r${roundId}-l${lane}`,
+    color: paint[lane].color,
+    colorName: paint[lane].colorName,
+    kind,
+    multiplier: roundOdds(probs[lane]),
+  })) as [CarSpec, CarSpec, CarSpec];
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Outcome (secret until reveal)                                       */
@@ -223,17 +246,41 @@ export interface Outcome {
 
 export type Curve = (t: number) => number;
 
-/** Build the full outcome from a revealed per-round secret. */
-export function outcomeFromReveal(reveal: string): Outcome {
+/**
+ * Build the full outcome from a revealed per-round secret.
+ *
+ * When `roundId` is supplied the finishing order is drawn against the public
+ * per-lane win probabilities, so the published odds are the real odds.
+ */
+export function outcomeFromReveal(reveal: string, roundId?: number): Outcome {
   const rnd = rngFrom(`outcome:${reveal}`);
   const seeds = [0, 1, 2].map(() => Math.floor(rnd() * 0xffffffff));
 
-  // deterministic finishing order (Fisher–Yates on the same stream)
-  const order = [0, 1, 2];
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(rnd() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
+  // deterministic finishing order, weighted by each lane's win probability
+  const probs =
+    roundId === undefined
+      ? [1 / 3, 1 / 3, 1 / 3]
+      : winWeights(lineupForRound(roundId).map((c) => c.kind));
+
+  const pool = [0, 1, 2];
+  const weights = [...probs];
+  const order: number[] = [];
+  while (pool.length) {
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = rnd() * total;
+    let pick = pool.length - 1;
+    for (let i = 0; i < pool.length; i++) {
+      r -= weights[i];
+      if (r <= 0) {
+        pick = i;
+        break;
+      }
+    }
+    order.push(pool[pick]);
+    pool.splice(pick, 1);
+    weights.splice(pick, 1);
   }
+
 
   // final margins: P1 = 1.0, then tight, race-like gaps
   const margins: number[] = [0, 0, 0];
