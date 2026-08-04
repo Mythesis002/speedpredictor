@@ -40,25 +40,25 @@ export function History({ entries }: { entries: HistoryEntry[] }) {
   );
 }
 
-/** Floating left rail: recent round winners. */
+/** Floating left rail: recent round winners. Kept slim so it never hides the track. */
 export function RecentRounds({ entries }: { entries: HistoryEntry[] }) {
   return (
-    <div className="glass rounded-xl p-1.5 w-[68px]">
-      <div className="text-[8px] font-display tracking-[0.15em] text-white/55 px-1 pb-1">
+    <div className="glass rounded-xl p-1 w-[54px] pointer-events-none">
+      <div className="text-[7px] font-display tracking-[0.15em] text-white/50 px-0.5 pb-1">
         RECENT
       </div>
-      <div className="space-y-1">
-        {entries.slice(0, 6).map((e, i) => (
+      <div className="space-y-[3px]">
+        {entries.slice(0, 4).map((e, i) => (
           <div
             key={`${e.id}-${i}`}
-            className="flex items-center justify-between rounded-md bg-white/5 px-1.5 py-1"
+            className="flex items-center justify-between rounded bg-white/5 px-1 py-[2px]"
           >
-            <span className="text-[8px] text-white/45 tabular">#{String(e.id).slice(-3)}</span>
+            <span className="text-[7.5px] text-white/40 tabular">{String(e.id).slice(-3)}</span>
             <span
-              className="w-2.5 h-2.5 rounded-full"
+              className="w-2 h-2 rounded-full"
               style={{
                 background: e.car.color,
-                boxShadow: `0 0 7px ${e.car.color}`,
+                boxShadow: `0 0 6px ${e.car.color}`,
                 border: "1px solid rgba(255,255,255,0.2)",
               }}
             />
@@ -73,30 +73,29 @@ export function RecentRounds({ entries }: { entries: HistoryEntry[] }) {
 export function LiveStats({
   players,
   totalBets,
-  biggestWin,
 }: {
   players: number;
   totalBets: number;
-  biggestWin: number;
+  biggestWin?: number;
 }) {
   const rows = [
     { label: "Players", value: players.toLocaleString("en-IN") },
-    { label: "Total Bets", value: `₹${totalBets.toLocaleString("en-IN")}` },
-    { label: "Biggest Win", value: `₹${biggestWin.toLocaleString("en-IN")}` },
+    { label: "Bets", value: `₹${Math.round(totalBets / 1000)}K` },
   ];
   return (
-    <div className="glass rounded-xl p-1.5 w-[92px]">
-      <div className="text-[8px] font-display tracking-[0.15em] text-white/55 px-1 pb-1">
-        LIVE STATS
+    <div className="glass rounded-xl p-1 w-[68px] pointer-events-none">
+      <div className="text-[7px] font-display tracking-[0.15em] text-white/50 px-0.5 pb-1">
+        LIVE
       </div>
-      <div className="space-y-1">
+      <div className="space-y-[3px]">
         {rows.map((r) => (
-          <div key={r.label} className="rounded-md bg-white/5 px-1.5 py-1 leading-tight">
-            <div className="text-[7.5px] text-white/45">{r.label}</div>
-            <div className="text-[10px] font-display tabular text-white">{r.value}</div>
+          <div key={r.label} className="rounded bg-white/5 px-1 py-[2px] leading-tight">
+            <div className="text-[7px] text-white/40">{r.label}</div>
+            <div className="text-[9.5px] font-display tabular text-white">{r.value}</div>
           </div>
         ))}
       </div>
     </div>
   );
 }
+
