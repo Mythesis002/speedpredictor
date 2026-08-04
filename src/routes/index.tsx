@@ -89,27 +89,41 @@ function Game() {
     localStorage.setItem(WALLET_KEY, String(balance));
   }, [balance]);
 
-  /* settlement — fired once per round by the engine when the race ends */
-  const onSettle = useCallback(
-    (roundId: number, order: [number, number, number]) => {
-      const cars = lineupForRound(roundId);
-      const winnerCar = cars[order[0]];
-      setHistory((h) => [{ id: roundId, car: winnerCar, ago: "now" }, ...h].slice(0, 50));
+  /* result banner (wins and losses both get feedback) */
+  const [result, setResult] = useState<{ won: boolean; text: string; color: string } | null>(null);
+  useEffect(() => {
+    if (!result) return;
+    const id = setTimeout(() => setResult(null), 5000);
+    return () => clearTimeout(id);
+  }, [result]);
 
-      const b = betRef.current;
-      if (b && b.roundId === roundId && b.lane === order[0]) {
-        const payout = Math.round(b.amount * cars[b.lane].multiplier);
-        setBalance((v) => v + payout);
-        setWin({
-          amount: payout,
-          colorName: cars[b.lane].colorName.toUpperCase(),
-          color: cars[b.lane].color,
-        });
-        buzz([18, 40, 18, 40, 60]);
-      }
-    },
-    [],
-  );
+  /* settlement — fired once per round by the engine when the race ends */
+  const onSettle = useCallback((roundId: number, order: [number, number, number]) => {
+    const cars = lineupForRound(roundId);
+    const winnerCar = cars[order[0]];
+    setHistory((h) => [{ id: roundId, car: winnerCar, ago: "now" }, ...h].slice(0, 50));
+
+    const b = betRef.current;
+    if (!b || b.roundId !== roundId) return;
+
+    if (b.lane === order[0]) {
+      const payout = Math.round(b.amount * cars[b.lane].multiplier);
+      setBalance((v) => v + payout);
+      setWin({
+        amount: payout,
+        colorName: carLabel(cars[b.lane]),
+        color: cars[b.lane].color,
+      });
+      buzz([18, 40, 18, 40, 60]);
+    } else {
+      setResult({
+        won: false,
+        text: `${carLabel(winnerCar)} won · you lost ${formatINR(b.amount)}`,
+        color: winnerCar.color,
+      });
+      buzz(30);
+    }
+  }, []);
 
   const { roundId, phase, countdown, locked, cars, progressRef, winner, fairness } =
     useRaceRound(onSettle);
@@ -147,14 +161,13 @@ function Game() {
   const hyperMode = cars.some((c) => c.kind === "hyper");
   const selectedLane = confirmed ? bet!.lane : selected;
 
-  const selectedLabel =
-    selectedLane === null
-      ? null
-      : cars[selectedLane].kind === "hyper"
-        ? "BLACK"
-        : cars[selectedLane].kind === "small"
-          ? "SMALL"
-          : cars[selectedLane].colorName.toUpperCase();
+  const selectedLabel = selectedLane === null ? null : carLabel(cars[selectedLane]);
+  const selectedMultiplier = selectedLane === null ? null : cars[selectedLane].multiplier;
+
+  /* keep the stake inside the wallet at all times */
+  useEffect(() => {
+    setAmount((a) => Math.max(100, Math.min(a, Math.max(100, balance))));
+  }, [balance]);
 
   const placeBet = () => {
     if (selected === null || locked || confirmed) return;
@@ -164,10 +177,17 @@ function Game() {
     buzz(22);
   };
 
+  const topUp = () => {
+    setBalance((b) => b + 5000);
+    buzz(14);
+  };
+
+  const raceLive = phase === "launch" || phase === "race";
+
   return (
     <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden overscroll-none bg-[#04060c] text-white flex flex-col [scrollbar-width:none]">
       <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
-        <Header balance={balance} roundId={roundId} />
+        <Header balance={balance} roundId={roundId} onTopUp={topUp} />
       </div>
 
       <WinModal
@@ -186,13 +206,31 @@ function Game() {
           winnerLane={winner}
           hyperMode={hyperMode}
           countdown={countdown}
+          myLane={confirmed ? bet!.lane : null}
         />
-        <div className="absolute left-1.5 top-1.5 z-30">
+        <div
+          className={`absolute left-1.5 top-1.5 z-30 transition-opacity duration-500 ${raceLive ? "opacity-25" : "opacity-100"}`}
+        >
           <RecentRounds entries={history} />
         </div>
-        <div className="absolute right-1.5 top-1.5 z-30">
-          <LiveStats players={players} totalBets={totalBets} biggestWin={45000} />
+        <div
+          className={`absolute right-1.5 top-1.5 z-30 transition-opacity duration-500 ${raceLive ? "opacity-25" : "opacity-100"}`}
+        >
+          <LiveStats players={players} totalBets={totalBets} />
         </div>
+
+        {/* active ticket chip — always visible while the race runs */}
+        {confirmed && (
+          <div className="absolute bottom-1.5 left-1.5 z-30">
+            <div
+              className="rounded-full px-2 py-1 glass font-display text-[8.5px] tracking-[0.16em]"
+              style={{ color: cars[bet!.lane].color, borderColor: `${cars[bet!.lane].color}66` }}
+            >
+              {formatINR(bet!.amount)} ON {carLabel(cars[bet!.lane])} ·{" "}
+              {formatINR(bet!.amount * cars[bet!.lane].multiplier)}
+            </div>
+          </div>
+        )}
 
         {hyperMode && phase !== "finish" && (
           <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 z-30">
@@ -206,6 +244,22 @@ function Game() {
         )}
       </div>
 
+      {/* Result banner */}
+      {result && (
+        <div className="mx-2 mt-2 animate-fade-in">
+          <div
+            className="rounded-xl px-3 py-2 text-center font-display text-[10px] tracking-[0.18em]"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              boxShadow: `inset 0 0 0 1px ${result.color}44`,
+              color: "rgba(255,255,255,0.75)",
+            }}
+          >
+            {result.text.toUpperCase()}
+          </div>
+        </div>
+      )}
+
       {/* Bet panel */}
       <div className="mt-2 mx-2 glass rounded-2xl p-3 space-y-3">
         <div className="flex items-center justify-between gap-2">
@@ -213,13 +267,24 @@ function Game() {
             ROUND #{roundId}
           </span>
           <span className="font-display text-[12px] tracking-[0.15em] text-white">
-            PLACE YOUR BET
+            {locked ? "RACE IN PROGRESS" : `BETS CLOSE IN ${countdown.toFixed(1)}s`}
           </span>
           <span
             className={`text-[10px] font-display tracking-[0.15em] ${locked ? "text-white/40" : "text-[#26ff9a]"}`}
           >
             {locked ? "CLOSED" : "OPEN"}
           </span>
+        </div>
+
+        {/* betting-window progress bar — the anticipation driver */}
+        <div className="h-1 rounded-full bg-white/8 overflow-hidden">
+          <div
+            className="h-full rounded-full transition-[width] duration-100 ease-linear"
+            style={{
+              width: locked ? "0%" : `${Math.min(100, (countdown / 6) * 100)}%`,
+              background: countdown < 2 ? "#ff4d6d" : "linear-gradient(90deg,#26ff9a,#35e6ff)",
+            }}
+          />
         </div>
 
         <PredictionCards
@@ -232,6 +297,8 @@ function Game() {
           }}
           locked={locked}
           winner={winner}
+          amount={amount}
+          confirmed={confirmed}
         />
 
         <BettingPanel
@@ -242,6 +309,7 @@ function Game() {
           selectedLabel={selectedLabel}
           confirmed={confirmed}
           phaseLabel={phase}
+          multiplier={selectedMultiplier}
           onConfirm={placeBet}
         />
 
@@ -261,7 +329,7 @@ function Game() {
         </div>
       </div>
 
-      <div className="mt-2 mx-2 pb-2">
+      <div className="mt-2 mx-2 pb-4">
         <History entries={history} />
       </div>
 
@@ -294,3 +362,4 @@ function Game() {
     </div>
   );
 }
+
