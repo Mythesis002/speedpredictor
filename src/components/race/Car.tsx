@@ -192,9 +192,13 @@ export const Car = memo(function Car({
               <g
                 style={{
                   transformOrigin: `${side === 0 ? 30 : 230}px 134px`,
-                  animation: `spin ${Math.max(0.12, wheelDur * 1.6)}s linear infinite`,
+                  animationName: "spin",
+                  animationDuration: `${Math.max(0.12, wheelDur * 1.6)}s`,
+                  animationTimingFunction: "linear",
+                  animationIterationCount: "infinite",
                   animationPlayState: rolling ? "running" : "paused",
                 }}
+
                 opacity={0.85 - t * 0.55}
               >
                 <rect
