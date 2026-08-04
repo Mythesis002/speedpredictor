@@ -264,13 +264,14 @@ function Game() {
 
       {/* Bet panel */}
       <div className="mt-2 mx-2 glass rounded-2xl p-3 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] text-white/45 font-display tracking-[0.15em]">
-            ROUND #{roundId}
+        <div className="flex items-center justify-between gap-2 whitespace-nowrap">
+          <span className="text-[10px] text-white/45 font-display tracking-[0.12em] shrink-0">
+            #{String(roundId).slice(-5)}
           </span>
-          <span className="font-display text-[12px] tracking-[0.15em] text-white">
-            {locked ? "RACE IN PROGRESS" : `BETS CLOSE IN ${countdown.toFixed(1)}s`}
+          <span className="font-display text-[11px] tracking-[0.12em] text-white truncate">
+            {locked ? "RACE IN PROGRESS" : `CLOSES IN ${countdown.toFixed(1)}s`}
           </span>
+
           <span
             className={`text-[10px] font-display tracking-[0.15em] ${locked ? "text-white/40" : "text-[#26ff9a]"}`}
           >
