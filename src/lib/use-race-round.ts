@@ -129,7 +129,7 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
         setOnline(false);
       }
       setReveals((r) => ({ ...r, [id]: reveal }));
-      setOutcomes((o) => ({ ...o, [id]: outcomeFromReveal(reveal) }));
+      setOutcomes((o) => ({ ...o, [id]: outcomeFromReveal(reveal, id) }));
       setVerifiedMap((v) => ({ ...v, [id]: ok }));
     },
     [fetchReveal],
