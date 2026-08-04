@@ -392,11 +392,24 @@ export function Highway({
                   glow={isWinner || (car.kind === "hyper" && hyperMode)}
                 />
               </div>
+              {myLane === i && !isWinner && (
+                <div
+                  className="absolute -top-8 left-1/2 -translate-x-1/2 rounded-full px-1.5 py-[1px] font-display text-[7.5px] tracking-[0.2em] whitespace-nowrap"
+                  style={{
+                    background: "rgba(0,0,0,0.55)",
+                    color: car.color,
+                    boxShadow: `0 0 0 1px ${car.color}66`,
+                  }}
+                >
+                  YOUR BET
+                </div>
+              )}
               {isWinner && (
                 <div className="absolute -top-9 left-1/2 -translate-x-1/2 font-display text-[10px] tracking-[0.3em] text-[#ffd66b] text-neon">
                   WINNER
                 </div>
               )}
+
             </div>
           );
         })}
