@@ -4,9 +4,11 @@ import { RollingNumber } from "./RollingNumber";
 interface Props {
   balance: number;
   roundId: number;
+  onTopUp?: () => void;
 }
 
-export function Header({ balance, roundId }: Props) {
+export function Header({ balance, roundId, onTopUp }: Props) {
+
   return (
     <div className="flex items-center gap-2 px-3 py-2">
       {/* Logo */}
