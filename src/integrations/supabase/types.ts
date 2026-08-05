@@ -161,8 +161,8 @@ export type Database = {
           p_payment_id: string
         }
         Returns: {
-          balance_paise: number
-          credited: boolean
+          out_balance_paise: number
+          out_credited: boolean
         }[]
       }
       place_bet: {
@@ -174,16 +174,16 @@ export type Database = {
           p_user_id: string
         }
         Returns: {
-          balance_paise: number
-          bet_id: string
+          out_balance_paise: number
+          out_bet_id: string
         }[]
       }
       settle_bet: {
         Args: { p_round_id: number; p_user_id: string; p_winner_lane: number }
         Returns: {
-          balance_paise: number
-          payout_paise: number
-          status: string
+          out_balance_paise: number
+          out_payout_paise: number
+          out_status: string
         }[]
       }
     }
