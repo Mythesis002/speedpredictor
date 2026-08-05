@@ -14,8 +14,9 @@ interface Props {
   multiplier: number | null;
 }
 
-const MIN_BET = 100;
-const CHIPS = [100, 500, 1000, 5000];
+const MIN_BET = 10;
+const CHIPS = [10, 50, 100, 500];
+const STEP = 10;
 
 export function BettingPanel({
   amount,
