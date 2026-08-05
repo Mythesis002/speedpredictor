@@ -14,13 +14,178 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bets: {
+        Row: {
+          amount_paise: number
+          created_at: string
+          id: string
+          lane: number
+          multiplier: number
+          payout_paise: number
+          round_id: number
+          settled_at: string | null
+          status: string
+          user_id: string
+          winner_lane: number | null
+        }
+        Insert: {
+          amount_paise: number
+          created_at?: string
+          id?: string
+          lane: number
+          multiplier: number
+          payout_paise?: number
+          round_id: number
+          settled_at?: string | null
+          status?: string
+          user_id: string
+          winner_lane?: number | null
+        }
+        Update: {
+          amount_paise?: number
+          created_at?: string
+          id?: string
+          lane?: number
+          multiplier?: number
+          payout_paise?: number
+          round_id?: number
+          settled_at?: string | null
+          status?: string
+          user_id?: string
+          winner_lane?: number | null
+        }
+        Relationships: []
+      }
+      deposits: {
+        Row: {
+          amount_paise: number
+          created_at: string
+          id: string
+          paid_at: string | null
+          payment_id: string | null
+          provider: string
+          qr_id: string | null
+          qr_image_url: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_paise: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          payment_id?: string | null
+          provider?: string
+          qr_id?: string | null
+          qr_image_url?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_paise?: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          payment_id?: string | null
+          provider?: string
+          qr_id?: string | null
+          qr_image_url?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          balance_paise: number
+          created_at: string
+          id: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          balance_paise?: number
+          created_at?: string
+          id: string
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          balance_paise?: number
+          created_at?: string
+          id?: string
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount_paise: number
+          balance_after_paise: number
+          created_at: string
+          id: string
+          kind: string
+          reference: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_paise: number
+          balance_after_paise: number
+          created_at?: string
+          id?: string
+          kind: string
+          reference?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_paise?: number
+          balance_after_paise?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          reference?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      credit_deposit: {
+        Args: {
+          p_amount_paise: number
+          p_deposit_id: string
+          p_payment_id: string
+        }
+        Returns: {
+          balance_paise: number
+          credited: boolean
+        }[]
+      }
+      place_bet: {
+        Args: {
+          p_amount_paise: number
+          p_lane: number
+          p_multiplier: number
+          p_round_id: number
+          p_user_id: string
+        }
+        Returns: {
+          balance_paise: number
+          bet_id: string
+        }[]
+      }
+      settle_bet: {
+        Args: { p_round_id: number; p_user_id: string; p_winner_lane: number }
+        Returns: {
+          balance_paise: number
+          payout_paise: number
+          status: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
