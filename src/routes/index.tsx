@@ -410,9 +410,7 @@ function Game() {
             { icon: Trophy, label: "Leaders" },
             { icon: Gift, label: "Rewards" },
             { icon: LogOut, label: "Sign out", action: () => void supabase.auth.signOut() },
-            { icon: Settings, label: "Settings" },
-          ]
-            .slice(0, 5)
+          ] as { icon: typeof Home; label: string; active?: boolean; action?: () => void }[])
             .map(({ icon: Icon, label, active, action }) => (
               <button
                 key={label}
