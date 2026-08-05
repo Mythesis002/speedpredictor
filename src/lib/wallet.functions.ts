@@ -90,8 +90,8 @@ export const placeBet = createServerFn({ method: "POST" })
     }
     const row = Array.isArray(rows) ? rows[0] : rows;
     return {
-      betId: row?.bet_id as string,
-      balancePaise: Number(row?.balance_paise ?? 0),
+      betId: row?.out_bet_id as string,
+      balancePaise: Number(row?.out_balance_paise ?? 0),
       multiplier,
     };
   });
@@ -119,9 +119,9 @@ export const settleRound = createServerFn({ method: "POST" })
     const row = Array.isArray(rows) ? rows[0] : rows;
     return {
       winnerLane,
-      status: (row?.status as string) ?? "none",
-      payoutPaise: Number(row?.payout_paise ?? 0),
-      balancePaise: Number(row?.balance_paise ?? 0),
+      status: (row?.out_status as string) ?? "none",
+      payoutPaise: Number(row?.out_payout_paise ?? 0),
+      balancePaise: Number(row?.out_balance_paise ?? 0),
     };
   });
 
