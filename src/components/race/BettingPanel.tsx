@@ -14,8 +14,9 @@ interface Props {
   multiplier: number | null;
 }
 
-const MIN_BET = 100;
-const CHIPS = [100, 500, 1000, 5000];
+const MIN_BET = 10;
+const CHIPS = [10, 50, 100, 500];
+const STEP = 10;
 
 export function BettingPanel({
   amount,
@@ -46,7 +47,7 @@ export function BettingPanel({
           <button
             aria-label="Decrease bet"
             disabled={locked}
-            onClick={() => onChange(clamp(amount - 100))}
+            onClick={() => onChange(clamp(amount - STEP))}
             className="h-11 w-10 grid place-items-center active:scale-95 disabled:opacity-40"
           >
             <Minus size={16} />
@@ -57,7 +58,7 @@ export function BettingPanel({
           <button
             aria-label="Increase bet"
             disabled={locked}
-            onClick={() => onChange(clamp(amount + 100))}
+            onClick={() => onChange(clamp(amount + STEP))}
             className="h-11 w-10 grid place-items-center active:scale-95 disabled:opacity-40"
           >
             <Plus size={16} />

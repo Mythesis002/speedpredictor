@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Highway } from "@/components/race/Highway";
 import { PredictionCards } from "@/components/race/PredictionCards";
 import { BettingPanel } from "@/components/race/BettingPanel";
@@ -11,11 +12,15 @@ import {
   type HistoryEntry,
 } from "@/components/race/History";
 import { WinModal } from "@/components/race/WinModal";
+import { DepositModal } from "@/components/race/DepositModal";
 import { lineupForRound } from "@/lib/round-engine";
 import { carLabel, formatINR } from "@/lib/car-label";
 import { useRaceRound } from "@/lib/use-race-round";
+import { useAuthSession } from "@/lib/use-auth";
+import { getWallet, placeBet as placeBetFn, settleRound } from "@/lib/wallet.functions";
+import { supabase } from "@/integrations/supabase/client";
 
-import { BarChart3, Gift, Home, Settings, ShieldCheck, Trophy } from "lucide-react";
+import { BarChart3, Gift, Home, LogOut, Settings, ShieldCheck, Trophy } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,13 +29,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Watch three neon cars battle down a futuristic highway every round and predict the winning colour. Provably fair rounds, live odds, instant payouts.",
+          "Watch three neon cars battle down a futuristic highway every round and predict the winning colour. Provably fair rounds, live odds, instant payouts from ₹10.",
       },
       { property: "og:title", content: "Speed Predict — Live Neon Car Racing" },
       {
         property: "og:description",
         content:
-          "Pick a colour, watch the live three-lane race and win up to 5×. Server-timed, provably fair racing predictions.",
+          "Pick a colour, watch the live three-lane race and win up to 6×. Server-timed, provably fair racing predictions with UPI deposits.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -39,13 +44,19 @@ export const Route = createFileRoute("/")({
   component: SpeedPredict,
 });
 
-const WALLET_KEY = "sp.wallet.v1";
-const START_BALANCE = 12450;
+const MIN_BET = 10;
 
 function SpeedPredict() {
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
-  if (!hydrated) {
+  const { session, loading } = useAuthSession();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (hydrated && !loading && !session) void navigate({ to: "/auth" });
+  }, [hydrated, loading, session, navigate]);
+
+  if (!hydrated || loading || !session) {
     return <div className="h-[100dvh] w-full bg-[#04060c]" />;
   }
   return <Game />;
@@ -68,28 +79,52 @@ function buzz(pattern: number | number[]) {
 }
 
 function Game() {
-  const [balance, setBalance] = useState(START_BALANCE);
-  const [amount, setAmount] = useState(100);
+  const loadWallet = useServerFn(getWallet);
+  const submitBet = useServerFn(placeBetFn);
+  const settle = useServerFn(settleRound);
+
+  const [balance, setBalance] = useState(0);
+  const [amount, setAmount] = useState(10);
   const [bet, setBet] = useState<Bet | null>(null);
   const betRef = useRef<Bet | null>(null);
   betRef.current = bet;
+  const [depositOpen, setDepositOpen] = useState(false);
+  const [betError, setBetError] = useState<string | null>(null);
+  const [placing, setPlacing] = useState(false);
 
   const [win, setWin] = useState<{ amount: number; colorName: string; color: string } | null>(null);
   const [players, setPlayers] = useState(1245);
   const [totalBets, setTotalBets] = useState(89540);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
-  /* wallet persistence */
-  useEffect(() => {
-    const raw = localStorage.getItem(WALLET_KEY);
-    if (raw) {
-      const n = Number(raw);
-      if (Number.isFinite(n) && n >= 0) setBalance(n);
+  /* wallet comes from the server — never from the browser */
+  const refreshWallet = useCallback(async () => {
+    try {
+      const w = await loadWallet({});
+      setBalance(w.balancePaise / 100);
+      setBet(
+        w.activeBet
+          ? {
+              roundId: w.activeBet.roundId,
+              lane: w.activeBet.lane,
+              amount: w.activeBet.amountPaise / 100,
+            }
+          : null,
+      );
+    } catch {
+      /* transient — the next refresh will pick it up */
     }
-  }, []);
+  }, [loadWallet]);
+
   useEffect(() => {
-    localStorage.setItem(WALLET_KEY, String(balance));
-  }, [balance]);
+    void refreshWallet();
+  }, [refreshWallet]);
+
+  useEffect(() => {
+    if (!betError) return;
+    const id = setTimeout(() => setBetError(null), 4000);
+    return () => clearTimeout(id);
+  }, [betError]);
 
   /* result banner (wins and losses both get feedback) */
   const [result, setResult] = useState<{ won: boolean; text: string; color: string } | null>(null);
@@ -99,41 +134,46 @@ function Game() {
     return () => clearTimeout(id);
   }, [result]);
 
-  /* settlement — fired once per round by the engine when the race ends */
-  const onSettle = useCallback((roundId: number, order: [number, number, number]) => {
-    const cars = lineupForRound(roundId);
-    const winnerCar = cars[order[0]];
-    setHistory((h) => [{ id: roundId, car: winnerCar, ago: "now" }, ...h].slice(0, 50));
+  /* settlement — the server decides the winner and the payout */
+  const onSettle = useCallback(
+    (roundId: number, order: [number, number, number]) => {
+      const cars = lineupForRound(roundId);
+      const winnerCar = cars[order[0]];
+      setHistory((h) => [{ id: roundId, car: winnerCar, ago: "now" }, ...h].slice(0, 50));
 
-    const b = betRef.current;
-    if (!b || b.roundId !== roundId) return;
+      const b = betRef.current;
+      if (!b || b.roundId !== roundId) return;
 
-    if (b.lane === order[0]) {
-      const payout = Math.round(b.amount * cars[b.lane].multiplier);
-      setBalance((v) => v + payout);
-      setWin({
-        amount: payout,
-        colorName: carLabel(cars[b.lane]),
-        color: cars[b.lane].color,
-      });
-      buzz([18, 40, 18, 40, 60]);
-    } else {
-      setResult({
-        won: false,
-        text: `${carLabel(winnerCar)} won · you lost ${formatINR(b.amount)}`,
-        color: winnerCar.color,
-      });
-      buzz(30);
-    }
-  }, []);
+      void (async () => {
+        try {
+          const res = await settle({ data: { roundId } });
+          setBalance(res.balancePaise / 100);
+          setBet(null);
+          if (res.status === "won") {
+            setWin({
+              amount: res.payoutPaise / 100,
+              colorName: carLabel(cars[b.lane]),
+              color: cars[b.lane].color,
+            });
+            buzz([18, 40, 18, 40, 60]);
+          } else if (res.status === "lost") {
+            setResult({
+              won: false,
+              text: `${carLabel(cars[res.winnerLane])} won · you lost ${formatINR(b.amount)}`,
+              color: cars[res.winnerLane].color,
+            });
+            buzz(30);
+          }
+        } catch {
+          void refreshWallet();
+        }
+      })();
+    },
+    [settle, refreshWallet],
+  );
 
   const { roundId, phase, countdown, locked, cars, progressRef, winner, fairness } =
     useRaceRound(onSettle);
-
-  /* clear the ticket when a new round opens; seed history on first load */
-  useEffect(() => {
-    setBet((b) => (b && b.roundId !== roundId ? null : b));
-  }, [roundId]);
 
   useEffect(() => {
     setHistory((h) =>
@@ -168,20 +208,27 @@ function Game() {
 
   /* keep the stake inside the wallet at all times */
   useEffect(() => {
-    setAmount((a) => Math.max(100, Math.min(a, Math.max(100, balance))));
+    setAmount((a) => Math.max(MIN_BET, Math.min(a, Math.max(MIN_BET, Math.floor(balance)))));
   }, [balance]);
 
-  const placeBet = () => {
-    if (selected === null || locked || confirmed) return;
-    if (amount > balance || amount <= 0) return;
-    setBalance((b) => b - amount);
-    setBet({ roundId, lane: selected, amount });
-    buzz(22);
-  };
-
-  const topUp = () => {
-    setBalance((b) => b + 5000);
-    buzz(14);
+  const placeBet = async () => {
+    if (selected === null || locked || confirmed || placing) return;
+    if (amount < MIN_BET || amount > balance) return;
+    setPlacing(true);
+    const staked = amount;
+    const lane = selected;
+    try {
+      const res = await submitBet({
+        data: { roundId, lane, amountPaise: Math.round(staked * 100) },
+      });
+      setBalance(res.balancePaise / 100);
+      setBet({ roundId, lane, amount: staked });
+      buzz(22);
+    } catch (err) {
+      setBetError(err instanceof Error ? err.message : "Could not place the bet");
+      void refreshWallet();
+    }
+    setPlacing(false);
   };
 
   const raceLive = phase === "launch" || phase === "race";
@@ -189,7 +236,7 @@ function Game() {
   return (
     <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden overscroll-none bg-[#04060c] text-white flex flex-col [scrollbar-width:none]">
       <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
-        <Header balance={balance} roundId={roundId} onTopUp={topUp} />
+        <Header balance={balance} roundId={roundId} onTopUp={() => setDepositOpen(true)} />
       </div>
 
       <WinModal
@@ -197,6 +244,12 @@ function Game() {
         colorName={win?.colorName}
         color={win?.color}
         onClose={() => setWin(null)}
+      />
+
+      <DepositModal
+        open={depositOpen}
+        onClose={() => setDepositOpen(false)}
+        onCredited={(paise) => setBalance(paise / 100)}
       />
 
       {/* Race stage */}
@@ -263,6 +316,14 @@ function Game() {
         </div>
       )}
 
+      {betError && (
+        <div className="mx-2 mt-2 animate-fade-in">
+          <div className="rounded-xl px-3 py-2 text-center font-display text-[10px] tracking-[0.16em] bg-[#ff4d6d]/10 text-[#ff8a9c]">
+            {betError.toUpperCase()}
+          </div>
+        </div>
+      )}
+
       {/* Bet panel */}
       <div className="mt-2 mx-2 glass rounded-2xl p-3 space-y-3">
         <div className="flex items-center justify-between gap-2 whitespace-nowrap">
@@ -308,13 +369,13 @@ function Game() {
         <BettingPanel
           amount={amount}
           balance={balance}
-          locked={locked}
+          locked={locked || placing}
           onChange={setAmount}
           selectedLabel={selectedLabel}
           confirmed={confirmed}
           phaseLabel={phase}
           multiplier={selectedMultiplier}
-          onConfirm={placeBet}
+          onConfirm={() => void placeBet()}
         />
 
         {/* provably-fair status */}
@@ -343,27 +404,28 @@ function Game() {
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
       >
         <div className="glass rounded-2xl grid grid-cols-5 py-1.5">
-          {[
+          {([
             { icon: Home, label: "Home", active: true },
             { icon: BarChart3, label: "Stats" },
             { icon: Trophy, label: "Leaders" },
             { icon: Gift, label: "Rewards" },
-            { icon: Settings, label: "Settings" },
-          ].map(({ icon: Icon, label, active }) => (
-            <button
-              key={label}
-              className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] ${
-                active ? "text-[#a24bff]" : "text-white/45"
-              }`}
-              style={active ? { background: "rgba(162,75,255,0.12)" } : undefined}
-            >
-              <Icon size={16} />
-              <span className="text-[9px] font-display tracking-wide">{label}</span>
-            </button>
-          ))}
+            { icon: LogOut, label: "Sign out", action: () => void supabase.auth.signOut() },
+          ] as { icon: typeof Home; label: string; active?: boolean; action?: () => void }[])
+            .map(({ icon: Icon, label, active, action }) => (
+              <button
+                key={label}
+                onClick={action}
+                className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] ${
+                  active ? "text-[#a24bff]" : "text-white/45"
+                }`}
+                style={active ? { background: "rgba(162,75,255,0.12)" } : undefined}
+              >
+                <Icon size={16} />
+                <span className="text-[9px] font-display tracking-wide">{label}</span>
+              </button>
+            ))}
         </div>
       </div>
     </div>
   );
 }
-
