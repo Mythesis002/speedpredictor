@@ -404,7 +404,7 @@ function Game() {
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
       >
         <div className="glass rounded-2xl grid grid-cols-5 py-1.5">
-          {[
+          {([
             { icon: Home, label: "Home", active: true },
             { icon: BarChart3, label: "Stats" },
             { icon: Trophy, label: "Leaders" },
