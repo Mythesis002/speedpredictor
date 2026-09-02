@@ -203,3 +203,63 @@ export const checkDeposit = createServerFn({ method: "POST" })
       balancePaise: Number(profile?.balance_paise ?? 0),
     };
   });
+
+/** A player asks for a payout. Money leaves the wallet only when an admin approves. */
+export const requestWithdrawal = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { amountPaise: number; upiId: string }) => {
+    const amountPaise = data?.amountPaise;
+    const upiId = (data?.upiId ?? "").trim();
+    if (!Number.isInteger(amountPaise) || amountPaise < 10000)
+      throw new Error("Minimum withdrawal is ₹100");
+    if (amountPaise > MAX_DEPOSIT_PAISE) throw new Error("Amount is above the payout limit");
+    if (!/^[\w.\-]{2,64}@[a-zA-Z]{2,32}$/.test(upiId)) throw new Error("Enter a valid UPI ID");
+    return { amountPaise, upiId };
+  })
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("balance_paise")
+      .eq("id", context.userId)
+      .maybeSingle();
+    if (!profile) throw new Error("Profile not found");
+
+    const { data: pending } = await supabaseAdmin
+      .from("withdrawals")
+      .select("amount_paise")
+      .eq("user_id", context.userId)
+      .eq("status", "pending");
+    const held = (pending ?? []).reduce((t, w) => t + Number(w.amount_paise), 0);
+
+    if (Number(profile.balance_paise) - held < data.amountPaise) {
+      throw new Error("Not enough withdrawable balance");
+    }
+
+    const { error } = await supabaseAdmin.from("withdrawals").insert({
+      user_id: context.userId,
+      amount_paise: data.amountPaise,
+      upi_id: data.upiId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
+/** The player's own payout requests, newest first. */
+export const myWithdrawals = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data } = await context.supabase
+      .from("withdrawals")
+      .select("id, amount_paise, upi_id, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    return (data ?? []).map((w) => ({
+      id: w.id,
+      amountPaise: Number(w.amount_paise),
+      upiId: w.upi_id,
+      status: w.status,
+      createdAt: w.created_at,
+    }));
+  });
