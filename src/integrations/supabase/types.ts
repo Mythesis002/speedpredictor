@@ -149,6 +149,63 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      withdrawals: {
+        Row: {
+          admin_note: string | null
+          amount_paise: number
+          created_at: string
+          id: string
+          processed_at: string | null
+          status: string
+          updated_at: string
+          upi_id: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount_paise: number
+          created_at?: string
+          id?: string
+          processed_at?: string | null
+          status?: string
+          updated_at?: string
+          upi_id: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount_paise?: number
+          created_at?: string
+          id?: string
+          processed_at?: string | null
+          status?: string
+          updated_at?: string
+          upi_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -165,6 +222,13 @@ export type Database = {
           out_credited: boolean
         }[]
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       place_bet: {
         Args: {
           p_amount_paise: number
@@ -178,6 +242,13 @@ export type Database = {
           out_bet_id: string
         }[]
       }
+      process_withdrawal: {
+        Args: { p_action: string; p_note?: string; p_withdrawal_id: string }
+        Returns: {
+          out_balance_paise: number
+          out_status: string
+        }[]
+      }
       settle_bet: {
         Args: { p_round_id: number; p_user_id: string; p_winner_lane: number }
         Returns: {
@@ -188,7 +259,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -315,6 +386,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
