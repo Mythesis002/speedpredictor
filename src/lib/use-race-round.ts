@@ -117,6 +117,12 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
       let ok: boolean | null = null;
       try {
         const res = await fetchReveal({ data: { roundId: id } });
+        if (!res.ok) {
+          // asked a touch early — allow a retry on the next frame
+          if (res.reason === "early") requested.current.delete(id);
+          setOnline(true);
+          return;
+        }
         reveal = res.reveal;
         const known = commitsRef.current[id];
         // sha256(reveal) must equal the commitment, and that commitment must
@@ -128,6 +134,7 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
         ok = null;
         setOnline(false);
       }
+
       setReveals((r) => ({ ...r, [id]: reveal }));
       setOutcomes((o) => ({ ...o, [id]: outcomeFromReveal(reveal, id) }));
       setVerifiedMap((v) => ({ ...v, [id]: ok }));
