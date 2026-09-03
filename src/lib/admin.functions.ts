@@ -289,7 +289,7 @@ export const actOnWithdrawal = createServerFn({ method: "POST" })
     const { data: rows, error } = await supabaseAdmin.rpc("process_withdrawal", {
       p_withdrawal_id: data.withdrawalId,
       p_action: data.action,
-      p_note: data.note ?? null,
+      p_note: data.note,
     });
     if (error) throw new Error(error.message.replace(/^.*ERROR:\s*/, ""));
     const row = Array.isArray(rows) ? rows[0] : rows;

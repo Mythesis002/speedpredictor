@@ -13,14 +13,26 @@ import {
 } from "@/components/race/History";
 import { WinModal } from "@/components/race/WinModal";
 import { DepositModal } from "@/components/race/DepositModal";
+import { WithdrawModal } from "@/components/race/WithdrawModal";
 import { lineupForRound } from "@/lib/round-engine";
 import { carLabel, formatINR } from "@/lib/car-label";
 import { useRaceRound } from "@/lib/use-race-round";
 import { useAuthSession } from "@/lib/use-auth";
 import { getWallet, placeBet as placeBetFn, settleRound } from "@/lib/wallet.functions";
+import { amIAdmin } from "@/lib/admin.functions";
 import { supabase } from "@/integrations/supabase/client";
 
-import { BarChart3, Gift, Home, LogOut, Settings, ShieldCheck, Trophy } from "lucide-react";
+import {
+  BarChart3,
+  Banknote,
+  Gift,
+  Home,
+  LogOut,
+  Settings,
+  ShieldCheck,
+  ShieldHalf,
+  Trophy,
+} from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -82,6 +94,7 @@ function Game() {
   const loadWallet = useServerFn(getWallet);
   const submitBet = useServerFn(placeBetFn);
   const settle = useServerFn(settleRound);
+  const checkAdmin = useServerFn(amIAdmin);
 
   const [balance, setBalance] = useState(0);
   const [amount, setAmount] = useState(10);
@@ -89,6 +102,8 @@ function Game() {
   const betRef = useRef<Bet | null>(null);
   betRef.current = bet;
   const [depositOpen, setDepositOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [betError, setBetError] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
 
@@ -96,6 +111,12 @@ function Game() {
   const [players, setPlayers] = useState(1245);
   const [totalBets, setTotalBets] = useState(89540);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  useEffect(() => {
+    void checkAdmin({})
+      .then(setIsAdmin)
+      .catch(() => setIsAdmin(false));
+  }, [checkAdmin]);
 
   /* wallet comes from the server — never from the browser */
   const refreshWallet = useCallback(async () => {
@@ -252,6 +273,15 @@ function Game() {
         onCredited={(paise) => setBalance(paise / 100)}
       />
 
+      <WithdrawModal
+        open={withdrawOpen}
+        onClose={() => {
+          setWithdrawOpen(false);
+          void refreshWallet();
+        }}
+        balancePaise={Math.round(balance * 100)}
+      />
+
       {/* Race stage */}
       <div className="relative mx-2 rounded-2xl overflow-hidden border border-white/10 h-[42vh] min-h-[260px] max-h-[420px] shrink-0">
         <Highway
@@ -378,6 +408,16 @@ function Game() {
           onConfirm={() => void placeBet()}
         />
 
+        {isAdmin && (
+          <a
+            href="/admin"
+            className="glass rounded-xl px-3 py-2 flex items-center gap-2 text-[11px] font-display tracking-wide text-white"
+          >
+            <ShieldHalf size={14} style={{ color: "#ffc32b" }} />
+            Owner console
+          </a>
+        )}
+
         {/* provably-fair status */}
         <div className="flex items-center gap-1.5 text-[9px] font-display tracking-[0.14em] text-white/40">
           <ShieldCheck
@@ -408,7 +448,7 @@ function Game() {
             { icon: Home, label: "Home", active: true },
             { icon: BarChart3, label: "Stats" },
             { icon: Trophy, label: "Leaders" },
-            { icon: Gift, label: "Rewards" },
+            { icon: Banknote, label: "Cash out", action: () => setWithdrawOpen(true) },
             { icon: LogOut, label: "Sign out", action: () => void supabase.auth.signOut() },
           ] as { icon: typeof Home; label: string; active?: boolean; action?: () => void }[])
             .map(({ icon: Icon, label, active, action }) => (
