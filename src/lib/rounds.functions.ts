@@ -99,9 +99,13 @@ export interface RoundReveal {
   winner: number;
 }
 
+export type RevealResult = ({ ok: true } & RoundReveal) | { ok: false; reason: "early" | "expired" };
+
 /**
  * Reveals a round's secret. Refuses while bets are still open, which is what
  * makes the commitment meaningful — no client can learn the result early.
+ * Refusals are returned as data (never thrown) so a client that asks a few ms
+ * early doesn't surface an unhandled Response error.
  */
 export const revealRound = createServerFn({ method: "GET" })
   .inputValidator((data: unknown): { roundId: number } => {
@@ -112,19 +116,20 @@ export const revealRound = createServerFn({ method: "GET" })
     }
     return { roundId };
   })
-  .handler(async ({ data }): Promise<RoundReveal> => {
+  .handler(async ({ data }): Promise<RevealResult> => {
     const { roundId } = data;
     const now = Date.now();
 
     if (roundId > roundIdAt(now) || now < roundLockMs(roundId)) {
-      throw new Response("Round is still open for betting", { status: 425 });
+      return { ok: false, reason: "early" };
     }
     // don't serve ancient history; keeps the endpoint bounded
     if (roundIdAt(now) - roundId > 500) {
-      throw new Response("Round expired", { status: 410 });
+      return { ok: false, reason: "expired" };
     }
+
 
     const [reveal, commit] = await Promise.all([perRoundSecret(roundId), commitFor(roundId)]);
     const { order } = outcomeFromReveal(reveal, roundId);
-    return { roundId, reveal, commit, order, winner: order[0] };
+    return { ok: true, roundId, reveal, commit, order, winner: order[0] };
   });
