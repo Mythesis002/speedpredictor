@@ -13,14 +13,26 @@ import {
 } from "@/components/race/History";
 import { WinModal } from "@/components/race/WinModal";
 import { DepositModal } from "@/components/race/DepositModal";
+import { WithdrawModal } from "@/components/race/WithdrawModal";
 import { lineupForRound } from "@/lib/round-engine";
 import { carLabel, formatINR } from "@/lib/car-label";
 import { useRaceRound } from "@/lib/use-race-round";
 import { useAuthSession } from "@/lib/use-auth";
 import { getWallet, placeBet as placeBetFn, settleRound } from "@/lib/wallet.functions";
+import { amIAdmin } from "@/lib/admin.functions";
 import { supabase } from "@/integrations/supabase/client";
 
-import { BarChart3, Gift, Home, LogOut, Settings, ShieldCheck, Trophy } from "lucide-react";
+import {
+  BarChart3,
+  Banknote,
+  Gift,
+  Home,
+  LogOut,
+  Settings,
+  ShieldCheck,
+  ShieldHalf,
+  Trophy,
+} from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -408,7 +420,7 @@ function Game() {
             { icon: Home, label: "Home", active: true },
             { icon: BarChart3, label: "Stats" },
             { icon: Trophy, label: "Leaders" },
-            { icon: Gift, label: "Rewards" },
+            { icon: Banknote, label: "Cash out", action: () => setWithdrawOpen(true) },
             { icon: LogOut, label: "Sign out", action: () => void supabase.auth.signOut() },
           ] as { icon: typeof Home; label: string; active?: boolean; action?: () => void }[])
             .map(({ icon: Icon, label, active, action }) => (
