@@ -101,6 +101,8 @@ function Game() {
   const betRef = useRef<Bet | null>(null);
   betRef.current = bet;
   const [depositOpen, setDepositOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [betError, setBetError] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
 
@@ -262,6 +264,15 @@ function Game() {
         open={depositOpen}
         onClose={() => setDepositOpen(false)}
         onCredited={(paise) => setBalance(paise / 100)}
+      />
+
+      <WithdrawModal
+        open={withdrawOpen}
+        onClose={() => {
+          setWithdrawOpen(false);
+          void refreshWallet();
+        }}
+        balancePaise={Math.round(balance * 100)}
       />
 
       {/* Race stage */}
