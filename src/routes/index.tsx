@@ -94,6 +94,7 @@ function Game() {
   const loadWallet = useServerFn(getWallet);
   const submitBet = useServerFn(placeBetFn);
   const settle = useServerFn(settleRound);
+  const checkAdmin = useServerFn(amIAdmin);
 
   const [balance, setBalance] = useState(0);
   const [amount, setAmount] = useState(10);
@@ -110,6 +111,12 @@ function Game() {
   const [players, setPlayers] = useState(1245);
   const [totalBets, setTotalBets] = useState(89540);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  useEffect(() => {
+    void checkAdmin({})
+      .then(setIsAdmin)
+      .catch(() => setIsAdmin(false));
+  }, [checkAdmin]);
 
   /* wallet comes from the server — never from the browser */
   const refreshWallet = useCallback(async () => {
@@ -400,6 +407,16 @@ function Game() {
           multiplier={selectedMultiplier}
           onConfirm={() => void placeBet()}
         />
+
+        {isAdmin && (
+          <a
+            href="/admin"
+            className="glass rounded-xl px-3 py-2 flex items-center gap-2 text-[11px] font-display tracking-wide text-white"
+          >
+            <ShieldHalf size={14} style={{ color: "#ffc32b" }} />
+            Owner console
+          </a>
+        )}
 
         {/* provably-fair status */}
         <div className="flex items-center gap-1.5 text-[9px] font-display tracking-[0.14em] text-white/40">
