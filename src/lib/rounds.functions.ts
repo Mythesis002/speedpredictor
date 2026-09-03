@@ -131,5 +131,5 @@ export const revealRound = createServerFn({ method: "GET" })
 
     const [reveal, commit] = await Promise.all([perRoundSecret(roundId), commitFor(roundId)]);
     const { order } = outcomeFromReveal(reveal, roundId);
-    return { roundId, reveal, commit, order, winner: order[0] };
+    return { ok: true, roundId, reveal, commit, order, winner: order[0] };
   });
