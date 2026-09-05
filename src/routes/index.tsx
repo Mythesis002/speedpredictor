@@ -10,6 +10,7 @@ import {
   RecentRounds,
   LiveStats,
   type HistoryEntry,
+  type BetHistoryEntry,
 } from "@/components/race/History";
 import { WinModal } from "@/components/race/WinModal";
 import { DepositModal } from "@/components/race/DepositModal";
@@ -18,7 +19,7 @@ import { lineupForRound } from "@/lib/round-engine";
 import { carLabel, formatINR } from "@/lib/car-label";
 import { useRaceRound } from "@/lib/use-race-round";
 import { useAuthSession } from "@/lib/use-auth";
-import { getWallet, placeBet as placeBetFn, settleRound } from "@/lib/wallet.functions";
+import { getWallet, myBets, placeBet as placeBetFn, settleRound } from "@/lib/wallet.functions";
 import { amIAdmin } from "@/lib/admin.functions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -111,12 +112,45 @@ function Game() {
   const [players, setPlayers] = useState(1245);
   const [totalBets, setTotalBets] = useState(89540);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [betHistory, setBetHistory] = useState<BetHistoryEntry[]>([]);
+
+  /* the player's own bet history, straight from the server ledger */
+  const loadBets = useServerFn(myBets);
+  const refreshBets = useCallback(async () => {
+    try {
+      const rows = await loadBets({});
+      setBetHistory(
+        rows.map((b) => {
+          const lineup = lineupForRound(b.roundId);
+          return {
+            id: b.id,
+            roundId: b.roundId,
+            car: lineup[b.lane],
+            winnerCar: b.winnerLane === null ? null : lineup[b.winnerLane],
+            amount: b.amountPaise / 100,
+            payout: b.payoutPaise / 100,
+            multiplier: b.multiplier,
+            status: (b.status === "won" || b.status === "lost"
+              ? b.status
+              : "pending") as BetHistoryEntry["status"],
+          };
+        }),
+      );
+    } catch {
+      /* transient */
+    }
+  }, [loadBets]);
+
+  useEffect(() => {
+    void refreshBets();
+  }, [refreshBets]);
 
   useEffect(() => {
     void checkAdmin({})
       .then(setIsAdmin)
       .catch(() => setIsAdmin(false));
   }, [checkAdmin]);
+
 
   /* wallet comes from the server — never from the browser */
   const refreshWallet = useCallback(async () => {

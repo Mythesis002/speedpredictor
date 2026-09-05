@@ -263,3 +263,25 @@ export const myWithdrawals = createServerFn({ method: "GET" })
       createdAt: w.created_at,
     }));
   });
+
+/** The player's own bet history, newest first. */
+export const myBets = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data } = await context.supabase
+      .from("bets")
+      .select("id, round_id, lane, amount_paise, multiplier, status, payout_paise, winner_lane, created_at")
+      .order("round_id", { ascending: false })
+      .limit(50);
+    return (data ?? []).map((b) => ({
+      id: b.id as string,
+      roundId: Number(b.round_id),
+      lane: Number(b.lane),
+      amountPaise: Number(b.amount_paise),
+      multiplier: Number(b.multiplier),
+      status: b.status as string,
+      payoutPaise: Number(b.payout_paise),
+      winnerLane: b.winner_lane === null ? null : Number(b.winner_lane),
+      createdAt: b.created_at as string,
+    }));
+  });
