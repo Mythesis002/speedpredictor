@@ -192,18 +192,25 @@ export function Highway({
             el.style.opacity = "0";
             continue;
           }
-          const zBack = z + DASH_LEN;
+          const zBack = Math.min(z + DASH_LEN, Z_FAR);
           const yFront = yAt(z, h);
           const yBack = yAt(zBack, h);
-          const s = scaleAt(z + DASH_LEN * 0.5);
-          const wpx = Math.max(1, 0.016 * w * s);
-          const hpx = Math.max(1, yFront - yBack);
-          const x = xAt(DIVIDER_U[d], z + DASH_LEN * 0.5, w);
-          el.style.transform = `translate3d(${(x - wpx / 2).toFixed(2)}px, ${yBack.toFixed(2)}px, 0) scale(${(wpx / 10).toFixed(4)}, ${(hpx / 10).toFixed(4)})`;
+          // a dash is a trapezoid: narrower + converged at its far end,
+          // wider at the end nearest the camera — never a straight stick.
+          const wNear = Math.max(0.8, 0.016 * w * scaleAt(z));
+          const wFar = Math.max(0.4, 0.016 * w * scaleAt(zBack));
+          const xNear = xAt(DIVIDER_U[d], z, w);
+          const xFar = xAt(DIVIDER_U[d], zBack, w);
+          el.style.clipPath =
+            `polygon(${(xFar - wFar / 2).toFixed(2)}px ${yBack.toFixed(2)}px,` +
+            ` ${(xFar + wFar / 2).toFixed(2)}px ${yBack.toFixed(2)}px,` +
+            ` ${(xNear + wNear / 2).toFixed(2)}px ${yFront.toFixed(2)}px,` +
+            ` ${(xNear - wNear / 2).toFixed(2)}px ${yFront.toFixed(2)}px)`;
           // fade in as it emerges from the vanishing point
           el.style.opacity = Math.min(1, (Z_FAR - z) / (Z_FAR * 0.45)).toFixed(3);
         }
       }
+
 
       /* ---- cinematic camera: shake + FOV punch ---- */
       const cam = cameraRef.current;
