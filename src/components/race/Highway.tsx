@@ -31,12 +31,12 @@ interface Props {
 /* ---- dash geometry (world units along z) ---- */
 const DASHES = 16;
 const DASH_PERIOD = 0.9;
-const DASH_LEN = 0.38;
+const DASH_LEN = 0.34;
 const DASH_SPAN = DASHES * DASH_PERIOD;
 
 /* ---- car depth model ---- */
-const Z_CAR_NEAR = 1.06; // trailing car, closest to the lens
-const CAR_SPREAD = 3.1; // how much depth the leader gains
+const Z_CAR_NEAR = 1.5; // trailing car, closest to the lens
+const CAR_SPREAD = 2.0; // how much depth the leader gains
 const BASE_CAR = 150; // px width the <Car/> svg is authored at
 
 export function Highway({
@@ -131,7 +131,7 @@ export function Highway({
         const omega = 9;
         for (let i = 0; i < 3; i++) {
           const gap = Math.max(0, p[i] - trailer);
-          const target = Math.min(4.2, Z_CAR_NEAR + Math.sqrt(gap) * CAR_SPREAD);
+          const target = Math.min(5.2, Z_CAR_NEAR + Math.sqrt(gap) * CAR_SPREAD);
           const x = zCar.current[i] - target;
           const a = -omega * omega * x - 2 * omega * zVel.current[i];
           zVel.current[i] += a * STEP;
@@ -145,10 +145,10 @@ export function Highway({
       for (let i = 0; i < 3; i++) {
         const z = Math.max(Z_CAR_NEAR, Math.min(6, zCar.current[i]));
         const s = scaleAt(z);
-        const carW = laneWidthAt(z, w) * 0.86;
+        const carW = laneWidthAt(z, w) * 0.94;
         const k = carW / BASE_CAR;
         const x = xAt(LANE_U[i], z, w);
-        const y = yAt(z, h) - h * 0.035; // sit the tyres on the tarmac
+        const y = yAt(z, h); // tyres land exactly on the projected tarmac
 
         const el = laneRefs.current[i];
         if (el) {
