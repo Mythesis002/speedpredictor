@@ -177,33 +177,6 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* ---------- Perspective road motion ----------
-   Geometrically exact: a dash travels from the vanishing point to its
-   bottom-edge offset, x interpolating linearly with the projected y.
-   --dx  = (bottomX% - 50) / 100  (signed lateral fraction of road width)
-   --road-w / --road-h are written by the render loop each frame. */
-@keyframes dash-flow {
-  0%   { transform: translate3d(calc(-50% + var(--dx) * 0.000 * var(--road-w)), calc(0.000 * var(--road-h)), 0) scale(0.08); opacity: 0; }
-  10%  { transform: translate3d(calc(-50% + var(--dx) * 0.004 * var(--road-w)), calc(0.004 * var(--road-h)), 0) scale(0.12); opacity: 0.35; }
-  20%  { transform: translate3d(calc(-50% + var(--dx) * 0.021 * var(--road-w)), calc(0.021 * var(--road-h)), 0) scale(0.14); opacity: 0.7; }
-  30%  { transform: translate3d(calc(-50% + var(--dx) * 0.054 * var(--road-w)), calc(0.054 * var(--road-h)), 0) scale(0.18); opacity: 0.85; }
-  40%  { transform: translate3d(calc(-50% + var(--dx) * 0.109 * var(--road-w)), calc(0.109 * var(--road-h)), 0) scale(0.24); opacity: 0.92; }
-  50%  { transform: translate3d(calc(-50% + var(--dx) * 0.190 * var(--road-w)), calc(0.190 * var(--road-h)), 0) scale(0.33); opacity: 0.95; }
-  60%  { transform: translate3d(calc(-50% + var(--dx) * 0.302 * var(--road-w)), calc(0.302 * var(--road-h)), 0) scale(0.46); opacity: 1; }
-  70%  { transform: translate3d(calc(-50% + var(--dx) * 0.450 * var(--road-w)), calc(0.450 * var(--road-h)), 0) scale(0.64); opacity: 1; }
-  80%  { transform: translate3d(calc(-50% + var(--dx) * 0.638 * var(--road-w)), calc(0.638 * var(--road-h)), 0) scale(0.87); opacity: 1; }
-  90%  { transform: translate3d(calc(-50% + var(--dx) * 0.871 * var(--road-w)), calc(0.871 * var(--road-h)), 0) scale(1.16); opacity: 1; }
-  100% { transform: translate3d(calc(-50% + var(--dx) * 1.000 * var(--road-w)), calc(1.000 * var(--road-h)), 0) scale(1.32); opacity: 1; }
-}
-/* flow rate is written from the render loop via --dash-dur */
-.dash {
-  --dash-dur: 1.9s;
-  --road-w: 360px;
-  --road-h: 200px;
-  animation: dash-flow var(--dash-dur) linear infinite;
-  animation-play-state: var(--dash-play, running);
-}
-
 /* wheel tread scroll — sells real rolling motion */
 @keyframes tread-roll {
   from { transform: translateY(0); }
