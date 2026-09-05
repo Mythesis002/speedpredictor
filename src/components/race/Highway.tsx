@@ -409,16 +409,14 @@ export function Highway({
                   ref={(el) => {
                     dashRefs.current[d * DASHES + i] = el;
                   }}
-                  className="absolute left-0 top-0 block gpu rounded-[1px]"
+                  className="absolute inset-0 block gpu"
                   style={{
-                    width: 10,
-                    height: 10,
-                    transformOrigin: "0 0",
                     background: "rgba(255,255,255,0.92)",
-                    boxShadow: "0 0 6px rgba(255,255,255,0.35)",
+                    filter: "drop-shadow(0 0 5px rgba(255,255,255,0.35))",
                     opacity: 0,
                   }}
                 />
+
               ))}
             </div>
           ))}
