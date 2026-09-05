@@ -10,6 +10,7 @@ import {
   RecentRounds,
   LiveStats,
   type HistoryEntry,
+  type BetHistoryEntry,
 } from "@/components/race/History";
 import { WinModal } from "@/components/race/WinModal";
 import { DepositModal } from "@/components/race/DepositModal";
@@ -18,7 +19,7 @@ import { lineupForRound } from "@/lib/round-engine";
 import { carLabel, formatINR } from "@/lib/car-label";
 import { useRaceRound } from "@/lib/use-race-round";
 import { useAuthSession } from "@/lib/use-auth";
-import { getWallet, placeBet as placeBetFn, settleRound } from "@/lib/wallet.functions";
+import { getWallet, myBets, placeBet as placeBetFn, settleRound } from "@/lib/wallet.functions";
 import { amIAdmin } from "@/lib/admin.functions";
 import { supabase } from "@/integrations/supabase/client";
 
