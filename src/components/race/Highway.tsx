@@ -35,8 +35,8 @@ const DASH_LEN = 0.34;
 const DASH_SPAN = DASHES * DASH_PERIOD;
 
 /* ---- car depth model ---- */
-const Z_CAR_NEAR = 1.95; // trailing car, closest to the lens
-const CAR_SPREAD = 2.4; // how much depth the leader gains
+const Z_CAR_NEAR = 1.5; // trailing car, closest to the lens
+const CAR_SPREAD = 2.0; // how much depth the leader gains
 const BASE_CAR = 150; // px width the <Car/> svg is authored at
 
 export function Highway({
@@ -148,7 +148,7 @@ export function Highway({
         const carW = laneWidthAt(z, w) * 0.94;
         const k = carW / BASE_CAR;
         const x = xAt(LANE_U[i], z, w);
-        const y = yAt(z, h) - h * 0.035; // sit the tyres on the tarmac
+        const y = yAt(z, h); // tyres land exactly on the projected tarmac
 
         const el = laneRefs.current[i];
         if (el) {
