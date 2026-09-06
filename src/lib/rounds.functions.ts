@@ -131,5 +131,51 @@ export const revealRound = createServerFn({ method: "GET" })
 
     const [reveal, commit] = await Promise.all([perRoundSecret(roundId), commitFor(roundId)]);
     const { order } = outcomeFromReveal(reveal, roundId);
+    // persist the finished race so results history is real and shared by
+    // every device (best effort — never block the reveal on a DB hiccup)
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.from("rounds").upsert(
+        {
+          round_id: roundId,
+          winner_lane: order[0],
+          finish_order: order,
+          commit_hash: commit,
+          reveal,
+        },
+        { onConflict: "round_id" },
+      );
+    } catch {
+      /* results are derivable from the reveal anyway */
+    }
+
     return { ok: true, roundId, reveal, commit, order, winner: order[0] };
   });
+
+export interface RoundResult {
+  roundId: number;
+  winnerLane: number;
+  createdAt: string;
+}
+
+/** The last 50 finished races, straight from the database. */
+export const recentResults = createServerFn({ method: "GET" }).handler(
+  async (): Promise<RoundResult[]> => {
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data } = await supabaseAdmin
+        .from("rounds")
+        .select("round_id, winner_lane, created_at")
+        .order("round_id", { ascending: false })
+        .limit(50);
+      return (data ?? []).map((r) => ({
+        roundId: Number(r.round_id),
+        winnerLane: Number(r.winner_lane),
+        createdAt: r.created_at as string,
+      }));
+    } catch {
+      return [];
+    }
+  },
+);
+
