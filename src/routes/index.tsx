@@ -222,10 +222,12 @@ function Game() {
         } catch {
           void refreshWallet();
         }
+        void refreshBets();
       })();
     },
-    [settle, refreshWallet],
+    [settle, refreshWallet, refreshBets],
   );
+
 
   const { roundId, phase, countdown, locked, cars, progressRef, winner, fairness } =
     useRaceRound(onSettle);
@@ -278,7 +280,9 @@ function Game() {
       });
       setBalance(res.balancePaise / 100);
       setBet({ roundId, lane, amount: staked });
+      void refreshBets();
       buzz(22);
+
     } catch (err) {
       setBetError(err instanceof Error ? err.message : "Could not place the bet");
       void refreshWallet();
@@ -469,7 +473,7 @@ function Game() {
       </div>
 
       <div className="mt-2 mx-2 pb-4">
-        <History entries={history} />
+        <History entries={betHistory} />
       </div>
 
       {/* Bottom nav */}
