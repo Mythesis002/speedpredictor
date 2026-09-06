@@ -222,10 +222,12 @@ function Game() {
         } catch {
           void refreshWallet();
         }
+        void refreshBets();
       })();
     },
-    [settle, refreshWallet],
+    [settle, refreshWallet, refreshBets],
   );
+
 
   const { roundId, phase, countdown, locked, cars, progressRef, winner, fairness } =
     useRaceRound(onSettle);
