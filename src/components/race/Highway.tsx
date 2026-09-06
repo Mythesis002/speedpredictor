@@ -147,7 +147,20 @@ export function Highway({
         const s = scaleAt(z);
         const carW = laneWidthAt(z, w) * 0.94;
         const k = carW / BASE_CAR;
-        const x = xAt(LANE_U[i], z, w);
+
+        const throttleI = Math.min(1, speedS.current[i] * 2.6);
+        /* the driver never holds a perfect line: a slow weave inside the lane */
+        const tSec = ts / 1000;
+        const sway =
+          throttleI *
+          0.085 *
+          (Math.sin(tSec * 0.9 + i * 2.3) * 0.65 + Math.sin(tSec * 2.17 + i * 5.1) * 0.35);
+        const swayVel =
+          throttleI *
+          0.085 *
+          (Math.cos(tSec * 0.9 + i * 2.3) * 0.9 * 0.65 + Math.cos(tSec * 2.17 + i * 5.1) * 2.17 * 0.35);
+
+        const x = xAt(LANE_U[i] + sway, z, w);
         const y = yAt(z, h); // tyres land exactly on the projected tarmac
 
         const el = laneRefs.current[i];
@@ -155,16 +168,25 @@ export function Highway({
           el.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(${k.toFixed(4)})`;
           el.style.zIndex = String(30 - Math.round((z - Z_CAR_NEAR) * 6));
           el.style.opacity = (1 - (1 - s) * 0.22).toFixed(3);
+          /* wheels spin at the car's real speed, not a React snapshot */
+          const rolling = speedS.current[i] > 0.004;
+          const dur = Math.max(0.055, 0.5 - throttleI * 0.44);
+          el.style.setProperty("--wheel-dur", `${dur.toFixed(3)}s`);
+          el.style.setProperty("--hub-dur", `${(dur * 1.6).toFixed(3)}s`);
+          el.style.setProperty("--wheel-play", rolling ? "running" : "paused");
         }
 
-        /* suspension: launch squat, braking dive, high-speed jitter */
+        /* suspension: launch squat, braking dive, high-speed jitter, body roll */
         const bodyEl = bodyRefs.current[i];
         if (bodyEl) {
-          const throttleI = Math.min(1, speedS.current[i] * 2.6);
           const pitch = ph === "launch" ? 4.2 : ph === "finish" ? -2.6 : -throttleI * 1.3;
           const jitter = live ? Math.sin(ts * 0.06 + i * 2.1) * 0.5 * throttleI : 0;
-          bodyEl.style.transform = `translate3d(${jitter.toFixed(2)}px, ${(pitch * 0.4).toFixed(2)}px, 0) rotate(${(pitch * 0.1).toFixed(2)}deg)`;
+          const roll = -swayVel * 26; // lean into the direction of the weave
+          bodyEl.style.transform =
+            `translate3d(${jitter.toFixed(2)}px, ${(pitch * 0.4).toFixed(2)}px, 0)` +
+            ` rotate(${(pitch * 0.1 + roll).toFixed(2)}deg)`;
         }
+
 
         const rank = [0, 1, 2].sort((a, b) => p[b] - p[a]).indexOf(i) + 1;
         const badge = posRefs.current[i];
