@@ -280,7 +280,9 @@ function Game() {
       });
       setBalance(res.balancePaise / 100);
       setBet({ roundId, lane, amount: staked });
+      void refreshBets();
       buzz(22);
+
     } catch (err) {
       setBetError(err instanceof Error ? err.message : "Could not place the bet");
       void refreshWallet();
