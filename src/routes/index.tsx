@@ -469,7 +469,7 @@ function Game() {
       </div>
 
       <div className="mt-2 mx-2 pb-4">
-        <History entries={history} />
+        <History entries={betHistory} />
       </div>
 
       {/* Bottom nav */}
