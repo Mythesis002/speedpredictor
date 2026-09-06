@@ -158,13 +158,13 @@ export const Car = memo(function Car({
               <g
                 style={{
                   animationName: "tread-roll",
-                  animationDuration: `${wheelDur}s`,
+                  animationDuration: `var(--wheel-dur, ${wheelDur}s)`,
                   animationTimingFunction: "linear",
                   animationIterationCount: "infinite",
-                  animationPlayState: rolling ? "running" : "paused",
+                  animationPlayState: `var(--wheel-play, ${rolling ? "running" : "paused"})`,
                 }}
 
-                opacity={0.72 - t * 0.42}
+                opacity={0.78 - t * 0.26}
               >
                 {[92, 104, 116, 128, 140, 152, 164].map((y) => (
                   <rect
@@ -187,19 +187,19 @@ export const Car = memo(function Car({
                 fill="#0a0d13"
                 stroke="#5b6579"
                 strokeWidth="1.2"
-                opacity={0.9 - t * 0.5}
+                opacity={0.92 - t * 0.22}
               />
               <g
                 style={{
                   transformOrigin: `${side === 0 ? 30 : 230}px 134px`,
                   animationName: "spin",
-                  animationDuration: `${Math.max(0.12, wheelDur * 1.6)}s`,
+                  animationDuration: `var(--hub-dur, ${Math.max(0.12, wheelDur * 1.6)}s)`,
                   animationTimingFunction: "linear",
                   animationIterationCount: "infinite",
-                  animationPlayState: rolling ? "running" : "paused",
+                  animationPlayState: `var(--wheel-play, ${rolling ? "running" : "paused"})`,
                 }}
 
-                opacity={0.85 - t * 0.55}
+                opacity={0.9 - t * 0.25}
               >
                 <rect
                   x={side === 0 ? 29 : 229}
@@ -209,9 +209,19 @@ export const Car = memo(function Car({
                   rx="1"
                   fill="#8f9ab0"
                 />
+                <rect
+                  x={side === 0 ? 22 : 222}
+                  y="133"
+                  width="16"
+                  height="2"
+                  rx="1"
+                  fill="#8f9ab0"
+                  opacity="0.75"
+                />
               </g>
             </g>
           ))}
+
 
           {/* speed blur over the wheels at high throttle */}
           <g opacity={t * 0.55}>
