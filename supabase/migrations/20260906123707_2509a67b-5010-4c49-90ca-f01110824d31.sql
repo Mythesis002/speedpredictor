@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.public_stats() FROM anon;

@@ -119,6 +119,33 @@ export type Database = {
         }
         Relationships: []
       }
+      rounds: {
+        Row: {
+          commit_hash: string | null
+          created_at: string
+          finish_order: number[]
+          reveal: string | null
+          round_id: number
+          winner_lane: number
+        }
+        Insert: {
+          commit_hash?: string | null
+          created_at?: string
+          finish_order: number[]
+          reveal?: string | null
+          round_id: number
+          winner_lane: number
+        }
+        Update: {
+          commit_hash?: string | null
+          created_at?: string
+          finish_order?: number[]
+          reveal?: string | null
+          round_id?: number
+          winner_lane?: number
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount_paise: number
@@ -247,6 +274,14 @@ export type Database = {
         Returns: {
           out_balance_paise: number
           out_status: string
+        }[]
+      }
+      public_stats: {
+        Args: never
+        Returns: {
+          bets_today: number
+          players: number
+          staked_paise: number
         }[]
       }
       settle_bet: {
