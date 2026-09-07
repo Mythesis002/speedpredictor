@@ -6,12 +6,10 @@ import { PredictionCards } from "@/components/race/PredictionCards";
 import { BettingPanel } from "@/components/race/BettingPanel";
 import { Header } from "@/components/race/Header";
 import {
-  History,
   Results,
   RecentRounds,
   LiveStats,
   type HistoryEntry,
-  type BetHistoryEntry,
 } from "@/components/race/History";
 import { WinModal } from "@/components/race/WinModal";
 import { DepositModal } from "@/components/race/DepositModal";
@@ -24,11 +22,9 @@ import { recentResults } from "@/lib/rounds.functions";
 import {
   getWallet,
   liveStats,
-  myBets,
   placeBet as placeBetFn,
   settleRound,
 } from "@/lib/wallet.functions";
-import { amIAdmin } from "@/lib/admin.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 import {
@@ -39,7 +35,6 @@ import {
   LogOut,
   Settings,
   ShieldCheck,
-  ShieldHalf,
   Trophy,
 } from "lucide-react";
 
