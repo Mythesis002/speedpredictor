@@ -240,26 +240,44 @@ function Game() {
   const { roundId, phase, countdown, locked, cars, progressRef, winner, fairness } =
     useRaceRound(onSettle);
 
-  useEffect(() => {
-    setHistory((h) =>
-      h.length
-        ? h
-        : Array.from({ length: 24 }, (_, i) => {
-            const id = roundId - 1 - i;
-            const lineup = lineupForRound(id);
-            return { id, car: lineup[(id * 7) % 3], ago: `${i + 1}m` };
-          }),
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  /* real results, straight from the database — shared by every device */
+  const loadResults = useServerFn(recentResults);
+  const refreshResults = useCallback(async () => {
+    try {
+      const rows = await loadResults({});
+      if (!rows.length) return;
+      setHistory(
+        rows.map((r) => ({
+          id: r.roundId,
+          car: lineupForRound(r.roundId)[r.winnerLane],
+          ago: timeAgo(r.createdAt),
+        })),
+      );
+    } catch {
+      /* transient */
+    }
+  }, [loadResults]);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setPlayers((n) => Math.max(600, n + Math.round((Math.random() - 0.5) * 24)));
-      setTotalBets((n) => Math.max(10000, n + Math.round((Math.random() - 0.4) * 900)));
-    }, 1600);
+    void refreshResults();
+  }, [refreshResults, roundId]);
+
+  /* real live numbers */
+  const loadStats = useServerFn(liveStats);
+  useEffect(() => {
+    const pull = () => {
+      void loadStats({})
+        .then((s) => {
+          setPlayers(s.players);
+          setTotalBets(Math.round(s.stakedPaise / 100));
+        })
+        .catch(() => {});
+    };
+    pull();
+    const id = setInterval(pull, 20_000);
     return () => clearInterval(id);
-  }, []);
+  }, [loadStats]);
+
 
   const [selected, setSelected] = useState<number | null>(null);
   useEffect(() => setSelected(null), [roundId]);
