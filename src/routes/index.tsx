@@ -106,7 +106,6 @@ function Game() {
   const loadWallet = useServerFn(getWallet);
   const submitBet = useServerFn(placeBetFn);
   const settle = useServerFn(settleRound);
-  const checkAdmin = useServerFn(amIAdmin);
 
   const [balance, setBalance] = useState(0);
   const [amount, setAmount] = useState(10);
@@ -115,7 +114,6 @@ function Game() {
   betRef.current = bet;
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [betError, setBetError] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
 
@@ -123,44 +121,7 @@ function Game() {
   const [players, setPlayers] = useState(0);
   const [totalBets, setTotalBets] = useState(0);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [betHistory, setBetHistory] = useState<BetHistoryEntry[]>([]);
 
-  /* the player's own bet history, straight from the server ledger */
-  const loadBets = useServerFn(myBets);
-  const refreshBets = useCallback(async () => {
-    try {
-      const rows = await loadBets({});
-      setBetHistory(
-        rows.map((b) => {
-          const lineup = lineupForRound(b.roundId);
-          return {
-            id: b.id,
-            roundId: b.roundId,
-            car: lineup[b.lane],
-            winnerCar: b.winnerLane === null ? null : lineup[b.winnerLane],
-            amount: b.amountPaise / 100,
-            payout: b.payoutPaise / 100,
-            multiplier: b.multiplier,
-            status: (b.status === "won" || b.status === "lost"
-              ? b.status
-              : "pending") as BetHistoryEntry["status"],
-          };
-        }),
-      );
-    } catch {
-      /* transient */
-    }
-  }, [loadBets]);
-
-  useEffect(() => {
-    void refreshBets();
-  }, [refreshBets]);
-
-  useEffect(() => {
-    void checkAdmin({})
-      .then(setIsAdmin)
-      .catch(() => setIsAdmin(false));
-  }, [checkAdmin]);
 
 
   /* wallet comes from the server — never from the browser */
@@ -475,15 +436,6 @@ function Game() {
           onConfirm={() => void placeBet()}
         />
 
-        {isAdmin && (
-          <a
-            href="/admin"
-            className="glass rounded-xl px-3 py-2 flex items-center gap-2 text-[11px] font-display tracking-wide text-white"
-          >
-            <ShieldHalf size={14} style={{ color: "#ffc32b" }} />
-            Owner console
-          </a>
-        )}
 
         {/* provably-fair status */}
         <div className="flex items-center gap-1.5 text-[9px] font-display tracking-[0.14em] text-white/40">
@@ -502,7 +454,6 @@ function Game() {
       </div>
 
       <div className="mt-2 mx-2 pb-4 space-y-2">
-        <History entries={betHistory} />
         <Results entries={history} />
       </div>
 
