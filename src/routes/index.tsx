@@ -7,6 +7,7 @@ import { BettingPanel } from "@/components/race/BettingPanel";
 import { Header } from "@/components/race/Header";
 import {
   History,
+  Results,
   RecentRounds,
   LiveStats,
   type HistoryEntry,
@@ -19,7 +20,14 @@ import { lineupForRound } from "@/lib/round-engine";
 import { carLabel, formatINR } from "@/lib/car-label";
 import { useRaceRound } from "@/lib/use-race-round";
 import { useAuthSession } from "@/lib/use-auth";
-import { getWallet, myBets, placeBet as placeBetFn, settleRound } from "@/lib/wallet.functions";
+import { recentResults } from "@/lib/rounds.functions";
+import {
+  getWallet,
+  liveStats,
+  myBets,
+  placeBet as placeBetFn,
+  settleRound,
+} from "@/lib/wallet.functions";
 import { amIAdmin } from "@/lib/admin.functions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -58,6 +66,14 @@ export const Route = createFileRoute("/")({
 });
 
 const MIN_BET = 10;
+
+function timeAgo(iso: string): string {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return "now";
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
+}
 
 function SpeedPredict() {
   const [hydrated, setHydrated] = useState(false);
@@ -109,8 +125,8 @@ function Game() {
   const [placing, setPlacing] = useState(false);
 
   const [win, setWin] = useState<{ amount: number; colorName: string; color: string } | null>(null);
-  const [players, setPlayers] = useState(1245);
-  const [totalBets, setTotalBets] = useState(89540);
+  const [players, setPlayers] = useState(0);
+  const [totalBets, setTotalBets] = useState(0);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [betHistory, setBetHistory] = useState<BetHistoryEntry[]>([]);
 
@@ -232,26 +248,44 @@ function Game() {
   const { roundId, phase, countdown, locked, cars, progressRef, winner, fairness } =
     useRaceRound(onSettle);
 
-  useEffect(() => {
-    setHistory((h) =>
-      h.length
-        ? h
-        : Array.from({ length: 24 }, (_, i) => {
-            const id = roundId - 1 - i;
-            const lineup = lineupForRound(id);
-            return { id, car: lineup[(id * 7) % 3], ago: `${i + 1}m` };
-          }),
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  /* real results, straight from the database — shared by every device */
+  const loadResults = useServerFn(recentResults);
+  const refreshResults = useCallback(async () => {
+    try {
+      const rows = await loadResults({});
+      if (!rows.length) return;
+      setHistory(
+        rows.map((r) => ({
+          id: r.roundId,
+          car: lineupForRound(r.roundId)[r.winnerLane],
+          ago: timeAgo(r.createdAt),
+        })),
+      );
+    } catch {
+      /* transient */
+    }
+  }, [loadResults]);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setPlayers((n) => Math.max(600, n + Math.round((Math.random() - 0.5) * 24)));
-      setTotalBets((n) => Math.max(10000, n + Math.round((Math.random() - 0.4) * 900)));
-    }, 1600);
+    void refreshResults();
+  }, [refreshResults, roundId]);
+
+  /* real live numbers */
+  const loadStats = useServerFn(liveStats);
+  useEffect(() => {
+    const pull = () => {
+      void loadStats({})
+        .then((s) => {
+          setPlayers(s.players);
+          setTotalBets(Math.round(s.stakedPaise / 100));
+        })
+        .catch(() => {});
+    };
+    pull();
+    const id = setInterval(pull, 20_000);
     return () => clearInterval(id);
-  }, []);
+  }, [loadStats]);
+
 
   const [selected, setSelected] = useState<number | null>(null);
   useEffect(() => setSelected(null), [roundId]);
@@ -472,8 +506,9 @@ function Game() {
         </div>
       </div>
 
-      <div className="mt-2 mx-2 pb-4">
+      <div className="mt-2 mx-2 pb-4 space-y-2">
         <History entries={betHistory} />
+        <Results entries={history} />
       </div>
 
       {/* Bottom nav */}

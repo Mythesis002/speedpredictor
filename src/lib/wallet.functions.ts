@@ -285,3 +285,16 @@ export const myBets = createServerFn({ method: "GET" })
       createdAt: b.created_at as string,
     }));
   });
+
+/** Safe, aggregate-only live numbers for the HUD (no personal data). */
+export const liveStats = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data } = await context.supabase.rpc("public_stats");
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      players: Number(row?.players ?? 0),
+      stakedPaise: Number(row?.staked_paise ?? 0),
+      betsToday: Number(row?.bets_today ?? 0),
+    };
+  });
