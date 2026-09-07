@@ -298,3 +298,41 @@ export const actOnWithdrawal = createServerFn({ method: "POST" })
       balancePaise: Number(row?.out_balance_paise ?? 0),
     };
   });
+
+/** Payment wiring status — flips to live automatically once real keys are saved. */
+export const getPaymentsStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const id = process.env["RAZORPAY_KEY_ID"] ?? "";
+    return {
+      configured: Boolean(id && process.env["RAZORPAY_KEY_SECRET"]),
+      webhookReady: Boolean(process.env["RAZORPAY_WEBHOOK_SECRET"]),
+      mode: id.startsWith("rzp_live") ? "live" : id ? "test" : "none",
+      keyIdMasked: id ? `${id.slice(0, 12)}…` : null,
+    };
+  });
+
+export interface AdminRound {
+  roundId: number;
+  winnerLane: number;
+  createdAt: string;
+}
+
+/** Last 50 race outcomes exactly as stored in the database. */
+export const listRounds = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AdminRound[]> => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("rounds")
+      .select("round_id, winner_lane, created_at")
+      .order("round_id", { ascending: false })
+      .limit(50);
+    return (data ?? []).map((r) => ({
+      roundId: Number(r.round_id),
+      winnerLane: Number(r.winner_lane),
+      createdAt: r.created_at as string,
+    }));
+  });
