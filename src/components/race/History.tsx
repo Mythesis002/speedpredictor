@@ -149,3 +149,45 @@ export function LiveStats({
     </div>
   );
 }
+
+/** Last 50 finished races, exactly as stored on the server. */
+export function Results({ entries }: { entries: HistoryEntry[] }) {
+  return (
+    <div className="glass rounded-2xl p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-display text-[10px] tracking-[0.2em] text-white/60">
+          LAST 50 RESULTS
+        </span>
+        <span className="text-[9px] text-white/35">{entries.length} races</span>
+      </div>
+
+      {entries.length === 0 ? (
+        <div className="py-5 text-center text-[11px] text-white/40">
+          Results appear here as soon as a race finishes.
+        </div>
+      ) : (
+        <div className="grid grid-cols-5 gap-1.5">
+          {entries.slice(0, 50).map((e) => (
+            <div
+              key={e.id}
+              className="rounded-xl bg-white/[0.04] px-1.5 py-1.5 flex flex-col items-center gap-1"
+              title={`Round ${e.id} · ${e.car.colorName}`}
+            >
+              <span
+                className="w-3.5 h-3.5 rounded-full"
+                style={{
+                  background: e.car.color,
+                  boxShadow: `0 0 8px ${e.car.color}`,
+                  border: "1px solid rgba(255,255,255,0.22)",
+                }}
+              />
+              <span className="text-[8px] tabular text-white/40 leading-none">
+                {String(e.id).slice(-4)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
