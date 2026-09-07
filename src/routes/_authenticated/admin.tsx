@@ -229,13 +229,33 @@ function AdminPage() {
         />
       </section>
 
+      {/* Payment wiring */}
+      <div className="mt-2 mx-2 glass rounded-2xl px-3 py-2 flex items-center gap-2">
+        <span
+          className="w-2 h-2 rounded-full shrink-0"
+          style={{
+            background: payments.data?.configured ? "#26ff9a" : "#ffc32b",
+            boxShadow: `0 0 8px ${payments.data?.configured ? "#26ff9a" : "#ffc32b"}`,
+          }}
+        />
+        <div className="text-[11px] text-white/70 leading-tight">
+          {payments.data?.configured
+            ? `Payments live (${payments.data.mode}) · ${payments.data.keyIdMasked}`
+            : "Payments waiting for keys — add them and deposits start working instantly."}
+          {payments.data && !payments.data.webhookReady && (
+            <span className="text-[#ffc32b]"> · webhook secret missing</span>
+          )}
+        </div>
+      </div>
+
       {/* Tabs */}
-      <div className="mt-3 mx-2 glass rounded-2xl grid grid-cols-3 p-1">
+      <div className="mt-3 mx-2 glass rounded-2xl grid grid-cols-4 p-1">
         {(
           [
             ["payouts", `Payouts${pending.length ? ` (${pending.length})` : ""}`],
             ["deposits", "Deposits"],
             ["players", "Players"],
+            ["races", "Races"],
           ] as [Tab, string][]
         ).map(([id, label]) => (
           <button
