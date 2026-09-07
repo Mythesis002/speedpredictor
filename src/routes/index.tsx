@@ -117,8 +117,8 @@ function Game() {
   const [placing, setPlacing] = useState(false);
 
   const [win, setWin] = useState<{ amount: number; colorName: string; color: string } | null>(null);
-  const [players, setPlayers] = useState(1245);
-  const [totalBets, setTotalBets] = useState(89540);
+  const [players, setPlayers] = useState(0);
+  const [totalBets, setTotalBets] = useState(0);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [betHistory, setBetHistory] = useState<BetHistoryEntry[]>([]);
 
