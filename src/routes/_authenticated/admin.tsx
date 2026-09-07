@@ -52,7 +52,7 @@ const rupees = (paise: number) =>
 const when = (iso: string) =>
   new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 
-type Tab = "payouts" | "deposits" | "players";
+type Tab = "payouts" | "deposits" | "players" | "races";
 
 function Stat({
   icon: Icon,
