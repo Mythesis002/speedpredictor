@@ -112,6 +112,15 @@ function AdminPage() {
     queryFn: () => playersFn({}),
     enabled: tab === "players",
   });
+  const roundsFn = useServerFn(listRounds);
+  const rounds = useQuery({
+    queryKey: ["admin", "rounds"],
+    queryFn: () => roundsFn({}),
+    enabled: tab === "races",
+    refetchInterval: 15_000,
+  });
+  const payFn = useServerFn(getPaymentsStatus);
+  const payments = useQuery({ queryKey: ["admin", "payments"], queryFn: () => payFn({}) });
 
   const act = useMutation({
     mutationFn: (v: { withdrawalId: string; action: "approve" | "reject" }) => actFn({ data: v }),
