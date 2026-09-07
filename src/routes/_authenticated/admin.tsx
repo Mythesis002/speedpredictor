@@ -397,6 +397,44 @@ function AdminPage() {
             )}
           </div>
         )}
+
+        {tab === "races" && (
+          <div className="glass rounded-2xl p-3">
+            <div className="text-[9px] font-display tracking-[0.16em] text-white/40 mb-2">
+              LAST 50 RACE RESULTS
+            </div>
+            {(rounds.data ?? []).length === 0 && (
+              <div className="text-center text-sm text-white/45 py-4">
+                No finished races recorded yet.
+              </div>
+            )}
+            {(rounds.data ?? []).map((r) => {
+              const car = lineupForRound(r.roundId)[r.winnerLane];
+              return (
+                <div
+                  key={r.roundId}
+                  className="flex items-center gap-2 py-1.5 border-t border-white/5 first:border-0"
+                >
+                  <span className="text-[10px] tabular text-white/35 w-14 shrink-0">
+                    #{r.roundId}
+                  </span>
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0"
+                    style={{
+                      background: car?.color,
+                      boxShadow: `0 0 8px ${car?.color}`,
+                      border: "1px solid rgba(255,255,255,0.2)",
+                    }}
+                  />
+                  <span className="text-[12px] text-white/80 flex-1 truncate">
+                    {car?.colorName ?? `Lane ${r.winnerLane + 1}`}
+                  </span>
+                  <span className="text-[10px] text-white/35 shrink-0">{when(r.createdAt)}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
