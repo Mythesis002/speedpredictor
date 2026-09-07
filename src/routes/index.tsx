@@ -506,8 +506,9 @@ function Game() {
         </div>
       </div>
 
-      <div className="mt-2 mx-2 pb-4">
+      <div className="mt-2 mx-2 pb-4 space-y-2">
         <History entries={betHistory} />
+        <Results entries={history} />
       </div>
 
       {/* Bottom nav */}
