@@ -67,6 +67,14 @@ export const Route = createFileRoute("/")({
 
 const MIN_BET = 10;
 
+function timeAgo(iso: string): string {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return "now";
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
+}
+
 function SpeedPredict() {
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
