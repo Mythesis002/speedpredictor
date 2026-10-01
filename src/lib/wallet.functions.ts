@@ -85,7 +85,7 @@ export const placeBet = createServerFn({ method: "POST" })
     if (error) {
       const msg = error.message.includes("duplicate key")
         ? "You already have a bet on this round"
-        : error.message.replace(/^.*ERROR:\s*/, "");
+        : error.message.replace(/^.*ERROR:\s*/, "").replace(/^[A-Z_]+:\s*/, "");
       throw new Error(msg);
     }
     const row = Array.isArray(rows) ? rows[0] : rows;
