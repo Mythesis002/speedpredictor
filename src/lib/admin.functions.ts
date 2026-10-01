@@ -52,6 +52,8 @@ export interface AdminDeposit {
 }
 
 export interface AdminPlayer {
+  isBanned: boolean;
+  bannedReason: string | null;
   id: string;
   phone: string;
   balancePaise: number;
@@ -246,7 +248,7 @@ export const listPlayers = createServerFn({ method: "GET" })
     const [{ data: profiles }, { data: deposits }, { data: bets }] = await Promise.all([
       supabaseAdmin
         .from("profiles")
-        .select("id, phone, balance_paise, created_at")
+        .select("id, phone, balance_paise, created_at, is_banned, banned_reason")
         .order("created_at", { ascending: false })
         .limit(200),
       supabaseAdmin.from("deposits").select("user_id, amount_paise, status"),
@@ -265,6 +267,8 @@ export const listPlayers = createServerFn({ method: "GET" })
         wonPaise: sum(myBets, "payout_paise"),
         bets: myBets.length,
         joinedAt: p.created_at,
+        isBanned: Boolean(p.is_banned),
+        bannedReason: p.banned_reason ?? null,
       };
     });
   });
@@ -335,4 +339,51 @@ export const listRounds = createServerFn({ method: "GET" })
       winnerLane: Number(r.winner_lane),
       createdAt: r.created_at as string,
     }));
+  });
+
+const reasonOk = (r: unknown) => typeof r === "string" && r.trim().length >= 3 && r.length <= 300;
+
+/** Ban or unban a player. A reason is mandatory and every action is written to the audit log. */
+export const setPlayerBan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { userId: string; banned: boolean; reason: string }) => {
+    if (typeof d?.userId !== "string" || d.userId.length < 10) throw new Error("Invalid player");
+    if (typeof d.banned !== "boolean") throw new Error("Invalid action");
+    if (!reasonOk(d.reason)) throw new Error("A reason is required");
+    return { userId: d.userId, banned: d.banned, reason: d.reason.trim() };
+  })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.rpc("admin_set_ban", {
+      p_actor: context.userId,
+      p_user: data.userId,
+      p_banned: data.banned,
+      p_reason: data.reason,
+    });
+    if (error) throw new Error(error.message.replace(/^.*ERROR:\s*/, ""));
+    return { ok: true as const };
+  });
+
+/** Credit (+) or debit (−) a player's wallet with a reason; recorded in ledger + audit log. */
+export const adjustPlayerBalance = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { userId: string; amountPaise: number; reason: string }) => {
+    if (typeof d?.userId !== "string" || d.userId.length < 10) throw new Error("Invalid player");
+    if (!Number.isInteger(d.amountPaise) || d.amountPaise === 0 || Math.abs(d.amountPaise) > 10_000_000)
+      throw new Error("Invalid amount");
+    if (!reasonOk(d.reason)) throw new Error("A reason is required");
+    return { userId: d.userId, amountPaise: d.amountPaise, reason: d.reason.trim() };
+  })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: bal, error } = await supabaseAdmin.rpc("admin_adjust_balance", {
+      p_actor: context.userId,
+      p_user: data.userId,
+      p_amount_paise: data.amountPaise,
+      p_reason: data.reason,
+    });
+    if (error) throw new Error(error.message.replace(/^.*ERROR:\s*/, ""));
+    return { balancePaise: Number(bal ?? 0) };
   });

@@ -153,15 +153,11 @@ export function rngFrom(str: string): () => number {
 /* Lineup (public — known before betting opens)                        */
 /* ------------------------------------------------------------------ */
 
+/** The three team colours. Every grid uses exactly these, shuffled across lanes. */
 export const COLORS: { name: string; hex: string }[] = [
   { name: "Red", hex: "#ff3b4d" },
-  { name: "Green", hex: "#3bff97" },
-  { name: "Blue", hex: "#3b8bff" },
   { name: "Purple", hex: "#a24bff" },
-  { name: "Orange", hex: "#ff8a2a" },
-  { name: "Yellow", hex: "#ffd83a" },
-  { name: "White", hex: "#f0f4ff" },
-  { name: "Silver", hex: "#c9d1dc" },
+  { name: "Blue", hex: "#3b8bff" },
 ];
 
 /**
@@ -207,11 +203,6 @@ export function lineupForRound(roundId: number): [CarSpec, CarSpec, CarSpec] {
     const kind: CarKind = roll < 0.035 && !hyperUsed ? "hyper" : roll < 0.18 ? "small" : "normal";
     if (kind === "hyper") hyperUsed = true;
     kinds.push(kind);
-
-    if (kind === "hyper") {
-      paint.push({ color: "#0b0b10", colorName: "Black" });
-      continue;
-    }
 
     let c = COLORS[Math.floor(rnd() * COLORS.length)];
     let guard = 0;
