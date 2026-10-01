@@ -194,10 +194,9 @@ function Game() {
         } catch {
           void refreshWallet();
         }
-        void refreshBets();
       })();
     },
-    [settle, refreshWallet, refreshBets],
+    [settle, refreshWallet],
   );
 
 
@@ -270,7 +269,6 @@ function Game() {
       });
       setBalance(res.balancePaise / 100);
       setBet({ roundId, lane, amount: staked });
-      void refreshBets();
       buzz(22);
 
     } catch (err) {
