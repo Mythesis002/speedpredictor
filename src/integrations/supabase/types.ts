@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          entity: string
+          entity_id: string | null
+          id: string
+          metadata: Json
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          entity: string
+          entity_id?: string | null
+          id?: string
+          metadata?: Json
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          metadata?: Json
+        }
+        Relationships: []
+      }
       bets: {
         Row: {
           amount_paise: number
@@ -97,24 +127,42 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age_confirmed_at: string | null
           balance_paise: number
+          banned_reason: string | null
           created_at: string
+          daily_loss_limit_paise: number | null
+          display_name: string | null
           id: string
+          is_banned: boolean
           phone: string
+          self_excluded_until: string | null
           updated_at: string
         }
         Insert: {
+          age_confirmed_at?: string | null
           balance_paise?: number
+          banned_reason?: string | null
           created_at?: string
+          daily_loss_limit_paise?: number | null
+          display_name?: string | null
           id: string
+          is_banned?: boolean
           phone: string
+          self_excluded_until?: string | null
           updated_at?: string
         }
         Update: {
+          age_confirmed_at?: string | null
           balance_paise?: number
+          banned_reason?: string | null
           created_at?: string
+          daily_loss_limit_paise?: number | null
+          display_name?: string | null
           id?: string
+          is_banned?: boolean
           phone?: string
+          self_excluded_until?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -238,6 +286,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_adjust_balance: {
+        Args: {
+          p_actor: string
+          p_amount_paise: number
+          p_reason: string
+          p_user: string
+        }
+        Returns: number
+      }
+      admin_set_ban: {
+        Args: {
+          p_actor: string
+          p_banned: boolean
+          p_reason: string
+          p_user: string
+        }
+        Returns: undefined
+      }
       credit_deposit: {
         Args: {
           p_amount_paise: number
