@@ -60,7 +60,7 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const patch: import("@/integrations/supabase/types").TablesUpdate<"profiles"> = { updated_at: new Date().toISOString() };
     if (data.displayName !== undefined) patch.display_name = data.displayName;
     if (data.dailyLossLimitPaise !== undefined) patch.daily_loss_limit_paise = data.dailyLossLimitPaise;
     if (data.ageConfirmed) patch.age_confirmed_at = new Date().toISOString();

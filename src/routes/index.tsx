@@ -466,14 +466,14 @@ function Game() {
         <div className="glass rounded-2xl grid grid-cols-4 py-1.5">
           {([
             { icon: Home, label: "Home", active: true },
-            { icon: BarChart3, label: "History", action: () => void navigate({ to: "/history" }) },
+            { icon: BarChart3, label: "History", href: "/history" },
             { icon: Banknote, label: "Cash out", action: () => setWithdrawOpen(true) },
-            { icon: Settings, label: "Profile", action: () => void navigate({ to: "/profile" }) },
-          ] as { icon: typeof Home; label: string; active?: boolean; action?: () => void }[])
-            .map(({ icon: Icon, label, active, action }) => (
+            { icon: Settings, label: "Profile", href: "/profile" },
+          ] as { icon: typeof Home; label: string; active?: boolean; action?: () => void; href?: "/history" | "/profile" }[])
+            .map(({ icon: Icon, label, active, action, href }) => (
               <button
                 key={label}
-                onClick={action}
+                onClick={href ? () => void nav({ to: href }) : action}
                 className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] ${
                   active ? "text-[#a24bff]" : "text-white/45"
                 }`}
