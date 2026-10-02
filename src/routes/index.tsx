@@ -32,10 +32,8 @@ import {
   Banknote,
   Gift,
   Home,
-  LogOut,
   Settings,
   ShieldCheck,
-  Trophy,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
