@@ -101,6 +101,7 @@ function buzz(pattern: number | number[]) {
 }
 
 function Game() {
+  const nav = useNavigate();
   const loadWallet = useServerFn(getWallet);
   const submitBet = useServerFn(placeBetFn);
   const settle = useServerFn(settleRound);
