@@ -19,6 +19,8 @@ import {
   getPaymentsStatus,
   listDeposits,
   listPlayers,
+  setPlayerBan,
+  adjustPlayerBalance,
   listRounds,
   listWithdrawals,
 } from "@/lib/admin.functions";
@@ -386,6 +388,10 @@ function AdminPage() {
                     {rupees(p.balancePaise)}
                   </div>
                 </div>
+                {p.isBanned && (
+                  <div className="text-[10px] text-[#ff4d6d]">Banned: {p.bannedReason}</div>
+                )}
+                <PlayerActions id={p.id} banned={p.isBanned} />
                 <div className="text-[10px] text-white/40 mt-0.5">
                   Joined {when(p.joinedAt)} · Deposited {rupees(p.depositedPaise)} · Staked{" "}
                   {rupees(p.stakedPaise)} · Won {rupees(p.wonPaise)} · {p.bets} bets
@@ -436,6 +442,43 @@ function AdminPage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function PlayerActions({ id, banned }: { id: string; banned: boolean }) {
+  const ban = useServerFn(setPlayerBan);
+  const adjust = useServerFn(adjustPlayerBalance);
+  const qc = useQueryClient();
+  const done = (m: string) => {
+    toast.success(m);
+    void qc.invalidateQueries({ queryKey: ["admin"] });
+  };
+  const fail = (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed");
+  return (
+    <div className="flex gap-2 mt-1">
+      <button
+        className="h-8 px-3 rounded-lg bg-white/5 text-[10px]"
+        onClick={() => {
+          const reason = prompt(banned ? "Reason for unban" : "Reason for ban");
+          if (!reason) return;
+          ban({ data: { userId: id, banned: !banned, reason } }).then(() => done(banned ? "Unbanned" : "Banned"), fail);
+        }}
+      >
+        {banned ? "Unban" : "Ban"}
+      </button>
+      <button
+        className="h-8 px-3 rounded-lg bg-white/5 text-[10px]"
+        onClick={() => {
+          const amt = Number(prompt("Adjust balance in ₹ (use minus to debit, e.g. -50)"));
+          if (!Number.isFinite(amt) || amt === 0) return;
+          const reason = prompt("Reason (required)");
+          if (!reason) return;
+          adjust({ data: { userId: id, amountPaise: Math.round(amt * 100), reason } }).then(() => done("Balance adjusted"), fail);
+        }}
+      >
+        Adjust ₹
+      </button>
     </div>
   );
 }

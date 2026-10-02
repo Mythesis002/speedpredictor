@@ -131,7 +131,13 @@ export function LiveStats({
 }) {
   const rows = [
     { label: "Players", value: players.toLocaleString("en-IN") },
-    { label: "Bets", value: `₹${Math.round(totalBets / 1000)}K` },
+    {
+      label: "Staked",
+      value:
+        totalBets >= 100000
+          ? `₹${(totalBets / 1000).toFixed(1)}K`
+          : `₹${Math.round(totalBets).toLocaleString("en-IN")}`,
+    },
   ];
   return (
     <div className="glass rounded-xl p-1 w-[68px] pointer-events-none">
@@ -150,41 +156,53 @@ export function LiveStats({
   );
 }
 
-/** Last 50 finished races, exactly as stored on the server. */
+/** Last finished races, exactly as stored on the server. Only the three team colours. */
+const TEAM = [
+  { name: "Red", hex: "#ff3b4d" },
+  { name: "Purple", hex: "#a24bff" },
+  { name: "Blue", hex: "#3b8bff" },
+];
+
 export function Results({ entries }: { entries: HistoryEntry[] }) {
+  const last = entries.slice(0, 20);
+  const pct = TEAM.map((t) => {
+    const n = entries.filter((e) => e.car.colorName === t.name).length;
+    return { ...t, p: entries.length ? Math.round((n / entries.length) * 100) : 0 };
+  });
   return (
     <div className="glass rounded-2xl p-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="font-display text-[10px] tracking-[0.2em] text-white/60">
-          LAST 50 RESULTS
-        </span>
-        <span className="text-[9px] text-white/35">{entries.length} races</span>
+        <span className="font-display text-[10px] tracking-[0.2em] text-white/60">LAST RESULTS</span>
+        <span className="text-[9px] text-white/35">Last {last.length} rounds</span>
       </div>
-
-      {entries.length === 0 ? (
+      <div className="flex gap-3 mb-2">
+        {pct.map((t) => (
+          <span key={t.name} className="flex items-center gap-1 text-[10px] text-white/60">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ background: t.hex }} />
+            {t.name} {t.p}%
+          </span>
+        ))}
+        <span className="text-[9px] text-white/30 ml-auto self-center">of last {entries.length}</span>
+      </div>
+      {last.length === 0 ? (
         <div className="py-5 text-center text-[11px] text-white/40">
           Results appear here as soon as a race finishes.
         </div>
       ) : (
         <div className="grid grid-cols-5 gap-1.5">
-          {entries.slice(0, 50).map((e) => (
-            <div
+          {last.map((e) => (
+            <a
               key={e.id}
-              className="rounded-xl bg-white/[0.04] px-1.5 py-1.5 flex flex-col items-center gap-1"
-              title={`Round ${e.id} · ${e.car.colorName}`}
+              href={`/verify/${e.id}`}
+              className="rounded-xl bg-white/[0.04] px-1 py-1.5 flex flex-col items-center gap-1 min-h-[44px]"
+              aria-label={`Round ${e.id}: ${e.car.colorName} won. Verify`}
             >
               <span
                 className="w-3.5 h-3.5 rounded-full"
-                style={{
-                  background: e.car.color,
-                  boxShadow: `0 0 8px ${e.car.color}`,
-                  border: "1px solid rgba(255,255,255,0.22)",
-                }}
+                style={{ background: e.car.color, boxShadow: `0 0 8px ${e.car.color}`, border: "1px solid rgba(255,255,255,0.22)" }}
               />
-              <span className="text-[8px] tabular text-white/40 leading-none">
-                {String(e.id).slice(-4)}
-              </span>
-            </div>
+              <span className="text-[8px] tabular text-white/40 leading-none">#{e.id}</span>
+            </a>
           ))}
         </div>
       )}

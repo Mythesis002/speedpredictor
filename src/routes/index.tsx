@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Highway } from "@/components/race/Highway";
@@ -32,10 +32,8 @@ import {
   Banknote,
   Gift,
   Home,
-  LogOut,
   Settings,
   ShieldCheck,
-  Trophy,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -103,6 +101,7 @@ function buzz(pattern: number | number[]) {
 }
 
 function Game() {
+  const nav = useNavigate();
   const loadWallet = useServerFn(getWallet);
   const submitBet = useServerFn(placeBetFn);
   const settle = useServerFn(settleRound);
@@ -436,7 +435,11 @@ function Game() {
 
 
         {/* provably-fair status */}
-        <div className="flex items-center gap-1.5 text-[9px] font-display tracking-[0.14em] text-white/40">
+        <Link
+          to="/verify/$roundId"
+          params={{ roundId: String(Math.max(0, roundId - 1)) }}
+          className="flex items-center gap-1.5 text-[9px] font-display tracking-[0.14em] text-white/40 min-h-[28px]"
+        >
           <ShieldCheck
             size={12}
             className={fairness.verified ? "text-[#26ff9a]" : "text-white/35"}
@@ -448,7 +451,8 @@ function Game() {
                 ? `COMMIT ${fairness.commit?.slice(0, 12) ?? "…"}`
                 : "OFFLINE MODE · LOCAL SIMULATION"}
           </span>
-        </div>
+          <span className="ml-auto underline text-white/45">VERIFY</span>
+        </Link>
       </div>
 
       <div className="mt-2 mx-2 pb-4 space-y-2">
@@ -460,18 +464,17 @@ function Game() {
         className="sticky bottom-0 mt-auto z-40 bg-gradient-to-t from-[#04060c] via-[#04060c] to-transparent pt-3 px-2"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
       >
-        <div className="glass rounded-2xl grid grid-cols-5 py-1.5">
+        <div className="glass rounded-2xl grid grid-cols-4 py-1.5">
           {([
             { icon: Home, label: "Home", active: true },
-            { icon: BarChart3, label: "Stats" },
-            { icon: Trophy, label: "Leaders" },
+            { icon: BarChart3, label: "History", href: "/history" },
             { icon: Banknote, label: "Cash out", action: () => setWithdrawOpen(true) },
-            { icon: LogOut, label: "Sign out", action: () => void supabase.auth.signOut() },
-          ] as { icon: typeof Home; label: string; active?: boolean; action?: () => void }[])
-            .map(({ icon: Icon, label, active, action }) => (
+            { icon: Settings, label: "Profile", href: "/profile" },
+          ] as { icon: typeof Home; label: string; active?: boolean; action?: () => void; href?: "/history" | "/profile" }[])
+            .map(({ icon: Icon, label, active, action, href }) => (
               <button
                 key={label}
-                onClick={action}
+                onClick={href ? () => void nav({ to: href }) : action}
                 className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] ${
                   active ? "text-[#a24bff]" : "text-white/45"
                 }`}

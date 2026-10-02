@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link as RouterLink } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { phoneToEmail, useAuthSession } from "@/lib/use-auth";
@@ -32,6 +33,7 @@ function AuthPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [adult, setAdult] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,7 +41,7 @@ function AuthPage() {
   }, [session, navigate]);
 
   const digits = phone.replace(/\D/g, "");
-  const valid = digits.length === 10 && password.length >= 6;
+  const valid = digits.length === 10 && password.length >= 6 && (mode === "login" || adult);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +55,7 @@ function AuthPage() {
         const { error: err } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { phone: digits }, emailRedirectTo: window.location.origin },
+          options: { data: { phone: digits, age_confirmed: true }, emailRedirectTo: window.location.origin },
         });
         if (err) throw err;
         const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
@@ -155,6 +157,16 @@ function AuthPage() {
                 />
               </div>
             </label>
+
+            {mode === "signup" && (
+              <label className="flex items-start gap-2 text-[11px] text-white/65 min-h-[44px] cursor-pointer">
+                <input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#ffc32b]" />
+                <span>
+                  I am 18 or older and agree to the{" "}
+                  <RouterLink to="/how-it-works" className="underline">Terms & Privacy</RouterLink>.
+                </span>
+              </label>
+            )}
 
             {error && (
               <p className="text-[11px] text-[#ff4d6d] font-display tracking-wide">{error}</p>

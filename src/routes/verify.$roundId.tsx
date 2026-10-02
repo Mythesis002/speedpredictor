@@ -38,7 +38,6 @@ function VerifyPage() {
       const hash = await sha256Hex(r.reveal);
       const order = outcomeFromReveal(r.reveal, id).order;
       return {
-        ok: true as const,
         ...r,
         hash,
         hashOk: hash === r.commit,
