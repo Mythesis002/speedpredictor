@@ -122,7 +122,7 @@ export async function createRazorpayQr(
     headers: { Authorization: razorpayAuth(), "Content-Type": "application/json" },
     body: JSON.stringify({
       type: "upi_qr",
-      name: "Apex wallet top-up",
+      name: "Speed Predict wallet top-up",
       usage: "single_use",
       fixed_amount: true,
       payment_amount: amountPaise,

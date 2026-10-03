@@ -30,13 +30,13 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
   head: () => ({
     meta: [
-      { title: "Owner Console · Apex" },
+      { title: "Owner Console · Speed Predict" },
       {
         name: "description",
         content:
-          "Live owner console for Apex: deposits, payouts, player growth and daily gaming revenue in one screen.",
+          "Live owner console for Speed Predict: deposits, payouts, player growth and daily gaming revenue in one screen.",
       },
-      { property: "og:title", content: "Owner Console · Apex" },
+      { property: "og:title", content: "Owner Console · Speed Predict" },
       {
         property: "og:description",
         content: "Deposits, payout requests, player growth and daily revenue at a glance.",

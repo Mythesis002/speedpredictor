@@ -9,9 +9,9 @@ import { lineupForRound } from "@/lib/round-engine";
 export const Route = createFileRoute("/_authenticated/history")({
   head: () => ({
     meta: [
-      { title: "My bets — Apex" },
-      { name: "description", content: "Your Apex bet history, win rate and profit." },
-      { property: "og:title", content: "My bets — Apex" },
+      { title: "My bets — Speed Predict" },
+      { name: "description", content: "Your Speed Predict bet history, win rate and profit." },
+      { property: "og:title", content: "My bets — Speed Predict" },
       { property: "og:description", content: "Bet history and results." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

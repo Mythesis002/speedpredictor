@@ -12,9 +12,16 @@ export function Header({ balance, roundId, onTopUp }: Props) {
   return (
     <div className="flex items-center gap-2 px-3 py-2">
       {/* Logo */}
-      <div className="leading-none shrink-0 font-display italic tracking-tight text-[22px]">
-        <span className="text-white">AP</span>
-        <span style={{ color: "#ffc32b", textShadow: "0 0 14px #ffc32b66" }}>EX</span>
+      <div className="leading-none shrink-0">
+        <div className="font-display text-[15px] tracking-tight text-white italic">
+          SPEED
+        </div>
+        <div
+          className="font-display text-[15px] tracking-tight italic"
+          style={{ color: "#ffc32b", textShadow: "0 0 14px #ffc32b66" }}
+        >
+          PREDICT
+        </div>
       </div>
 
       {/* Round */}
