@@ -8,13 +8,13 @@ import { Gift, Loader2, Lock, Phone } from "lucide-react";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Speed Predict Racing Predictions" },
+      { title: "Sign in — Apex Racing Predictions" },
       {
         name: "description",
         content:
-          "Create your Speed Predict account with a phone number and password. New players get a ₹28 welcome bonus and can start predicting from ₹10.",
+          "Create your Apex account with a phone number and password. New players get a ₹28 welcome bonus and can start predicting from ₹10.",
       },
-      { property: "og:title", content: "Sign in to Speed Predict" },
+      { property: "og:title", content: "Sign in to Apex" },
       {
         property: "og:description",
         content: "Phone-number sign up, ₹28 welcome bonus, ₹10 minimum prediction.",

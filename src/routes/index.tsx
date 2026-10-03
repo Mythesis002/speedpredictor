@@ -39,13 +39,13 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Speed Predict — Live Neon Car Racing Predictions" },
+      { title: "Apex — Live Neon Car Racing Predictions" },
       {
         name: "description",
         content:
           "Watch three neon cars battle down a futuristic highway every round and predict the winning colour. Provably fair rounds, live odds, instant payouts from ₹10.",
       },
-      { property: "og:title", content: "Speed Predict — Live Neon Car Racing" },
+      { property: "og:title", content: "Apex — Live Neon Car Racing" },
       {
         property: "og:description",
         content:

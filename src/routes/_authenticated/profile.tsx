@@ -10,9 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
     meta: [
-      { title: "Profile — Speed Predict" },
-      { name: "description", content: "Your Speed Predict account, limits and responsible play settings." },
-      { property: "og:title", content: "Profile — Speed Predict" },
+      { title: "Profile — Apex" },
+      { name: "description", content: "Your Apex account, limits and responsible play settings." },
+      { property: "og:title", content: "Profile — Apex" },
       { property: "og:description", content: "Account and responsible play settings." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
