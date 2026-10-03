@@ -61,8 +61,8 @@ function HistoryPage() {
         </div>
         <h1 className="font-display text-xl">My bets</h1>
 
-        <div className="grid grid-cols-4 gap-2">
-          {[["Bets", String(summary.total)], ["Win rate", `${summary.rate}%`], ["Net", `${summary.net >= 0 ? "+" : "−"}${inr(Math.abs(summary.net))}`], ["Best win", inr(summary.best)]].map(([k, v]) => (
+        <div className="grid grid-cols-3 gap-2">
+          {[["Bets", String(summary.total)], ["Net", `${summary.net >= 0 ? "+" : "−"}${inr(Math.abs(summary.net))}`], ["Best win", inr(summary.best)]].map(([k, v]) => (
             <div key={k} className="glass rounded-xl p-2">
               <div className="text-[9px] text-white/45">{k}</div>
               <div className="text-[12px] font-display tabular">{v}</div>

@@ -157,32 +157,14 @@ export function LiveStats({
 }
 
 /** Last finished races, exactly as stored on the server. Only the three team colours. */
-const TEAM = [
-  { name: "Red", hex: "#ff3b4d" },
-  { name: "Purple", hex: "#a24bff" },
-  { name: "Blue", hex: "#3b8bff" },
-];
 
 export function Results({ entries }: { entries: HistoryEntry[] }) {
   const last = entries.slice(0, 20);
-  const pct = TEAM.map((t) => {
-    const n = entries.filter((e) => e.car.colorName === t.name).length;
-    return { ...t, p: entries.length ? Math.round((n / entries.length) * 100) : 0 };
-  });
   return (
     <div className="glass rounded-2xl p-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="font-display text-[10px] tracking-[0.2em] text-white/60">LAST RESULTS</span>
-        <span className="text-[9px] text-white/35">Last {last.length} rounds</span>
-      </div>
-      <div className="flex gap-3 mb-2">
-        {pct.map((t) => (
-          <span key={t.name} className="flex items-center gap-1 text-[10px] text-white/60">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ background: t.hex }} />
-            {t.name} {t.p}%
-          </span>
-        ))}
-        <span className="text-[9px] text-white/30 ml-auto self-center">of last {entries.length}</span>
+        <span className="font-display text-[10px] tracking-[0.2em] text-white/60">LAST WINNERS</span>
+        <span className="text-[9px] text-white/35">Tap to check</span>
       </div>
       {last.length === 0 ? (
         <div className="py-5 text-center text-[11px] text-white/40">
