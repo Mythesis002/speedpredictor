@@ -280,7 +280,7 @@ function Game() {
   const raceLive = phase === "launch" || phase === "race";
 
   return (
-    <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden overscroll-none bg-[#04060c] text-white flex flex-col [scrollbar-width:none]">
+    <div data-scroll-root className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden overscroll-none bg-[#04060c] text-white flex flex-col [scrollbar-width:none]">
       <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <Header balance={balance} roundId={roundId} onTopUp={() => setDepositOpen(true)} />
       </div>
@@ -318,16 +318,6 @@ function Game() {
           countdown={countdown}
           myLane={confirmed ? bet!.lane : null}
         />
-        <div
-          className={`absolute left-1.5 top-1.5 z-30 transition-opacity duration-500 ${raceLive ? "opacity-25" : "opacity-100"}`}
-        >
-          <RecentRounds entries={history} />
-        </div>
-        <div
-          className={`absolute right-1.5 top-1.5 z-30 transition-opacity duration-500 ${raceLive ? "opacity-25" : "opacity-100"}`}
-        >
-          <LiveStats players={players} totalBets={totalBets} />
-        </div>
 
         {/* active ticket chip — always visible while the race runs */}
         {confirmed && (
@@ -434,24 +424,13 @@ function Game() {
         />
 
 
-        {/* provably-fair status */}
         <Link
           to="/verify/$roundId"
           params={{ roundId: String(Math.max(0, roundId - 1)) }}
-          className="flex items-center gap-1.5 text-[9px] font-display tracking-[0.14em] text-white/40 min-h-[28px]"
+          className="flex items-center justify-center gap-1.5 text-[10px] font-display tracking-[0.14em] text-white/45 min-h-[32px]"
         >
-          <ShieldCheck
-            size={12}
-            className={fairness.verified ? "text-[#26ff9a]" : "text-white/35"}
-          />
-          <span className="truncate">
-            {fairness.verified
-              ? "PROVABLY FAIR · RESULT VERIFIED"
-              : fairness.online
-                ? `COMMIT ${fairness.commit?.slice(0, 12) ?? "…"}`
-                : "OFFLINE MODE · LOCAL SIMULATION"}
-          </span>
-          <span className="ml-auto underline text-white/45">VERIFY</span>
+          <ShieldCheck size={12} className="text-[#26ff9a]" />
+          FAIR RESULTS · CHECK LAST RACE
         </Link>
       </div>
 
@@ -459,31 +438,48 @@ function Game() {
         <Results entries={history} />
       </div>
 
-      {/* Bottom nav */}
+      {/* Bottom nav — every item does something real */}
       <div
         className="sticky bottom-0 mt-auto z-40 bg-gradient-to-t from-[#04060c] via-[#04060c] to-transparent pt-3 px-2"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
       >
-        <div className="glass rounded-2xl grid grid-cols-4 py-1.5">
-          {([
-            { icon: Home, label: "Home", active: true },
-            { icon: BarChart3, label: "History", href: "/history" },
-            { icon: Banknote, label: "Cash out", action: () => setWithdrawOpen(true) },
-            { icon: Settings, label: "Profile", href: "/profile" },
-          ] as { icon: typeof Home; label: string; active?: boolean; action?: () => void; href?: "/history" | "/profile" }[])
-            .map(({ icon: Icon, label, active, action, href }) => (
-              <button
-                key={label}
-                onClick={href ? () => void nav({ to: href }) : action}
-                className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] ${
-                  active ? "text-[#a24bff]" : "text-white/45"
-                }`}
-                style={active ? { background: "rgba(162,75,255,0.12)" } : undefined}
-              >
-                <Icon size={16} />
-                <span className="text-[9px] font-display tracking-wide">{label}</span>
-              </button>
-            ))}
+        <div className="glass rounded-2xl grid grid-cols-5 py-1.5">
+          <button
+            onClick={() => document.querySelector("[data-scroll-root]")?.scrollTo({ top: 0, behavior: "smooth" })}
+            className="flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] text-[#a24bff]"
+            style={{ background: "rgba(162,75,255,0.12)" }}
+          >
+            <Home size={16} />
+            <span className="text-[9px] font-display tracking-wide">Play</span>
+          </button>
+          <button
+            onClick={() => setDepositOpen(true)}
+            className="flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] text-[#ffd83a]"
+          >
+            <Plus size={16} />
+            <span className="text-[9px] font-display tracking-wide">Add cash</span>
+          </button>
+          <Link
+            to="/history"
+            className="flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] text-white/60"
+          >
+            <BarChart3 size={16} />
+            <span className="text-[9px] font-display tracking-wide">My bets</span>
+          </Link>
+          <button
+            onClick={() => setWithdrawOpen(true)}
+            className="flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] text-white/60"
+          >
+            <Banknote size={16} />
+            <span className="text-[9px] font-display tracking-wide">Withdraw</span>
+          </button>
+          <Link
+            to="/profile"
+            className="flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] text-white/60"
+          >
+            <Settings size={16} />
+            <span className="text-[9px] font-display tracking-wide">Profile</span>
+          </Link>
         </div>
       </div>
     </div>
