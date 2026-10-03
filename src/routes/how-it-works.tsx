@@ -4,10 +4,10 @@ import { ArrowLeft } from "lucide-react";
 export const Route = createFileRoute("/how-it-works")({
   head: () => ({
     meta: [
-      { title: "How it works, Terms & Privacy — Speed Predict" },
-      { name: "description", content: "How Speed Predict races work, the rules, fairness, terms of use and privacy." },
-      { property: "og:title", content: "How it works — Speed Predict" },
-      { property: "og:description", content: "Rules, provably fair results, terms and privacy for Speed Predict." },
+      { title: "How it works, Terms & Privacy — Apex" },
+      { name: "description", content: "How Apex races work, the rules, fairness, terms of use and privacy." },
+      { property: "og:title", content: "How it works — Apex" },
+      { property: "og:description", content: "Rules, provably fair results, terms and privacy for Apex." },
       { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary" },
     ],
