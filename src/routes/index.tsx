@@ -30,6 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3,
   Banknote,
+  Plus,
   Gift,
   Home,
   Settings,
