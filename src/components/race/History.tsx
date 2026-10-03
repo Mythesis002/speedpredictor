@@ -157,11 +157,6 @@ export function LiveStats({
 }
 
 /** Last finished races, exactly as stored on the server. Only the three team colours. */
-const TEAM = [
-  { name: "Red", hex: "#ff3b4d" },
-  { name: "Purple", hex: "#a24bff" },
-  { name: "Blue", hex: "#3b8bff" },
-];
 
 export function Results({ entries }: { entries: HistoryEntry[] }) {
   const last = entries.slice(0, 20);

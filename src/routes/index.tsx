@@ -7,8 +7,8 @@ import { BettingPanel } from "@/components/race/BettingPanel";
 import { Header } from "@/components/race/Header";
 import {
   Results,
-  RecentRounds,
-  LiveStats,
+
+
   type HistoryEntry,
 } from "@/components/race/History";
 import { WinModal } from "@/components/race/WinModal";
