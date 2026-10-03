@@ -85,12 +85,9 @@ function AuthPage() {
     <main className="min-h-[100dvh] w-full bg-[#04060c] text-white flex flex-col justify-center px-5 py-10">
       <div className="mx-auto w-full max-w-sm">
         <div className="text-center mb-7">
-          <div className="font-display text-3xl italic leading-none">SPEED</div>
-          <div
-            className="font-display text-3xl italic leading-none"
-            style={{ color: "#ffc32b", textShadow: "0 0 20px #ffc32b55" }}
-          >
-            PREDICT
+          <div className="font-display text-5xl italic leading-none">
+            <span>AP</span>
+            <span style={{ color: "#ffc32b", textShadow: "0 0 20px #ffc32b55" }}>EX</span>
           </div>
         </div>
 

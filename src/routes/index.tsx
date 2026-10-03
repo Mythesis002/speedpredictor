@@ -308,7 +308,7 @@ function Game() {
       />
 
       {/* Race stage */}
-      <div className="relative mx-2 rounded-2xl overflow-hidden border border-white/10 h-[42vh] min-h-[260px] max-h-[420px] shrink-0">
+      <div className="relative mx-2 rounded-2xl overflow-hidden border border-white/10 h-[34dvh] min-h-[200px] max-h-[400px] shrink-0">
         <Highway
           cars={cars}
           phase={phase}
@@ -380,7 +380,7 @@ function Game() {
       )}
 
       {/* Bet panel */}
-      <div className="mt-2 mx-2 glass rounded-2xl p-3 space-y-3">
+      <div className="mt-1.5 mx-2 glass rounded-2xl p-2.5 space-y-2">
         <div className="flex items-center justify-between gap-2 whitespace-nowrap">
           <span className="text-[10px] text-white/45 font-display tracking-[0.12em] shrink-0">
             #{String(roundId).slice(-5)}
@@ -438,7 +438,7 @@ function Game() {
         <Link
           to="/verify/$roundId"
           params={{ roundId: String(Math.max(0, roundId - 1)) }}
-          className="flex items-center gap-1.5 text-[9px] font-display tracking-[0.14em] text-white/40 min-h-[28px]"
+          className="flex items-center gap-1.5 text-[9px] font-display tracking-[0.14em] text-white/40 min-h-[22px]"
         >
           <ShieldCheck
             size={12}
@@ -461,7 +461,7 @@ function Game() {
 
       {/* Bottom nav */}
       <div
-        className="sticky bottom-0 mt-auto z-40 bg-gradient-to-t from-[#04060c] via-[#04060c] to-transparent pt-3 px-2"
+        className="sticky bottom-0 mt-auto z-40 bg-gradient-to-t from-[#04060c] via-[#04060c] to-transparent pt-1.5 px-2"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
       >
         <div className="glass rounded-2xl grid grid-cols-4 py-1.5">
@@ -475,7 +475,7 @@ function Game() {
               <button
                 key={label}
                 onClick={href ? () => void nav({ to: href }) : action}
-                className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] ${
+                className={`flex flex-col items-center gap-0.5 py-1 rounded-xl min-h-[40px] ${
                   active ? "text-[#a24bff]" : "text-white/45"
                 }`}
                 style={active ? { background: "rgba(162,75,255,0.12)" } : undefined}
