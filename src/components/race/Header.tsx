@@ -1,4 +1,4 @@
-import { Menu, Plus, Wallet } from "lucide-react";
+import { Plus, Wallet } from "lucide-react";
 import { RollingNumber } from "./RollingNumber";
 
 interface Props {
@@ -13,14 +13,11 @@ export function Header({ balance, roundId, onTopUp }: Props) {
     <div className="flex items-center gap-2 px-3 py-2">
       {/* Logo */}
       <div className="leading-none shrink-0">
-        <div className="font-display text-[15px] tracking-tight text-white italic">
-          SPEED
-        </div>
         <div
-          className="font-display text-[15px] tracking-tight italic"
+          className="font-display text-[17px] tracking-tight italic"
           style={{ color: "#ffc32b", textShadow: "0 0 14px #ffc32b66" }}
         >
-          PREDICT
+          APEX
         </div>
       </div>
 
@@ -53,10 +50,6 @@ export function Header({ balance, roundId, onTopUp }: Props) {
         </button>
 
       </div>
-
-      <button className="h-8 w-8 rounded-xl glass grid place-items-center shrink-0">
-        <Menu size={15} />
-      </button>
     </div>
   );
 }

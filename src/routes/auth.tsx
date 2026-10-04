@@ -8,13 +8,13 @@ import { Gift, Loader2, Lock, Phone } from "lucide-react";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Speed Predict Racing Predictions" },
+      { title: "Sign in — Apex Racing Predictions" },
       {
         name: "description",
         content:
-          "Create your Speed Predict account with a phone number and password. New players get a ₹28 welcome bonus and can start predicting from ₹10.",
+          "Create your Apex account with a phone number and password. New players get a ₹28 welcome bonus and can start predicting from ₹10.",
       },
-      { property: "og:title", content: "Sign in to Speed Predict" },
+      { property: "og:title", content: "Sign in to Apex" },
       {
         property: "og:description",
         content: "Phone-number sign up, ₹28 welcome bonus, ₹10 minimum prediction.",
@@ -85,12 +85,11 @@ function AuthPage() {
     <main className="min-h-[100dvh] w-full bg-[#04060c] text-white flex flex-col justify-center px-5 py-10">
       <div className="mx-auto w-full max-w-sm">
         <div className="text-center mb-7">
-          <div className="font-display text-3xl italic leading-none">SPEED</div>
           <div
             className="font-display text-3xl italic leading-none"
             style={{ color: "#ffc32b", textShadow: "0 0 20px #ffc32b55" }}
           >
-            PREDICT
+            APEX
           </div>
         </div>
 

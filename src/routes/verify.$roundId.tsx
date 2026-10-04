@@ -8,10 +8,10 @@ import { lineupForRound, outcomeFromReveal, winWeights, RTP } from "@/lib/round-
 export const Route = createFileRoute("/verify/$roundId")({
   head: ({ params }) => ({
     meta: [
-      { title: `Verify Round #${params.roundId} — Speed Predict` },
+      { title: `Verify Round #${params.roundId} — Apex` },
       { name: "description", content: "Check in your own browser that this race result was fixed before betting opened." },
-      { property: "og:title", content: `Verify Round #${params.roundId} — Speed Predict` },
-      { property: "og:description", content: "Provably fair race verification for Speed Predict." },
+      { property: "og:title", content: `Verify Round #${params.roundId} — Apex` },
+      { property: "og:description", content: "Provably fair race verification for Apex." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

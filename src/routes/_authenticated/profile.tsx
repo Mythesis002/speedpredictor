@@ -10,9 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
     meta: [
-      { title: "Profile — Speed Predict" },
-      { name: "description", content: "Your Speed Predict account, limits and responsible play settings." },
-      { property: "og:title", content: "Profile — Speed Predict" },
+      { title: "Profile — Apex" },
+      { name: "description", content: "Your Apex account, limits and responsible play settings." },
+      { property: "og:title", content: "Profile — Apex" },
       { property: "og:description", content: "Account and responsible play settings." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -102,7 +102,7 @@ function ProfilePage() {
               </div>
               <div className="space-y-1">
                 <div className="text-[12px] text-white/70">
-                  Take a break {paused && <span className="text-[#ffc32b]">— paused until {new Date(p.selfExcludedUntil!).toLocaleString()}</span>}
+                  Take a break {paused && p.selfExcludedUntil && <span className="text-[#ffc32b]">— paused until {new Date(p.selfExcludedUntil).toLocaleString()}</span>}
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {([1, 7, 30] as const).map((d) => (

@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Render all customer and owner routes inside the shared 394px app shell on wider screens, because Apex intentionally preserves its mobile-game form factor on desktop.
+- Preserve the legacy `@speedpredict.app` synthetic auth email mapping, because changing it would lock existing phone-number accounts out after the Apex rebrand.
