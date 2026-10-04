@@ -64,6 +64,19 @@
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
   }
+  #root {
+    display: flex;
+    justify-content: center;
+  }
+  .app-shell {
+    position: relative;
+    width: min(100%, 394px);
+    height: 100%;
+    min-height: 100dvh;
+    overflow: hidden;
+    background: var(--color-background);
+    box-shadow: 0 0 80px oklch(0 0 0 / 0.72);
+  }
   .font-display { font-family: var(--font-display); letter-spacing: 0.02em; }
   .tabular { font-variant-numeric: tabular-nums; }
 }
@@ -230,7 +243,12 @@
 .gpu { transform: translateZ(0); will-change: transform; backface-visibility: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
-  .traffic-x, .traffic-y, .animate-shake { animation: none !important; }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* wheel hub rotation */

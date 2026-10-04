@@ -39,13 +39,13 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Speed Predict — Live Neon Car Racing Predictions" },
+      { title: "Apex — Live Neon Car Racing Predictions" },
       {
         name: "description",
         content:
           "Watch three neon cars battle down a futuristic highway every round and predict the winning colour. Provably fair rounds, live odds, instant payouts from ₹10.",
       },
-      { property: "og:title", content: "Speed Predict — Live Neon Car Racing" },
+      { property: "og:title", content: "Apex — Live Neon Car Racing" },
       {
         property: "og:description",
         content:
@@ -246,7 +246,8 @@ function Game() {
 
   const confirmed = bet?.roundId === roundId;
   const hyperMode = cars.some((c) => c.kind === "hyper");
-  const selectedLane = confirmed ? bet!.lane : selected;
+  const activeBet = confirmed ? bet : null;
+  const selectedLane = activeBet?.lane ?? selected;
 
   const selectedLabel = selectedLane === null ? null : carLabel(cars[selectedLane]);
   const selectedMultiplier = selectedLane === null ? null : cars[selectedLane].multiplier;
@@ -316,7 +317,7 @@ function Game() {
           winnerLane={winner}
           hyperMode={hyperMode}
           countdown={countdown}
-          myLane={confirmed ? bet!.lane : null}
+          myLane={activeBet?.lane ?? null}
         />
         <div
           className={`absolute left-1.5 top-1.5 z-30 transition-opacity duration-500 ${raceLive ? "opacity-25" : "opacity-100"}`}
@@ -330,14 +331,14 @@ function Game() {
         </div>
 
         {/* active ticket chip — always visible while the race runs */}
-        {confirmed && (
+        {activeBet && (
           <div className="absolute bottom-1.5 left-1.5 z-30">
             <div
               className="rounded-full px-2 py-1 glass font-display text-[8.5px] tracking-[0.16em]"
-              style={{ color: cars[bet!.lane].color, borderColor: `${cars[bet!.lane].color}66` }}
+              style={{ color: cars[activeBet.lane].color, borderColor: `${cars[activeBet.lane].color}66` }}
             >
-              {formatINR(bet!.amount)} ON {carLabel(cars[bet!.lane])} ·{" "}
-              {formatINR(bet!.amount * cars[bet!.lane].multiplier)}
+              {formatINR(activeBet.amount)} ON {carLabel(cars[activeBet.lane])} ·{" "}
+              {formatINR(activeBet.amount * cars[activeBet.lane].multiplier)}
             </div>
           </div>
         )}
