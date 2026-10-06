@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { CarSpec } from "./Car";
 
 export interface HistoryEntry {
@@ -191,9 +192,10 @@ export function Results({ entries }: { entries: HistoryEntry[] }) {
       ) : (
         <div className="grid grid-cols-5 gap-1.5">
           {last.map((e) => (
-            <a
+            <Link
               key={e.id}
-              href={`/verify/${e.id}`}
+              to="/verify/$roundId"
+              params={{ roundId: String(e.id) }}
               className="rounded-xl bg-white/[0.04] px-1 py-1.5 flex flex-col items-center gap-1 min-h-[44px]"
               aria-label={`Round ${e.id}: ${e.car.colorName} won. Verify`}
             >
@@ -202,7 +204,7 @@ export function Results({ entries }: { entries: HistoryEntry[] }) {
                 style={{ background: e.car.color, boxShadow: `0 0 8px ${e.car.color}`, border: "1px solid rgba(255,255,255,0.22)" }}
               />
               <span className="text-[8px] tabular text-white/40 leading-none">#{e.id}</span>
-            </a>
+            </Link>
           ))}
         </div>
       )}

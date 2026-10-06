@@ -61,7 +61,7 @@ export const getWallet = createServerFn({ method: "GET" })
 
 export const placeBet = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { roundId: number; lane: number; amountPaise: number }) => {
+  .validator((data: { roundId: number; lane: number; amountPaise: number }) => {
     const { roundId, lane, amountPaise } = data ?? {};
     if (!Number.isInteger(roundId)) throw new Error("Invalid round");
     if (!Number.isInteger(lane) || lane < 0 || lane > 2) throw new Error("Invalid lane");
@@ -99,7 +99,7 @@ export const placeBet = createServerFn({ method: "POST" })
 /** Settles the caller's bet for a finished round. Idempotent and server-decided. */
 export const settleRound = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { roundId: number }) => {
+  .validator((data: { roundId: number }) => {
     if (!Number.isInteger(data?.roundId)) throw new Error("Invalid round");
     return { roundId: data.roundId };
   })
@@ -127,7 +127,7 @@ export const settleRound = createServerFn({ method: "POST" })
 
 export const createDeposit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { amountPaise: number }) => {
+  .validator((data: { amountPaise: number }) => {
     const amountPaise = data?.amountPaise;
     if (!Number.isInteger(amountPaise) || amountPaise < MIN_DEPOSIT_PAISE)
       throw new Error("Minimum deposit is ₹10");
@@ -157,7 +157,7 @@ export const createDeposit = createServerFn({ method: "POST" })
 /** Polls Razorpay for the deposit and credits it exactly once. */
 export const checkDeposit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { depositId: string }) => {
+  .validator((data: { depositId: string }) => {
     if (typeof data?.depositId !== "string" || data.depositId.length < 10)
       throw new Error("Invalid deposit");
     return { depositId: data.depositId };
@@ -207,7 +207,7 @@ export const checkDeposit = createServerFn({ method: "POST" })
 /** A player asks for a payout. Money leaves the wallet only when an admin approves. */
 export const requestWithdrawal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { amountPaise: number; upiId: string }) => {
+  .validator((data: { amountPaise: number; upiId: string }) => {
     const amountPaise = data?.amountPaise;
     const upiId = (data?.upiId ?? "").trim();
     if (!Number.isInteger(amountPaise) || amountPaise < 10000)
@@ -218,31 +218,12 @@ export const requestWithdrawal = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("balance_paise")
-      .eq("id", context.userId)
-      .maybeSingle();
-    if (!profile) throw new Error("Profile not found");
-
-    const { data: pending } = await supabaseAdmin
-      .from("withdrawals")
-      .select("amount_paise")
-      .eq("user_id", context.userId)
-      .eq("status", "pending");
-    const held = (pending ?? []).reduce((t, w) => t + Number(w.amount_paise), 0);
-
-    if (Number(profile.balance_paise) - held < data.amountPaise) {
-      throw new Error("Not enough withdrawable balance");
-    }
-
-    const { error } = await supabaseAdmin.from("withdrawals").insert({
-      user_id: context.userId,
-      amount_paise: data.amountPaise,
-      upi_id: data.upiId,
+    const { error } = await supabaseAdmin.rpc("request_withdrawal", {
+      p_user_id: context.userId,
+      p_amount_paise: data.amountPaise,
+      p_upi_id: data.upiId,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(error.message.replace(/^.*ERROR:\s*/, "").replace(/^[A-Z_]+:\s*/, ""));
     return { ok: true as const };
   });
 

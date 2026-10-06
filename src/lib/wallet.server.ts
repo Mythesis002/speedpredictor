@@ -20,11 +20,12 @@ export const MAX_BET_PAISE = 10_000_000; // ₹1,00,000 safety ceiling
 export const MIN_DEPOSIT_PAISE = 1000; // ₹10
 export const MAX_DEPOSIT_PAISE = 20_000_000; // ₹2,00,000
 
-const FALLBACK_MASTER_SEED = "speed-predict-dev-master-seed";
 const encoder = new TextEncoder();
 
 function masterSeed(): string {
-  return process.env["RACE_MASTER_SEED"] || FALLBACK_MASTER_SEED;
+  const seed = process.env["RACE_MASTER_SEED"];
+  if (!seed || seed.length < 32) throw new Error("Race service is temporarily unavailable");
+  return seed;
 }
 
 function toHex(buf: ArrayBuffer): string {

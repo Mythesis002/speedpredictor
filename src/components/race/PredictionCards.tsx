@@ -86,7 +86,7 @@ export function PredictionCards({
               >
                 {car.multiplier}x
               </div>
-              <div className="mt-1 text-[8.5px] font-display tabular text-white/45">
+              <div className="mt-1 text-[10px] font-display tabular text-white/55">
                 WIN {formatINR(amount * car.multiplier)}
               </div>
             </div>

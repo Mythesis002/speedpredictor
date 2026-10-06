@@ -36,7 +36,7 @@ const BLOCKED = ["fuck", "shit", "bitch", "chutiya", "madarchod", "bhenchod", "a
 
 export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: { displayName?: string; dailyLossLimitPaise?: number | null; selfExcludeDays?: 1 | 7 | 30; ageConfirmed?: boolean }) => {
       const out: { displayName?: string; dailyLossLimitPaise?: number | null; selfExcludeDays?: number; ageConfirmed?: boolean } = {};
       if (d?.displayName !== undefined) {

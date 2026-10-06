@@ -78,7 +78,11 @@ function AuthPage() {
   };
 
   if (loading) {
-    return <div className="h-[100dvh] w-full bg-[#04060c]" />;
+    return (
+      <div className="h-[100dvh] w-full bg-[#04060c] grid place-items-center text-white/45">
+        <Loader2 size={20} className="animate-spin" aria-label="Loading Apex" />
+      </div>
+    );
   }
 
   return (
