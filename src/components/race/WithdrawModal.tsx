@@ -34,13 +34,19 @@ export function WithdrawModal({ open, onClose, balancePaise }: Props) {
       }),
     onSuccess: () => {
       toast.success("Payout request sent — you'll be paid after review");
+      setAmount("100");
       setUpi("");
       void qc.invalidateQueries({ queryKey: ["my-withdrawals"] });
+      onClose();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   if (!open) return null;
+
+  const amountPaise = Math.round(Number(amount) * 100);
+  const validUpi = /^[\w.-]{2,64}@[a-zA-Z]{2,32}$/.test(upi.trim());
+  const canSubmit = Number.isInteger(amountPaise) && amountPaise >= 10_000 && amountPaise <= balancePaise && validUpi;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
@@ -50,7 +56,7 @@ export function WithdrawModal({ open, onClose, balancePaise }: Props) {
       >
         <div className="flex items-center justify-between">
           <div className="font-display text-white text-[15px]">Cash out</div>
-          <button onClick={onClose} className="text-white/50 p-1">
+          <button onClick={onClose} aria-label="Close" className="text-white/50 p-1">
             <X size={18} />
           </button>
         </div>
@@ -80,13 +86,18 @@ export function WithdrawModal({ open, onClose, balancePaise }: Props) {
         />
 
         <button
-          disabled={submit.isPending}
+          disabled={submit.isPending || !canSubmit}
           onClick={() => submit.mutate()}
           className="w-full mt-4 rounded-xl py-3 font-display text-black disabled:opacity-50"
           style={{ background: "#26ff9a" }}
         >
           {submit.isPending ? "Sending…" : "Request payout"}
         </button>
+        {!canSubmit && (amount || upi) && (
+          <p className="mt-2 text-center text-[10px] text-white/40">
+            Enter at least ₹100, within your balance, and a valid UPI ID.
+          </p>
+        )}
 
         {(list.data ?? []).length > 0 && (
           <div className="mt-4">

@@ -276,7 +276,7 @@ export const listPlayers = createServerFn({ method: "GET" })
 /** Approve (pays the player out and debits their wallet) or reject a payout request. */
 export const actOnWithdrawal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { withdrawalId: string; action: "approve" | "reject"; note?: string }) => {
+  .validator((data: { withdrawalId: string; action: "approve" | "reject"; note?: string }) => {
     if (typeof data?.withdrawalId !== "string" || data.withdrawalId.length < 10)
       throw new Error("Invalid request");
     if (data.action !== "approve" && data.action !== "reject") throw new Error("Invalid action");
@@ -346,7 +346,7 @@ const reasonOk = (r: unknown) => typeof r === "string" && r.trim().length >= 3 &
 /** Ban or unban a player. A reason is mandatory and every action is written to the audit log. */
 export const setPlayerBan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { userId: string; banned: boolean; reason: string }) => {
+  .validator((d: { userId: string; banned: boolean; reason: string }) => {
     if (typeof d?.userId !== "string" || d.userId.length < 10) throw new Error("Invalid player");
     if (typeof d.banned !== "boolean") throw new Error("Invalid action");
     if (!reasonOk(d.reason)) throw new Error("A reason is required");
@@ -368,7 +368,7 @@ export const setPlayerBan = createServerFn({ method: "POST" })
 /** Credit (+) or debit (−) a player's wallet with a reason; recorded in ledger + audit log. */
 export const adjustPlayerBalance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { userId: string; amountPaise: number; reason: string }) => {
+  .validator((d: { userId: string; amountPaise: number; reason: string }) => {
     if (typeof d?.userId !== "string" || d.userId.length < 10) throw new Error("Invalid player");
     if (!Number.isInteger(d.amountPaise) || d.amountPaise === 0 || Math.abs(d.amountPaise) > 10_000_000)
       throw new Error("Invalid amount");

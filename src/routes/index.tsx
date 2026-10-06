@@ -79,7 +79,11 @@ function SpeedPredict() {
   }, [hydrated, loading, session, navigate]);
 
   if (!hydrated || loading || !session) {
-    return <div className="h-[100dvh] w-full bg-[#04060c]" />;
+    return (
+      <div className="h-[100dvh] w-full bg-[#04060c] grid place-items-center text-white/45">
+        <div className="font-display text-[11px] tracking-[0.2em] animate-pulse">LOADING APEX</div>
+      </div>
+    );
   }
   return <Game />;
 }

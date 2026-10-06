@@ -17,11 +17,11 @@ import {
  * animation never depends on network latency.
  */
 
-const FALLBACK_MASTER_SEED = "speed-predict-dev-master-seed";
-
 function masterSeed(): string {
   // read at call time: env is injected per-request on the edge runtime
-  return process.env["RACE_MASTER_SEED"] || FALLBACK_MASTER_SEED;
+  const seed = process.env["RACE_MASTER_SEED"];
+  if (!seed || seed.length < 32) throw new Error("Race service is temporarily unavailable");
+  return seed;
 }
 
 const encoder = new TextEncoder();
@@ -108,7 +108,7 @@ export type RevealResult = ({ ok: true } & RoundReveal) | { ok: false; reason: "
  * early doesn't surface an unhandled Response error.
  */
 export const revealRound = createServerFn({ method: "GET" })
-  .inputValidator((data: unknown): { roundId: number } => {
+  .validator((data: unknown): { roundId: number } => {
     const raw = (data as { roundId?: unknown } | undefined)?.roundId;
     const roundId = typeof raw === "string" ? Number(raw) : raw;
     if (typeof roundId !== "number" || !Number.isFinite(roundId) || !Number.isInteger(roundId)) {
