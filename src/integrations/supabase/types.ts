@@ -350,6 +350,10 @@ export type Database = {
           staked_paise: number
         }[]
       }
+      request_withdrawal: {
+        Args: { p_amount_paise: number; p_upi_id: string; p_user_id: string }
+        Returns: string
+      }
       settle_bet: {
         Args: { p_round_id: number; p_user_id: string; p_winner_lane: number }
         Returns: {
