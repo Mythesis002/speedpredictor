@@ -158,9 +158,21 @@ export interface RoundResult {
   createdAt: string;
 }
 
-/** The last 50 finished races, straight from the database. */
+/**
+ * The last 50 finished races, shared by every player.
+ *
+ * A new account must not land on an empty teaching surface while the database
+ * is warming up (or before this device has caused a result to be persisted).
+ * Missing rows are therefore backfilled from the same server-authoritative
+ * round engine. Persisted rows always win, so this never invents a different
+ * result for a round we already have on record.
+ */
 export const recentResults = createServerFn({ method: "GET" }).handler(
   async (): Promise<RoundResult[]> => {
+    const now = Date.now();
+    const currentRound = roundIdAt(now);
+    const persisted = new Map<number, RoundResult>();
+
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data } = await supabaseAdmin
@@ -168,14 +180,40 @@ export const recentResults = createServerFn({ method: "GET" }).handler(
         .select("round_id, winner_lane, created_at")
         .order("round_id", { ascending: false })
         .limit(50);
-      return (data ?? []).map((r) => ({
-        roundId: Number(r.round_id),
-        winnerLane: Number(r.winner_lane),
-        createdAt: r.created_at as string,
-      }));
+
+      for (const row of data ?? []) {
+        const roundId = Number(row.round_id);
+        const winnerLane = Number(row.winner_lane);
+        if (Number.isInteger(roundId) && Number.isInteger(winnerLane)) {
+          persisted.set(roundId, {
+            roundId,
+            winnerLane,
+            createdAt: String(row.created_at),
+          });
+        }
+      }
     } catch {
-      return [];
+      // The deterministic fallback below keeps onboarding useful if storage is unavailable.
     }
+
+    const results: RoundResult[] = [];
+    for (let roundId = currentRound - 1; results.length < 50 && roundId > 0; roundId -= 1) {
+      const stored = persisted.get(roundId);
+      if (stored) {
+        results.push(stored);
+        continue;
+      }
+
+      const reveal = await perRoundSecret(roundId);
+      const { order } = outcomeFromReveal(reveal, roundId);
+      results.push({
+        roundId,
+        winnerLane: order[0],
+        createdAt: new Date(roundStartMs(roundId) + ROUND_MS).toISOString(),
+      });
+    }
+
+    return results;
   },
 );
 

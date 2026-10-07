@@ -212,13 +212,21 @@ function Game() {
     try {
       const rows = await loadResults({});
       if (!rows.length) return;
-      setHistory(
-        rows.map((r) => ({
-          id: r.roundId,
-          car: lineupForRound(r.roundId)[r.winnerLane],
-          ago: timeAgo(r.createdAt),
-        })),
-      );
+      setHistory((current) => {
+        const byRound = new Map(
+          current.map((entry) => [entry.id, entry]),
+        );
+        for (const row of rows) {
+          byRound.set(row.roundId, {
+            id: row.roundId,
+            car: lineupForRound(row.roundId)[row.winnerLane],
+            ago: timeAgo(row.createdAt),
+          });
+        }
+        return [...byRound.values()]
+          .sort((a, b) => b.id - a.id)
+          .slice(0, 50);
+      });
     } catch {
       /* transient */
     }
