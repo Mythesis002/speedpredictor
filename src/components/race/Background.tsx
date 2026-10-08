@@ -63,8 +63,7 @@ export function Background({ intense = false }: { intense?: boolean }) {
       <div
         className="absolute left-1/4 top-0 h-[60vh] w-1"
         style={{
-          background:
-            "linear-gradient(180deg, oklch(0.85 0.19 195 / 0.35), transparent)",
+          background: "linear-gradient(180deg, oklch(0.85 0.19 195 / 0.35), transparent)",
           transformOrigin: "top center",
           animation: "searchlight 7s ease-in-out infinite",
         }}
@@ -72,8 +71,7 @@ export function Background({ intense = false }: { intense?: boolean }) {
       <div
         className="absolute right-1/4 top-0 h-[60vh] w-1"
         style={{
-          background:
-            "linear-gradient(180deg, oklch(0.68 0.28 330 / 0.35), transparent)",
+          background: "linear-gradient(180deg, oklch(0.68 0.28 330 / 0.35), transparent)",
           transformOrigin: "top center",
           animation: "searchlight 9s ease-in-out infinite 1.5s",
         }}
@@ -113,8 +111,7 @@ export function Background({ intense = false }: { intense?: boolean }) {
         style={{
           width: 90,
           height: 22,
-          background:
-            "linear-gradient(90deg, oklch(0.68 0.28 330), oklch(0.85 0.19 195))",
+          background: "linear-gradient(90deg, oklch(0.68 0.28 330), oklch(0.85 0.19 195))",
           filter: "blur(0.3px)",
           boxShadow: "0 0 24px oklch(0.68 0.28 330 / 0.6)",
         }}

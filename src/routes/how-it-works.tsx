@@ -5,9 +5,15 @@ export const Route = createFileRoute("/how-it-works")({
   head: () => ({
     meta: [
       { title: "How it works, Terms & Privacy — Apex" },
-      { name: "description", content: "How Apex races work, the rules, fairness, terms of use and privacy." },
+      {
+        name: "description",
+        content: "How Apex races work, the rules, fairness, terms of use and privacy.",
+      },
       { property: "og:title", content: "How it works — Apex" },
-      { property: "og:description", content: "Rules, provably fair results, terms and privacy for Apex." },
+      {
+        property: "og:description",
+        content: "Rules, provably fair results, terms and privacy for Apex.",
+      },
       { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -57,17 +63,27 @@ const sections: { title: string; body: string[] }[] = [
 
 function InfoPage() {
   return (
-    <main className="min-h-[100dvh] bg-[#04060c] text-white px-4 py-6" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)" }}>
+    <main
+      className="min-h-[100dvh] bg-[#04060c] text-white px-4 py-6"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)" }}
+    >
       <div className="mx-auto max-w-md space-y-3">
-        <Link to="/" className="inline-flex items-center gap-1 text-[12px] text-white/55 min-h-[44px]">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1 text-[12px] text-white/55 min-h-[44px]"
+        >
           <ArrowLeft size={14} /> Back
         </Link>
         <h1 className="font-display text-xl">How it works</h1>
         {sections.map((s) => (
           <section key={s.title} className="glass rounded-2xl p-4">
-            <h2 className="font-display text-[11px] tracking-[0.2em] text-white/60 mb-2">{s.title.toUpperCase()}</h2>
+            <h2 className="font-display text-[11px] tracking-[0.2em] text-white/60 mb-2">
+              {s.title.toUpperCase()}
+            </h2>
             <ul className="space-y-1.5 text-[12px] text-white/75 list-disc pl-4">
-              {s.body.map((b) => <li key={b}>{b}</li>)}
+              {s.body.map((b) => (
+                <li key={b}>{b}</li>
+              ))}
             </ul>
           </section>
         ))}

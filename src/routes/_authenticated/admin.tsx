@@ -132,8 +132,7 @@ function AdminPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const forbidden =
-    overview.error && /forbidden/i.test((overview.error as Error).message ?? "");
+  const forbidden = overview.error && /forbidden/i.test((overview.error as Error).message ?? "");
 
   if (forbidden) {
     return (
@@ -292,9 +291,7 @@ function AdminPage() {
                     <div className="font-display tabular text-[17px] text-[#ffc32b]">
                       {rupees(w.amountPaise)}
                     </div>
-                    <div className="text-[10px] text-white/40">
-                      Wallet {rupees(w.balancePaise)}
-                    </div>
+                    <div className="text-[10px] text-white/40">Wallet {rupees(w.balancePaise)}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-2">
@@ -383,9 +380,7 @@ function AdminPage() {
               <div key={p.id} className="py-2 border-t border-white/5 first:border-0">
                 <div className="flex items-center justify-between">
                   <div className="text-[12px] text-white/85">+91 {p.phone}</div>
-                  <div className="tabular text-[13px] text-[#ffc32b]">
-                    {rupees(p.balancePaise)}
-                  </div>
+                  <div className="tabular text-[13px] text-[#ffc32b]">{rupees(p.balancePaise)}</div>
                 </div>
                 {p.isBanned && (
                   <div className="text-[10px] text-[#ff4d6d]">Banned: {p.bannedReason}</div>
@@ -461,7 +456,10 @@ function PlayerActions({ id, banned }: { id: string; banned: boolean }) {
         onClick={() => {
           const reason = prompt(banned ? "Reason for unban" : "Reason for ban");
           if (!reason) return;
-          ban({ data: { userId: id, banned: !banned, reason } }).then(() => done(banned ? "Unbanned" : "Banned"), fail);
+          ban({ data: { userId: id, banned: !banned, reason } }).then(
+            () => done(banned ? "Unbanned" : "Banned"),
+            fail,
+          );
         }}
       >
         {banned ? "Unban" : "Ban"}
@@ -473,7 +471,10 @@ function PlayerActions({ id, banned }: { id: string; banned: boolean }) {
           if (!Number.isFinite(amt) || amt === 0) return;
           const reason = prompt("Reason (required)");
           if (!reason) return;
-          adjust({ data: { userId: id, amountPaise: Math.round(amt * 100), reason } }).then(() => done("Balance adjusted"), fail);
+          adjust({ data: { userId: id, amountPaise: Math.round(amt * 100), reason } }).then(
+            () => done("Balance adjusted"),
+            fail,
+          );
         }}
       >
         Adjust ₹

@@ -7,7 +7,6 @@
  */
 
 import {
-  LOCK_OFFSET_MS,
   lineupForRound,
   outcomeFromReveal,
   roundIdAt,
@@ -19,6 +18,8 @@ export const MIN_BET_PAISE = 1000; // ₹10
 export const MAX_BET_PAISE = 10_000_000; // ₹1,00,000 safety ceiling
 export const MIN_DEPOSIT_PAISE = 1000; // ₹10
 export const MAX_DEPOSIT_PAISE = 20_000_000; // ₹2,00,000
+export const MIN_WITHDRAWAL_PAISE = 10_000; // ₹100
+export const MAX_WITHDRAWAL_PAISE = 20_000_000; // ₹2,00,000 (matches the SQL limit)
 
 const encoder = new TextEncoder();
 
@@ -71,7 +72,6 @@ export function assertBettingOpen(roundId: number): void {
   if (now >= roundLockMs(roundId) - 250) {
     throw new Error("Betting is closed for this round");
   }
-  void LOCK_OFFSET_MS;
 }
 
 /** Odds are read from the public grid on the server — never sent by the client. */
@@ -186,5 +186,67 @@ export async function verifyRazorpaySignature(
   for (let i = 0; i < expected.length; i++) {
     diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
   }
+  return diff === 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Settlement sweep                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Settles pending bets on rounds that have already finished.
+ *
+ * Settlement is normally triggered by the browser when a race ends. If the
+ * player closed the app mid-race, that trigger never fires, so the stake would
+ * sit "pending" forever. This sweep runs on wallet load (for one player) and on
+ * a scheduled job (for everyone). It only touches *finished* rounds, so the
+ * race currently on screen still plays out in the browser. `settle_bet` is
+ * idempotent, so overlapping runs are safe.
+ */
+export async function settleFinishedBets(
+  opts: { userId?: string; limit?: number } = {},
+): Promise<number> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const currentRound = roundIdAt(Date.now());
+
+  let query = supabaseAdmin
+    .from("bets")
+    .select("user_id, round_id")
+    .eq("status", "pending")
+    .lt("round_id", currentRound)
+    .order("round_id", { ascending: true })
+    .limit(opts.limit ?? 200);
+  if (opts.userId) query = query.eq("user_id", opts.userId);
+
+  const { data, error } = await query;
+  if (error || !data?.length) return 0;
+
+  const winners = new Map<number, number>();
+  let settled = 0;
+  for (const row of data) {
+    const roundId = Number(row.round_id);
+    if (!isRoundSettleable(roundId)) continue;
+
+    let winner = winners.get(roundId);
+    if (winner === undefined) {
+      winner = await winnerLaneFor(roundId);
+      winners.set(roundId, winner);
+    }
+
+    const { error: settleError } = await supabaseAdmin.rpc("settle_bet", {
+      p_user_id: row.user_id,
+      p_round_id: roundId,
+      p_winner_lane: winner,
+    });
+    if (!settleError) settled++;
+  }
+  return settled;
+}
+
+/** Constant-time string comparison (used for the scheduled-job secret). */
+export function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
 }

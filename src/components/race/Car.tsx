@@ -71,7 +71,6 @@ export const Car = memo(function Car({
   const rolling = t > 0.12;
   const wheelDur = Math.max(0.07, 0.5 - t * 0.42);
 
-
   // widebody silhouette (shared shape, scaled by class via viewBox usage)
   const body =
     "M20 100 q6-24 30-32 q18-26 80-26 t80 26 q24 8 30 32 l8 34 q4 22 -16 26 l-26 5 h-152 l-26-5 q-20-4 -16-26 z";
@@ -163,7 +162,6 @@ export const Car = memo(function Car({
                   animationIterationCount: "infinite",
                   animationPlayState: `var(--wheel-play, ${rolling ? "running" : "paused"})`,
                 }}
-
                 opacity={0.78 - t * 0.26}
               >
                 {[92, 104, 116, 128, 140, 152, 164].map((y) => (
@@ -198,7 +196,6 @@ export const Car = memo(function Car({
                   animationIterationCount: "infinite",
                   animationPlayState: `var(--wheel-play, ${rolling ? "running" : "paused"})`,
                 }}
-
                 opacity={0.9 - t * 0.25}
               >
                 <rect
@@ -222,7 +219,6 @@ export const Car = memo(function Car({
             </g>
           ))}
 
-
           {/* speed blur over the wheels at high throttle */}
           <g opacity={t * 0.55}>
             <rect x="14" y="112" width="32" height="52" rx="8" fill="#8b96ad" opacity="0.22" />
@@ -230,15 +226,26 @@ export const Car = memo(function Car({
           </g>
         </g>
 
-
         {/* ---- main body ---- */}
         <path d={body} fill={`url(#paint-${uid})`} />
         <path d={body} fill={`url(#flank-${uid})`} />
 
         {/* shoulder highlight running across the haunches */}
-        <path d="M34 100 q96-30 192 0" fill="none" stroke={hi} strokeOpacity="0.55" strokeWidth="2.2" />
+        <path
+          d="M34 100 q96-30 192 0"
+          fill="none"
+          stroke={hi}
+          strokeOpacity="0.55"
+          strokeWidth="2.2"
+        />
         {/* haunch crease */}
-        <path d="M40 126 q32 12 90 12 t90-12" fill="none" stroke={deep} strokeOpacity="0.5" strokeWidth="3" />
+        <path
+          d="M40 126 q32 12 90 12 t90-12"
+          fill="none"
+          stroke={deep}
+          strokeOpacity="0.5"
+          strokeWidth="3"
+        />
 
         {/* side mirrors on stalks */}
         <path d="M64 82 q-22-8 -30 2 q11 8 28 4 z" fill="#0d1117" />
@@ -250,7 +257,6 @@ export const Car = memo(function Car({
         {/* body-colour roof rail above the glass */}
         <path d="M80 74 q50-14 100 0 l-5 -7 q-45-11 -90 0 z" fill={hi} opacity="0.9" />
 
-
         {/* ---- GT wing: posts, blade, endplates ---- */}
         {!isSmall && (
           <g>
@@ -258,7 +264,14 @@ export const Car = memo(function Car({
             <path d="M96 104 l7 0 l1 -34 l-7 0 z" fill="#0c1016" />
             <path d="M157 104 l7 0 l-1 -34 l-7 0 z" fill="#0c1016" />
             {/* main blade */}
-            <rect x={isHyper ? 14 : 22} y="64" width={isHyper ? 232 : 216} height="8" rx="4" fill={`url(#carbon-${uid})`} />
+            <rect
+              x={isHyper ? 14 : 22}
+              y="64"
+              width={isHyper ? 232 : 216}
+              height="8"
+              rx="4"
+              fill={`url(#carbon-${uid})`}
+            />
             <rect
               x={isHyper ? 18 : 26}
               y="65.2"
@@ -274,21 +287,14 @@ export const Car = memo(function Car({
           </g>
         )}
 
-
         {/* ---- deck / spoiler lip across the boot ---- */}
         <path d="M46 104 q84-16 168 0 l2 8 q-86-16 -172 0 z" fill={dark} opacity="0.55" />
 
         {/* ---- C-signature LED tail blades ---- */}
         <g opacity={lampOpacity}>
           {/* left */}
-          <path
-            d="M40 116 l64 -6 l10 10 l-10 10 l-64 -4 z"
-            fill="#180205"
-          />
-          <path
-            d="M45 118 l56 -5 l6 6 l-6 6 l-56 -3 z"
-            fill={`url(#tail-${uid})`}
-          />
+          <path d="M40 116 l64 -6 l10 10 l-10 10 l-64 -4 z" fill="#180205" />
+          <path d="M45 118 l56 -5 l6 6 l-6 6 l-56 -3 z" fill={`url(#tail-${uid})`} />
           <path
             d="M47 118.5 l53 -4.5"
             stroke="#ffd3d6"
@@ -327,14 +333,38 @@ export const Car = memo(function Car({
 
         {/* exhaust pods */}
         <g>
-          <rect x="46" y="140" width="52" height="22" rx="7" fill="#0a0d13" stroke="#4a5262" strokeWidth="1.2" />
-          <rect x="162" y="140" width="52" height="22" rx="7" fill="#0a0d13" stroke="#4a5262" strokeWidth="1.2" />
+          <rect
+            x="46"
+            y="140"
+            width="52"
+            height="22"
+            rx="7"
+            fill="#0a0d13"
+            stroke="#4a5262"
+            strokeWidth="1.2"
+          />
+          <rect
+            x="162"
+            y="140"
+            width="52"
+            height="22"
+            rx="7"
+            fill="#0a0d13"
+            stroke="#4a5262"
+            strokeWidth="1.2"
+          />
           {[60, 82, 176, 198].map((x) => (
             <g key={x}>
               <circle cx={x} cy="151" r="7.5" fill="#171b23" stroke="#59616f" strokeWidth="1.4" />
               <circle cx={x} cy="151" r="4" fill="#05070b" />
               {t > 0.2 && (
-                <circle cx={x} cy="151" r="3" fill={isHyper ? "#ffb03a" : "#7fd8ff"} opacity={t * 0.5} />
+                <circle
+                  cx={x}
+                  cy="151"
+                  r="3"
+                  fill={isHyper ? "#ffb03a" : "#7fd8ff"}
+                  opacity={t * 0.5}
+                />
               )}
             </g>
           ))}
@@ -348,10 +378,16 @@ export const Car = memo(function Car({
           ))}
         </g>
         {/* central rain lamp */}
-        <path d="M122 156 h16 l-3 10 h-10 z" fill="#ff2634" opacity={braking ? 1 : 0.4 + t * 0.35} />
+        <path
+          d="M122 156 h16 l-3 10 h-10 z"
+          fill="#ff2634"
+          opacity={braking ? 1 : 0.4 + t * 0.35}
+        />
 
         {/* hypercar underglow */}
-        {isHyper && <ellipse cx="130" cy="174" rx="98" ry="9" fill="#ffd66b" opacity={0.26 + t * 0.26} />}
+        {isHyper && (
+          <ellipse cx="130" cy="174" rx="98" ry="9" fill="#ffd66b" opacity={0.26 + t * 0.26} />
+        )}
 
         {/* wet-road reflection */}
         {reflection && (

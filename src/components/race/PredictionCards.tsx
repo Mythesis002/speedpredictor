@@ -60,7 +60,6 @@ export function PredictionCards({
               </span>
             )}
 
-
             <div className="relative flex flex-col items-center px-1 pt-2.5 pb-2">
               <div className="scale-[0.92] -mt-1">
                 <Car spec={car} size={78} glow={isSelected || isWinner} reflection={false} />

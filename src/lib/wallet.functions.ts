@@ -3,8 +3,10 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   MAX_BET_PAISE,
   MAX_DEPOSIT_PAISE,
+  MAX_WITHDRAWAL_PAISE,
   MIN_BET_PAISE,
   MIN_DEPOSIT_PAISE,
+  MIN_WITHDRAWAL_PAISE,
   assertBettingOpen,
   closeRazorpayQr,
   createRazorpayQr,
@@ -12,6 +14,7 @@ import {
   isRoundSettleable,
   laneMultiplier,
   paymentsConfigured,
+  settleFinishedBets,
   winnerLaneFor,
 } from "./wallet.server";
 
@@ -27,6 +30,15 @@ export const getWallet = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<WalletState> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const userId = context.userId;
+
+    // Settle finished rounds this player left open (e.g. closed the app
+    // mid-race) before reporting the balance. Best effort: a hiccup here must
+    // never stop the wallet from loading.
+    try {
+      await settleFinishedBets({ userId });
+    } catch {
+      /* the next load will retry */
+    }
 
     const { data: profile, error } = await supabaseAdmin
       .from("profiles")
@@ -210,10 +222,10 @@ export const requestWithdrawal = createServerFn({ method: "POST" })
   .validator((data: { amountPaise: number; upiId: string }) => {
     const amountPaise = data?.amountPaise;
     const upiId = (data?.upiId ?? "").trim();
-    if (!Number.isInteger(amountPaise) || amountPaise < 10000)
+    if (!Number.isInteger(amountPaise) || amountPaise < MIN_WITHDRAWAL_PAISE)
       throw new Error("Minimum withdrawal is ₹100");
-    if (amountPaise > MAX_DEPOSIT_PAISE) throw new Error("Amount is above the payout limit");
-    if (!/^[\w.\-]{2,64}@[a-zA-Z]{2,32}$/.test(upiId)) throw new Error("Enter a valid UPI ID");
+    if (amountPaise > MAX_WITHDRAWAL_PAISE) throw new Error("Amount is above the payout limit");
+    if (!/^[\w.-]{2,64}@[a-zA-Z]{2,32}$/.test(upiId)) throw new Error("Enter a valid UPI ID");
     return { amountPaise, upiId };
   })
   .handler(async ({ data, context }) => {
@@ -223,7 +235,8 @@ export const requestWithdrawal = createServerFn({ method: "POST" })
       p_amount_paise: data.amountPaise,
       p_upi_id: data.upiId,
     });
-    if (error) throw new Error(error.message.replace(/^.*ERROR:\s*/, "").replace(/^[A-Z_]+:\s*/, ""));
+    if (error)
+      throw new Error(error.message.replace(/^.*ERROR:\s*/, "").replace(/^[A-Z_]+:\s*/, ""));
     return { ok: true as const };
   });
 
@@ -251,7 +264,9 @@ export const myBets = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data } = await context.supabase
       .from("bets")
-      .select("id, round_id, lane, amount_paise, multiplier, status, payout_paise, winner_lane, created_at")
+      .select(
+        "id, round_id, lane, amount_paise, multiplier, status, payout_paise, winner_lane, created_at",
+      )
       .order("round_id", { ascending: false })
       .limit(50);
     return (data ?? []).map((b) => ({

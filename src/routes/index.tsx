@@ -5,12 +5,7 @@ import { Highway } from "@/components/race/Highway";
 import { PredictionCards } from "@/components/race/PredictionCards";
 import { BettingPanel } from "@/components/race/BettingPanel";
 import { Header } from "@/components/race/Header";
-import {
-  Results,
-  RecentRounds,
-  LiveStats,
-  type HistoryEntry,
-} from "@/components/race/History";
+import { Results, RecentRounds, LiveStats, type HistoryEntry } from "@/components/race/History";
 import { WinModal } from "@/components/race/WinModal";
 import { DepositModal } from "@/components/race/DepositModal";
 import { WithdrawModal } from "@/components/race/WithdrawModal";
@@ -19,22 +14,10 @@ import { carLabel, formatINR } from "@/lib/car-label";
 import { useRaceRound } from "@/lib/use-race-round";
 import { useAuthSession } from "@/lib/use-auth";
 import { recentResults } from "@/lib/rounds.functions";
-import {
-  getWallet,
-  liveStats,
-  placeBet as placeBetFn,
-  settleRound,
-} from "@/lib/wallet.functions";
+import { getWallet, liveStats, placeBet as placeBetFn, settleRound } from "@/lib/wallet.functions";
 import { supabase } from "@/integrations/supabase/client";
 
-import {
-  BarChart3,
-  Banknote,
-  Gift,
-  Home,
-  Settings,
-  ShieldCheck,
-} from "lucide-react";
+import { BarChart3, Banknote, Gift, Home, Settings, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -125,8 +108,6 @@ function Game() {
   const [totalBets, setTotalBets] = useState(0);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
-
-
   /* wallet comes from the server — never from the browser */
   const refreshWallet = useCallback(async () => {
     try {
@@ -202,7 +183,6 @@ function Game() {
     [settle, refreshWallet],
   );
 
-
   const { roundId, phase, countdown, locked, cars, progressRef, winner, fairness } =
     useRaceRound(onSettle);
 
@@ -244,7 +224,6 @@ function Game() {
     return () => clearInterval(id);
   }, [loadStats]);
 
-
   const [selected, setSelected] = useState<number | null>(null);
   useEffect(() => setSelected(null), [roundId]);
 
@@ -274,7 +253,6 @@ function Game() {
       setBalance(res.balancePaise / 100);
       setBet({ roundId, lane, amount: staked });
       buzz(22);
-
     } catch (err) {
       setBetError(err instanceof Error ? err.message : "Could not place the bet");
       void refreshWallet();
@@ -339,7 +317,10 @@ function Game() {
           <div className="absolute bottom-1.5 left-1.5 z-30">
             <div
               className="rounded-full px-2 py-1 glass font-display text-[8.5px] tracking-[0.16em]"
-              style={{ color: cars[activeBet.lane].color, borderColor: `${cars[activeBet.lane].color}66` }}
+              style={{
+                color: cars[activeBet.lane].color,
+                borderColor: `${cars[activeBet.lane].color}66`,
+              }}
             >
               {formatINR(activeBet.amount)} ON {carLabel(cars[activeBet.lane])} ·{" "}
               {formatINR(activeBet.amount * cars[activeBet.lane].multiplier)}
@@ -355,7 +336,6 @@ function Game() {
             >
               ⚡ HYPER {cars.find((c) => c.kind === "hyper")?.multiplier ?? 5}×
             </div>
-
           </div>
         )}
       </div>
@@ -438,7 +418,6 @@ function Game() {
           onConfirm={() => void placeBet()}
         />
 
-
         {/* provably-fair status */}
         <Link
           to="/verify/$roundId"
@@ -470,25 +449,32 @@ function Game() {
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
       >
         <div className="glass rounded-2xl grid grid-cols-4 py-1.5">
-          {([
-            { icon: Home, label: "Home", active: true },
-            { icon: BarChart3, label: "History", href: "/history" },
-            { icon: Banknote, label: "Cash out", action: () => setWithdrawOpen(true) },
-            { icon: Settings, label: "Profile", href: "/profile" },
-          ] as { icon: typeof Home; label: string; active?: boolean; action?: () => void; href?: "/history" | "/profile" }[])
-            .map(({ icon: Icon, label, active, action, href }) => (
-              <button
-                key={label}
-                onClick={href ? () => void nav({ to: href }) : action}
-                className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] ${
-                  active ? "text-[#a24bff]" : "text-white/45"
-                }`}
-                style={active ? { background: "rgba(162,75,255,0.12)" } : undefined}
-              >
-                <Icon size={16} />
-                <span className="text-[9px] font-display tracking-wide">{label}</span>
-              </button>
-            ))}
+          {(
+            [
+              { icon: Home, label: "Home", active: true },
+              { icon: BarChart3, label: "History", href: "/history" },
+              { icon: Banknote, label: "Cash out", action: () => setWithdrawOpen(true) },
+              { icon: Settings, label: "Profile", href: "/profile" },
+            ] as {
+              icon: typeof Home;
+              label: string;
+              active?: boolean;
+              action?: () => void;
+              href?: "/history" | "/profile";
+            }[]
+          ).map(({ icon: Icon, label, active, action, href }) => (
+            <button
+              key={label}
+              onClick={href ? () => void nav({ to: href }) : action}
+              className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] ${
+                active ? "text-[#a24bff]" : "text-white/45"
+              }`}
+              style={active ? { background: "rgba(162,75,255,0.12)" } : undefined}
+            >
+              <Icon size={16} />
+              <span className="text-[9px] font-display tracking-wide">{label}</span>
+            </button>
+          ))}
         </div>
       </div>
     </div>

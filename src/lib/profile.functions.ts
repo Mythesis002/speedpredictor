@@ -17,7 +17,9 @@ export const getMyProfile = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from("profiles")
-      .select("phone, display_name, created_at, balance_paise, self_excluded_until, daily_loss_limit_paise, is_banned")
+      .select(
+        "phone, display_name, created_at, balance_paise, self_excluded_until, daily_loss_limit_paise, is_banned",
+      )
       .eq("id", context.userId)
       .maybeSingle();
     if (error || !data) throw new Error("Profile not found");
@@ -27,7 +29,8 @@ export const getMyProfile = createServerFn({ method: "GET" })
       createdAt: data.created_at,
       balancePaise: Number(data.balance_paise),
       selfExcludedUntil: data.self_excluded_until,
-      dailyLossLimitPaise: data.daily_loss_limit_paise === null ? null : Number(data.daily_loss_limit_paise),
+      dailyLossLimitPaise:
+        data.daily_loss_limit_paise === null ? null : Number(data.daily_loss_limit_paise),
       isBanned: Boolean(data.is_banned),
     };
   });
@@ -37,17 +40,30 @@ const BLOCKED = ["fuck", "shit", "bitch", "chutiya", "madarchod", "bhenchod", "a
 export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
-    (d: { displayName?: string; dailyLossLimitPaise?: number | null; selfExcludeDays?: 1 | 7 | 30; ageConfirmed?: boolean }) => {
-      const out: { displayName?: string; dailyLossLimitPaise?: number | null; selfExcludeDays?: number; ageConfirmed?: boolean } = {};
+    (d: {
+      displayName?: string;
+      dailyLossLimitPaise?: number | null;
+      selfExcludeDays?: 1 | 7 | 30;
+      ageConfirmed?: boolean;
+    }) => {
+      const out: {
+        displayName?: string;
+        dailyLossLimitPaise?: number | null;
+        selfExcludeDays?: number;
+        ageConfirmed?: boolean;
+      } = {};
       if (d?.displayName !== undefined) {
         const n = String(d.displayName).trim();
-        if (!/^[A-Za-z0-9 _.-]{3,20}$/.test(n)) throw new Error("Name must be 3–20 letters, numbers, spaces, _ . -");
-        if (BLOCKED.some((w) => n.toLowerCase().includes(w))) throw new Error("Please choose a different name");
+        if (!/^[A-Za-z0-9 _.-]{3,20}$/.test(n))
+          throw new Error("Name must be 3–20 letters, numbers, spaces, _ . -");
+        if (BLOCKED.some((w) => n.toLowerCase().includes(w)))
+          throw new Error("Please choose a different name");
         out.displayName = n;
       }
       if (d?.dailyLossLimitPaise !== undefined) {
         const v = d.dailyLossLimitPaise;
-        if (v !== null && (!Number.isInteger(v) || v < 1000 || v > 10_000_000)) throw new Error("Limit must be at least ₹10");
+        if (v !== null && (!Number.isInteger(v) || v < 1000 || v > 10_000_000))
+          throw new Error("Limit must be at least ₹10");
         out.dailyLossLimitPaise = v;
       }
       if (d?.selfExcludeDays !== undefined) {
@@ -60,12 +76,17 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: import("@/integrations/supabase/types").TablesUpdate<"profiles"> = { updated_at: new Date().toISOString() };
+    const patch: import("@/integrations/supabase/types").TablesUpdate<"profiles"> = {
+      updated_at: new Date().toISOString(),
+    };
     if (data.displayName !== undefined) patch.display_name = data.displayName;
-    if (data.dailyLossLimitPaise !== undefined) patch.daily_loss_limit_paise = data.dailyLossLimitPaise;
+    if (data.dailyLossLimitPaise !== undefined)
+      patch.daily_loss_limit_paise = data.dailyLossLimitPaise;
     if (data.ageConfirmed) patch.age_confirmed_at = new Date().toISOString();
     if (data.selfExcludeDays) {
-      patch.self_excluded_until = new Date(Date.now() + data.selfExcludeDays * 86_400_000).toISOString();
+      patch.self_excluded_until = new Date(
+        Date.now() + data.selfExcludeDays * 86_400_000,
+      ).toISOString();
       await supabaseAdmin.from("audit_log").insert({
         actor_id: context.userId,
         action: "self_exclude",

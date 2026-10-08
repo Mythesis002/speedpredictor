@@ -158,7 +158,8 @@ export function Highway({
         const swayVel =
           throttleI *
           0.085 *
-          (Math.cos(tSec * 0.9 + i * 2.3) * 0.9 * 0.65 + Math.cos(tSec * 2.17 + i * 5.1) * 2.17 * 0.35);
+          (Math.cos(tSec * 0.9 + i * 2.3) * 0.9 * 0.65 +
+            Math.cos(tSec * 2.17 + i * 5.1) * 2.17 * 0.35);
 
         const x = xAt(LANE_U[i] + sway, z, w);
         const y = yAt(z, h); // tyres land exactly on the projected tarmac
@@ -187,7 +188,6 @@ export function Highway({
             ` rotate(${(pitch * 0.1 + roll).toFixed(2)}deg)`;
         }
 
-
         const rank = [0, 1, 2].sort((a, b) => p[b] - p[a]).indexOf(i) + 1;
         const badge = posRefs.current[i];
         if (badge) {
@@ -209,7 +209,8 @@ export function Highway({
         for (let i = 0; i < DASHES; i++) {
           const el = dashRefs.current[d * DASHES + i];
           if (!el) continue;
-          let z = Z_NEAR + (((i * DASH_PERIOD - flow.current) % DASH_SPAN) + DASH_SPAN) % DASH_SPAN;
+          const z =
+            Z_NEAR + ((((i * DASH_PERIOD - flow.current) % DASH_SPAN) + DASH_SPAN) % DASH_SPAN);
           if (z > Z_FAR) {
             el.style.opacity = "0";
             continue;
@@ -232,7 +233,6 @@ export function Highway({
           el.style.opacity = Math.min(1, (Z_FAR - z) / (Z_FAR * 0.45)).toFixed(3);
         }
       }
-
 
       /* ---- cinematic camera: shake + FOV punch ---- */
       const cam = cameraRef.current;
@@ -438,7 +438,6 @@ export function Highway({
                     opacity: 0,
                   }}
                 />
-
               ))}
             </div>
           ))}

@@ -173,7 +173,9 @@ export function Results({ entries }: { entries: HistoryEntry[] }) {
   return (
     <div className="glass rounded-2xl p-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="font-display text-[10px] tracking-[0.2em] text-white/60">LAST RESULTS</span>
+        <span className="font-display text-[10px] tracking-[0.2em] text-white/60">
+          LAST RESULTS
+        </span>
         <span className="text-[9px] text-white/35">Last {last.length} rounds</span>
       </div>
       <div className="flex gap-3 mb-2">
@@ -183,7 +185,9 @@ export function Results({ entries }: { entries: HistoryEntry[] }) {
             {t.name} {t.p}%
           </span>
         ))}
-        <span className="text-[9px] text-white/30 ml-auto self-center">of last {entries.length}</span>
+        <span className="text-[9px] text-white/30 ml-auto self-center">
+          of last {entries.length}
+        </span>
       </div>
       {last.length === 0 ? (
         <div className="py-5 text-center text-[11px] text-white/40">
@@ -201,7 +205,11 @@ export function Results({ entries }: { entries: HistoryEntry[] }) {
             >
               <span
                 className="w-3.5 h-3.5 rounded-full"
-                style={{ background: e.car.color, boxShadow: `0 0 8px ${e.car.color}`, border: "1px solid rgba(255,255,255,0.22)" }}
+                style={{
+                  background: e.car.color,
+                  boxShadow: `0 0 8px ${e.car.color}`,
+                  border: "1px solid rgba(255,255,255,0.22)",
+                }}
               />
               <span className="text-[8px] tabular text-white/40 leading-none">#{e.id}</span>
             </Link>

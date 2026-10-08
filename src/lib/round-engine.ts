@@ -31,15 +31,7 @@ export const PHASE_MS: Record<RacePhase, number> = {
   finish: 4000,
 };
 
-
-export const PHASE_ORDER: RacePhase[] = [
-  "waiting",
-  "prep",
-  "lock",
-  "launch",
-  "race",
-  "finish",
-];
+export const PHASE_ORDER: RacePhase[] = ["waiting", "prep", "lock", "launch", "race", "finish"];
 
 export const ROUND_MS = PHASE_ORDER.reduce((s, p) => s + PHASE_MS[p], 0);
 
@@ -209,6 +201,9 @@ export function lineupForRound(roundId: number): [CarSpec, CarSpec, CarSpec] {
     while (used.has(c.name) && guard++ < 24) {
       c = COLORS[Math.floor(rnd() * COLORS.length)];
     }
+    // the random retries are practically always enough; if they ever aren't,
+    // take the first free colour so two lanes can never share a paint
+    if (used.has(c.name)) c = COLORS.find((x) => !used.has(x.name)) ?? c;
     used.add(c.name);
     paint.push({ color: c.hex, colorName: c.name });
   }
@@ -222,7 +217,6 @@ export function lineupForRound(roundId: number): [CarSpec, CarSpec, CarSpec] {
     multiplier: roundOdds(probs[lane]),
   })) as [CarSpec, CarSpec, CarSpec];
 }
-
 
 /* ------------------------------------------------------------------ */
 /* Outcome (secret until reveal)                                       */
@@ -271,7 +265,6 @@ export function outcomeFromReveal(reveal: string, roundId?: number): Outcome {
     pool.splice(pick, 1);
     weights.splice(pick, 1);
   }
-
 
   // final margins: P1 = 1.0, then tight, race-like gaps
   const margins: number[] = [0, 0, 0];

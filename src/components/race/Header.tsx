@@ -8,7 +8,6 @@ interface Props {
 }
 
 export function Header({ balance, roundId, onTopUp }: Props) {
-
   return (
     <div className="flex items-center gap-2 px-3 py-2">
       {/* Logo */}
@@ -24,12 +23,8 @@ export function Header({ balance, roundId, onTopUp }: Props) {
       {/* Round */}
       <div className="flex-1 min-w-0 mx-1">
         <div className="glass rounded-xl px-2 py-1 text-center">
-          <div className="text-[8px] tracking-[0.2em] text-white/45 font-display">
-            ROUND ID
-          </div>
-          <div className="font-display text-[12px] tabular text-white truncate">
-            #{roundId}
-          </div>
+          <div className="text-[8px] tracking-[0.2em] text-white/45 font-display">ROUND ID</div>
+          <div className="font-display text-[12px] tabular text-white truncate">#{roundId}</div>
         </div>
       </div>
 
@@ -48,7 +43,6 @@ export function Header({ balance, roundId, onTopUp }: Props) {
         >
           <Plus size={13} />
         </button>
-
       </div>
     </div>
   );

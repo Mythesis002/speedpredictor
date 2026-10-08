@@ -46,7 +46,11 @@ export function WithdrawModal({ open, onClose, balancePaise }: Props) {
 
   const amountPaise = Math.round(Number(amount) * 100);
   const validUpi = /^[\w.-]{2,64}@[a-zA-Z]{2,32}$/.test(upi.trim());
-  const canSubmit = Number.isInteger(amountPaise) && amountPaise >= 10_000 && amountPaise <= balancePaise && validUpi;
+  const canSubmit =
+    Number.isInteger(amountPaise) &&
+    amountPaise >= 10_000 &&
+    amountPaise <= balancePaise &&
+    validUpi;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">

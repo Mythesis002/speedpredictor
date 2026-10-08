@@ -55,7 +55,10 @@ function AuthPage() {
         const { error: err } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { phone: digits, age_confirmed: true }, emailRedirectTo: window.location.origin },
+          options: {
+            data: { phone: digits, age_confirmed: true },
+            emailRedirectTo: window.location.origin,
+          },
         });
         if (err) throw err;
         const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
@@ -163,10 +166,18 @@ function AuthPage() {
 
             {mode === "signup" && (
               <label className="flex items-start gap-2 text-[11px] text-white/65 min-h-[44px] cursor-pointer">
-                <input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#ffc32b]" />
+                <input
+                  type="checkbox"
+                  checked={adult}
+                  onChange={(e) => setAdult(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 accent-[#ffc32b]"
+                />
                 <span>
                   I am 18 or older and agree to the{" "}
-                  <RouterLink to="/how-it-works" className="underline">Terms & Privacy</RouterLink>.
+                  <RouterLink to="/how-it-works" className="underline">
+                    Terms & Privacy
+                  </RouterLink>
+                  .
                 </span>
               </label>
             )}

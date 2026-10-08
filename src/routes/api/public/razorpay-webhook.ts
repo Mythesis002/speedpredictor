@@ -49,7 +49,21 @@ export const Route = createFileRoute("/api/public/razorpay-webhook")({
 
         // never credit more than the amount that actually arrived
         const credited = Math.min(Number(dep.amount_paise), Number(payment.amount ?? 0));
-        if (credited < Number(dep.amount_paise)) return new Response("underpaid");
+        if (credited < Number(dep.amount_paise)) {
+          // money arrived but not in full: nothing is credited, so leave a trail
+          // an admin can see in the audit log instead of losing it silently
+          await supabaseAdmin.from("audit_log").insert({
+            action: "deposit_underpaid",
+            entity: "deposit",
+            entity_id: dep.id,
+            metadata: {
+              expected_paise: Number(dep.amount_paise),
+              received_paise: Number(payment.amount ?? 0),
+              payment_id: payment.id,
+            },
+          });
+          return new Response("underpaid");
+        }
 
         const { error } = await supabaseAdmin.rpc("credit_deposit", {
           p_deposit_id: dep.id,

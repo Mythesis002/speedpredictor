@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /* ------------------------------------------------------------------ */
@@ -71,7 +72,7 @@ export interface AdminPlayer {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Every admin function verifies the caller's role through their own RLS session. */
-async function assertAdmin(context: { supabase: any; userId: string }) {
+async function assertAdmin(context: { supabase: Pick<SupabaseClient, "rpc">; userId: string }) {
   const { data, error } = await context.supabase.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
@@ -82,6 +83,47 @@ async function assertAdmin(context: { supabase: any; userId: string }) {
 
 function sum(rows: { [k: string]: unknown }[] | null, key: string): number {
   return (rows ?? []).reduce((t, r) => t + Number(r[key] ?? 0), 0);
+}
+
+const PAGE_SIZE = 1000;
+
+interface PagedSelect {
+  from(table: string): {
+    select(columns: string): {
+      order(
+        column: string,
+        opts: { ascending: boolean },
+      ): {
+        range(
+          from: number,
+          to: number,
+        ): PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>;
+      };
+    };
+  };
+}
+
+/**
+ * Reads every row of a table, page by page. PostgREST silently caps an unpaged
+ * read (1,000 rows by default), which would make admin totals quietly stop
+ * growing once the game gets busy. Ordering by `id` keeps the pages stable.
+ */
+async function selectAll<T>(table: string, columns: string): Promise<T[]> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const client = supabaseAdmin as unknown as PagedSelect;
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await client
+      .from(table)
+      .select(columns)
+      .order("id", { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []) as T[];
+    out.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
+  return out;
 }
 
 /* ------------------------------------------------------------------ */
@@ -106,21 +148,33 @@ export const getAdminOverview = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const now = Date.now();
-    const startOfToday = new Date(new Date().toISOString().slice(0, 10)).getTime();
+    // "today" is the Indian calendar day (IST = UTC+05:30), not UTC midnight
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+    const startOfToday = Math.floor((now + IST_OFFSET_MS) / DAY_MS) * DAY_MS - IST_OFFSET_MS;
 
-    const [profiles, deposits, transactions, bets, withdrawals] = await Promise.all([
-      supabaseAdmin.from("profiles").select("id, balance_paise, created_at"),
-      supabaseAdmin.from("deposits").select("amount_paise, status, created_at, paid_at"),
-      supabaseAdmin.from("transactions").select("kind, amount_paise, created_at"),
-      supabaseAdmin.from("bets").select("amount_paise, payout_paise, status, created_at"),
-      supabaseAdmin.from("withdrawals").select("amount_paise, status"),
+    const [P, D, T, B, W] = await Promise.all([
+      selectAll<{ id: string; balance_paise: number; created_at: string }>(
+        "profiles",
+        "id, balance_paise, created_at",
+      ),
+      selectAll<{
+        amount_paise: number;
+        status: string;
+        created_at: string;
+        paid_at: string | null;
+      }>("deposits", "amount_paise, status, created_at, paid_at"),
+      selectAll<{ kind: string; amount_paise: number; created_at: string }>(
+        "transactions",
+        "kind, amount_paise, created_at",
+      ),
+      selectAll<{
+        amount_paise: number;
+        payout_paise: number;
+        status: string;
+        created_at: string;
+      }>("bets", "amount_paise, payout_paise, status, created_at"),
+      selectAll<{ amount_paise: number; status: string }>("withdrawals", "amount_paise, status"),
     ]);
-
-    const P = profiles.data ?? [];
-    const D = deposits.data ?? [];
-    const B = bets.data ?? [];
-    const W = withdrawals.data ?? [];
-    const T = transactions.data ?? [];
 
     const paidDeposits = D.filter((d) => d.status === "paid");
     const pendingDeposits = D.filter((d) => d.status !== "paid");
@@ -245,19 +299,36 @@ export const listPlayers = createServerFn({ method: "GET" })
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [{ data: profiles }, { data: deposits }, { data: bets }] = await Promise.all([
+    const [{ data: profiles }, deposits, bets] = await Promise.all([
       supabaseAdmin
         .from("profiles")
         .select("id, phone, balance_paise, created_at, is_banned, banned_reason")
         .order("created_at", { ascending: false })
         .limit(200),
-      supabaseAdmin.from("deposits").select("user_id, amount_paise, status"),
-      supabaseAdmin.from("bets").select("user_id, amount_paise, payout_paise"),
+      selectAll<{ user_id: string; amount_paise: number; status: string }>(
+        "deposits",
+        "user_id, amount_paise, status",
+      ),
+      selectAll<{ user_id: string; amount_paise: number; payout_paise: number }>(
+        "bets",
+        "user_id, amount_paise, payout_paise",
+      ),
     ]);
 
+    // group once instead of re-scanning every row for every player
+    const paidByUser = new Map<string, typeof deposits>();
+    for (const d of deposits) {
+      if (d.status !== "paid") continue;
+      paidByUser.set(d.user_id, [...(paidByUser.get(d.user_id) ?? []), d]);
+    }
+    const betsByUser = new Map<string, typeof bets>();
+    for (const b of bets) {
+      betsByUser.set(b.user_id, [...(betsByUser.get(b.user_id) ?? []), b]);
+    }
+
     return (profiles ?? []).map((p) => {
-      const myDeposits = (deposits ?? []).filter((d) => d.user_id === p.id && d.status === "paid");
-      const myBets = (bets ?? []).filter((b) => b.user_id === p.id);
+      const myDeposits = paidByUser.get(p.id) ?? [];
+      const myBets = betsByUser.get(p.id) ?? [];
       return {
         id: p.id,
         phone: p.phone,
@@ -370,7 +441,11 @@ export const adjustPlayerBalance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: { userId: string; amountPaise: number; reason: string }) => {
     if (typeof d?.userId !== "string" || d.userId.length < 10) throw new Error("Invalid player");
-    if (!Number.isInteger(d.amountPaise) || d.amountPaise === 0 || Math.abs(d.amountPaise) > 10_000_000)
+    if (
+      !Number.isInteger(d.amountPaise) ||
+      d.amountPaise === 0 ||
+      Math.abs(d.amountPaise) > 10_000_000
+    )
       throw new Error("Invalid amount");
     if (!reasonOk(d.reason)) throw new Error("A reason is required");
     return { userId: d.userId, amountPaise: d.amountPaise, reason: d.reason.trim() };

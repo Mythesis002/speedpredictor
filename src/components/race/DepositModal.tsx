@@ -93,7 +93,9 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
               <input
                 inputMode="numeric"
                 value={amount}
-                onChange={(e) => setAmount(Math.min(200000, Number(e.target.value.replace(/\D/g, "")) || 0))}
+                onChange={(e) =>
+                  setAmount(Math.min(200000, Number(e.target.value.replace(/\D/g, "")) || 0))
+                }
                 className="flex-1 bg-transparent outline-none font-display tabular text-lg"
               />
             </div>
@@ -130,9 +132,15 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
         {qr && !paid && (
           <div className="text-center">
             <div className="mx-auto w-52 h-52 rounded-xl bg-white p-2 grid place-items-center">
-              <img src={qr.url} alt="UPI payment QR code" className="w-full h-full object-contain" />
+              <img
+                src={qr.url}
+                alt="UPI payment QR code"
+                className="w-full h-full object-contain"
+              />
             </div>
-            <div className="mt-3 font-display text-lg tabular">{formatINR(qr.amountPaise / 100)}</div>
+            <div className="mt-3 font-display text-lg tabular">
+              {formatINR(qr.amountPaise / 100)}
+            </div>
             <div className="mt-1 flex items-center justify-center gap-1.5 text-[10px] font-display tracking-[0.14em] text-white/45">
               <Loader2 size={12} className="animate-spin" /> WAITING FOR PAYMENT…
             </div>

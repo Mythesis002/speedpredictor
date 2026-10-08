@@ -1,12 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-export function RollingNumber({
-  value,
-  duration = 500,
-}: {
-  value: number;
-  duration?: number;
-}) {
+export function RollingNumber({ value, duration = 500 }: { value: number; duration?: number }) {
   const [display, setDisplay] = useState(value);
   const from = useRef(value);
   const start = useRef(performance.now());
