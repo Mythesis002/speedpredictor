@@ -30,9 +30,9 @@ const SPRITES: Record<string, string> = {
 const ASPECT = 1408 / 768;
 
 /**
- * Photoreal rear-view GT. The render is placed with `mix-blend-mode: screen`
- * so its black studio backdrop disappears into the dark race stage, leaving
- * only the car. Class scaling (small / hyper) is kept from the original design.
+ * Photoreal rear-view GT. The sprites are transparent cutouts (green-screen
+ * render, keyed out), so the car sits on the stage with its own lighting.
+ * Class scaling (small / hyper) is kept from the original design.
  */
 export function Car({
   spec,
@@ -72,7 +72,6 @@ export function Car({
           width: w,
           height: h,
           objectFit: "contain",
-          mixBlendMode: "screen",
           filter: `brightness(${braking ? 1.18 : 1 + t * 0.08})`,
           userSelect: "none",
         }}
