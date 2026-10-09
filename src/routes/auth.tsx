@@ -88,12 +88,13 @@ function AuthPage() {
   return (
     <main className="min-h-[100dvh] w-full bg-[#04060c] text-white flex flex-col justify-center px-5 py-10">
       <div className="mx-auto w-full max-w-sm">
-        <div className="mb-7 flex justify-center">
-          <img
-            src="/apex-logo.svg"
-            alt="Apex logo"
-            className="h-16 w-auto drop-shadow-[0_0_24px_rgba(255,195,43,0.45)]"
-          />
+        <div className="text-center mb-7">
+          <div
+            className="font-display text-3xl italic leading-none"
+            style={{ color: "#ffc32b", textShadow: "0 0 20px #ffc32b55" }}
+          >
+            APEX
+          </div>
         </div>
 
         <div className="glass rounded-2xl p-4">
@@ -165,10 +166,7 @@ function AuthPage() {
                 <input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#ffc32b]" />
                 <span>
                   I am 18 or older and agree to the{" "}
-                  <RouterLink to="/how-it-works" className="underline">
-                    Terms & Privacy
-                  </RouterLink>
-                  .
+                  <RouterLink to="/how-it-works" className="underline">Terms & Privacy</RouterLink>.
                 </span>
               </label>
             )}
