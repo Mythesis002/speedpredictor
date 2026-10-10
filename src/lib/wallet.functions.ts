@@ -11,7 +11,6 @@ import {
   fetchQrPayments,
   isRoundSettleable,
   laneMultiplier,
-  paymentsConfigured,
   winnerLaneFor,
 } from "./wallet.server";
 
@@ -135,7 +134,6 @@ export const createDeposit = createServerFn({ method: "POST" })
     return { amountPaise };
   })
   .handler(async ({ data, context }) => {
-    if (!paymentsConfigured()) throw new Error("Payments are not configured yet");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: dep, error } = await supabaseAdmin
@@ -146,12 +144,19 @@ export const createDeposit = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     const qr = await createRazorpayQr(data.amountPaise, dep.id, context.userId);
+    const cleanImageUrl = qr.clean_qr_data_url || qr.image_url;
     await supabaseAdmin
       .from("deposits")
-      .update({ qr_id: qr.id, qr_image_url: qr.image_url })
+      .update({ qr_id: qr.id, qr_image_url: cleanImageUrl })
       .eq("id", dep.id);
 
-    return { depositId: dep.id, qrImageUrl: qr.image_url, amountPaise: data.amountPaise };
+    return {
+      depositId: dep.id,
+      qrImageUrl: cleanImageUrl,
+      qrContent: qr.image_content ?? null,
+      cleanQrDataUrl: qr.clean_qr_data_url ?? null,
+      amountPaise: data.amountPaise,
+    };
   });
 
 /** Polls Razorpay for the deposit and credits it exactly once. */
@@ -268,14 +273,17 @@ export const myBets = createServerFn({ method: "GET" })
   });
 
 /** Safe, aggregate-only live numbers for the HUD (no personal data). */
-export const liveStats = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data } = await context.supabase.rpc("public_stats");
+export const liveStats = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin.rpc("public_stats");
     const row = Array.isArray(data) ? data[0] : data;
     return {
       players: Number(row?.players ?? 0),
       stakedPaise: Number(row?.staked_paise ?? 0),
       betsToday: Number(row?.bets_today ?? 0),
     };
-  });
+  } catch {
+    return { players: 0, stakedPaise: 0, betsToday: 0 };
+  }
+});

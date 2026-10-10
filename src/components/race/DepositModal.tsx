@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, ShieldCheck, X } from "lucide-react";
+import QRCode from "qrcode";
 import { checkDeposit, createDeposit } from "@/lib/wallet.functions";
 import { formatINR } from "@/lib/car-label";
 
@@ -13,15 +14,21 @@ interface Props {
 const PRESETS = [50, 100, 500, 1000];
 
 /**
- * QR-only deposit flow. The client never handles a payment token — it just
- * shows the Razorpay UPI QR and polls the server until the money is credited.
+ * QR-only deposit flow. Renders a pure, standalone QR matrix from `qrContent`
+ * (or tightly crops the square QR region if only `image_url` is returned) so
+ * Razorpay's tall retail standee poster, merchant name, and branding never appear.
  */
 export function DepositModal({ open, onClose, onCredited }: Props) {
   const start = useServerFn(createDeposit);
   const poll = useServerFn(checkDeposit);
 
   const [amount, setAmount] = useState(100);
-  const [qr, setQr] = useState<{ id: string; url: string; amountPaise: number } | null>(null);
+  const [qr, setQr] = useState<{
+    id: string;
+    url: string;
+    cleanQrDataUrl: string | null;
+    amountPaise: number;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paid, setPaid] = useState(false);
@@ -66,7 +73,28 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
     setError(null);
     try {
       const res = await start({ data: { amountPaise: Math.round(amount * 100) } });
-      setQr({ id: res.depositId, url: res.qrImageUrl, amountPaise: res.amountPaise });
+      let cleanQrDataUrl: string | null = res.cleanQrDataUrl ?? null;
+      if (!cleanQrDataUrl && res.qrContent) {
+        try {
+          cleanQrDataUrl = await QRCode.toDataURL(res.qrContent, {
+            width: 520,
+            margin: 1,
+            errorCorrectionLevel: "M",
+            color: {
+              dark: "#000000",
+              light: "#ffffff",
+            },
+          });
+        } catch {
+          cleanQrDataUrl = null;
+        }
+      }
+      setQr({
+        id: res.depositId,
+        url: res.qrImageUrl,
+        cleanQrDataUrl,
+        amountPaise: res.amountPaise,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start the payment");
     }
@@ -75,7 +103,7 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
 
   return (
     <div className="fixed inset-0 z-[80] grid place-items-center bg-black/80 px-5 animate-fade-in">
-      <div className="w-full max-w-sm glass rounded-2xl p-4 relative">
+      <div className="w-full max-w-sm glass rounded-2xl p-4 relative overflow-hidden">
         <button
           onClick={onClose}
           aria-label="Close"
@@ -93,7 +121,9 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
               <input
                 inputMode="numeric"
                 value={amount}
-                onChange={(e) => setAmount(Math.min(200000, Number(e.target.value.replace(/\D/g, "")) || 0))}
+                onChange={(e) =>
+                  setAmount(Math.min(200000, Number(e.target.value.replace(/\D/g, "")) || 0))
+                }
                 className="flex-1 bg-transparent outline-none font-display tabular text-lg"
               />
             </div>
@@ -129,10 +159,17 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
 
         {qr && !paid && (
           <div className="text-center">
-            <div className="mx-auto w-52 h-52 rounded-xl bg-white p-2 grid place-items-center">
-              <img src={qr.url} alt="UPI payment QR code" className="w-full h-full object-contain" />
+            <div className="mx-auto w-56 h-56 rounded-2xl bg-white p-3 overflow-hidden grid place-items-center shadow-[0_0_30px_rgba(255,255,255,0.12)]">
+              <img
+                src={qr.cleanQrDataUrl || qr.url}
+                alt="UPI payment QR code"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain block select-none"
+              />
             </div>
-            <div className="mt-3 font-display text-lg tabular">{formatINR(qr.amountPaise / 100)}</div>
+            <div className="mt-3 font-display text-lg tabular">
+              {formatINR(qr.amountPaise / 100)}
+            </div>
             <div className="mt-1 flex items-center justify-center gap-1.5 text-[10px] font-display tracking-[0.14em] text-white/45">
               <Loader2 size={12} className="animate-spin" /> WAITING FOR PAYMENT…
             </div>

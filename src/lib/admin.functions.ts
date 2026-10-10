@@ -309,9 +309,14 @@ export const getPaymentsStatus = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const id = process.env["RAZORPAY_KEY_ID"] ?? "";
+    const secret = process.env["RAZORPAY_KEY_SECRET"] ?? "";
+    const webhookSecret = process.env["RAZORPAY_WEBHOOK_SECRET"] ?? "";
     return {
-      configured: Boolean(id && process.env["RAZORPAY_KEY_SECRET"]),
-      webhookReady: Boolean(process.env["RAZORPAY_WEBHOOK_SECRET"]),
+      configured: Boolean(id && secret),
+      hasKeyId: Boolean(id),
+      hasKeySecret: Boolean(secret),
+      webhookReady: Boolean(webhookSecret),
+      webhookEndpoint: "/api/public/razorpay-webhook",
       mode: id.startsWith("rzp_live") ? "live" : id ? "test" : "none",
       keyIdMasked: id ? `${id.slice(0, 12)}…` : null,
     };

@@ -14,6 +14,8 @@ import {
 import { WinModal } from "@/components/race/WinModal";
 import { DepositModal } from "@/components/race/DepositModal";
 import { WithdrawModal } from "@/components/race/WithdrawModal";
+import { BottomNav } from "@/components/race/BottomNav";
+import { AuthModal } from "@/components/race/AuthModal";
 import { lineupForRound } from "@/lib/round-engine";
 import { carLabel, formatINR } from "@/lib/car-label";
 import { useRaceRound } from "@/lib/use-race-round";
@@ -25,16 +27,13 @@ import {
   placeBet as placeBetFn,
   settleRound,
 } from "@/lib/wallet.functions";
-import { supabase } from "@/integrations/supabase/client";
-
 import {
-  BarChart3,
-  Banknote,
-  Gift,
-  Home,
-  Settings,
-  ShieldCheck,
-} from "lucide-react";
+  playBetPlacedChime,
+  playCountdownBeep,
+  playLaunchRoar,
+  playWinChime,
+} from "@/lib/sound";
+import { ShieldCheck, Timer } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -72,20 +71,15 @@ function SpeedPredict() {
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
   const { session, loading } = useAuthSession();
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (hydrated && !loading && !session) void navigate({ to: "/auth" });
-  }, [hydrated, loading, session, navigate]);
-
-  if (!hydrated || loading || !session) {
+  if (!hydrated || loading) {
     return (
       <div className="h-[100dvh] w-full bg-[#04060c] grid place-items-center text-white/45">
         <div className="font-display text-[11px] tracking-[0.2em] animate-pulse">LOADING APEX</div>
       </div>
     );
   }
-  return <Game />;
+  return <Game isGuest={!session} />;
 }
 
 interface Bet {
@@ -104,7 +98,7 @@ function buzz(pattern: number | number[]) {
   }
 }
 
-function Game() {
+function Game({ isGuest }: { isGuest: boolean }) {
   const nav = useNavigate();
   const loadWallet = useServerFn(getWallet);
   const submitBet = useServerFn(placeBetFn);
@@ -117,6 +111,10 @@ function Game() {
   betRef.current = bet;
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authPrompt, setAuthPrompt] = useState<string>(
+    "Sign in or create an account to claim your ₹28 welcome bonus and start predicting.",
+  );
   const [betError, setBetError] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
 
@@ -125,10 +123,24 @@ function Game() {
   const [totalBets, setTotalBets] = useState(0);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
-
+  const requirePlayer = useCallback(
+    (promptMessage: string): boolean => {
+      if (!isGuest) return true;
+      setAuthPrompt(promptMessage);
+      setAuthModalOpen(true);
+      buzz(14);
+      return false;
+    },
+    [isGuest],
+  );
 
   /* wallet comes from the server — never from the browser */
   const refreshWallet = useCallback(async () => {
+    if (isGuest) {
+      setBalance(0);
+      setBet(null);
+      return;
+    }
     try {
       const w = await loadWallet({});
       setBalance(w.balancePaise / 100);
@@ -144,7 +156,7 @@ function Game() {
     } catch {
       /* transient — the next refresh will pick it up */
     }
-  }, [loadWallet]);
+  }, [loadWallet, isGuest]);
 
   useEffect(() => {
     void refreshWallet();
@@ -169,10 +181,15 @@ function Game() {
     (roundId: number, order: [number, number, number]) => {
       const cars = lineupForRound(roundId);
       const winnerCar = cars[order[0]];
-      setHistory((h) => [{ id: roundId, car: winnerCar, ago: "now" }, ...h].slice(0, 50));
+      setHistory((h) =>
+        [{ id: roundId, car: winnerCar, ago: "now" }, ...h.filter((item) => item.id !== roundId)].slice(
+          0,
+          50,
+        ),
+      );
 
       const b = betRef.current;
-      if (!b || b.roundId !== roundId) return;
+      if (!b || b.roundId !== roundId || isGuest) return;
 
       void (async () => {
         try {
@@ -185,6 +202,7 @@ function Game() {
               colorName: carLabel(cars[b.lane]),
               color: cars[b.lane].color,
             });
+            playWinChime();
             buzz([18, 40, 18, 40, 60]);
           } else if (res.status === "lost") {
             setResult({
@@ -199,12 +217,38 @@ function Game() {
         }
       })();
     },
-    [settle, refreshWallet],
+    [settle, refreshWallet, isGuest],
   );
-
 
   const { roundId, phase, countdown, locked, cars, progressRef, winner, fairness } =
     useRaceRound(onSettle);
+
+  /* Web Audio cues: F1 3-2-1 countdown beeps, lock tone, and engine launch roar */
+  const lastBeepSecRef = useRef<number | null>(null);
+  const lastPhaseSoundRef = useRef<string>(phase);
+
+  useEffect(() => {
+    if (phase === "waiting") {
+      const sec = Math.ceil(countdown);
+      if ((sec === 3 || sec === 2 || sec === 1) && lastBeepSecRef.current !== sec) {
+        lastBeepSecRef.current = sec;
+        playCountdownBeep(false);
+      }
+    } else {
+      lastBeepSecRef.current = null;
+    }
+  }, [phase, countdown]);
+
+  useEffect(() => {
+    if (lastPhaseSoundRef.current !== phase) {
+      if (phase === "lock") {
+        playCountdownBeep(true);
+      } else if (phase === "launch") {
+        playLaunchRoar();
+      }
+      lastPhaseSoundRef.current = phase;
+    }
+  }, [phase]);
 
   /* real results, straight from the database — shared by every device */
   const loadResults = useServerFn(recentResults);
@@ -212,8 +256,14 @@ function Game() {
     try {
       const rows = await loadResults({});
       if (!rows.length) return;
+      const seen = new Set<number>();
+      const uniqueRows = rows.filter((r) => {
+        if (seen.has(r.roundId)) return false;
+        seen.add(r.roundId);
+        return true;
+      });
       setHistory(
-        rows.map((r) => ({
+        uniqueRows.map((r) => ({
           id: r.roundId,
           car: lineupForRound(r.roundId)[r.winnerLane],
           ago: timeAgo(r.createdAt),
@@ -244,7 +294,6 @@ function Game() {
     return () => clearInterval(id);
   }, [loadStats]);
 
-
   const [selected, setSelected] = useState<number | null>(null);
   useEffect(() => setSelected(null), [roundId]);
 
@@ -258,10 +307,14 @@ function Game() {
 
   /* keep the stake inside the wallet at all times */
   useEffect(() => {
+    if (isGuest) return;
     setAmount((a) => Math.max(MIN_BET, Math.min(a, Math.max(MIN_BET, Math.floor(balance)))));
-  }, [balance]);
+  }, [balance, isGuest]);
 
   const placeBet = async () => {
+    if (!requirePlayer("Sign in to place your prediction and claim your ₹28 welcome bonus.")) {
+      return;
+    }
     if (selected === null || locked || confirmed || placing) return;
     if (amount < MIN_BET || amount > balance) return;
     setPlacing(true);
@@ -273,8 +326,8 @@ function Game() {
       });
       setBalance(res.balancePaise / 100);
       setBet({ roundId, lane, amount: staked });
+      playBetPlacedChime();
       buzz(22);
-
     } catch (err) {
       setBetError(err instanceof Error ? err.message : "Could not place the bet");
       void refreshWallet();
@@ -283,12 +336,45 @@ function Game() {
   };
 
   const raceLive = phase === "launch" || phase === "race";
+  const secLeft = Math.max(0, Math.ceil(countdown));
+  const isUrgent = !locked && countdown <= 3.0;
+  const isWarning = !locked && countdown > 3.0 && countdown <= 4.5;
+  const timerColor = locked
+    ? "#ff4d6d"
+    : isUrgent
+      ? "#ff3b5c"
+      : isWarning
+        ? "#ffc32b"
+        : "#26ff9a";
+  const ringRadius = 11;
+  const ringCirc = 2 * Math.PI * ringRadius;
+  const ringOffset = locked
+    ? ringCirc
+    : ringCirc * (1 - Math.min(1, Math.max(0, countdown / 6)));
 
   return (
     <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden overscroll-none bg-[#04060c] text-white flex flex-col [scrollbar-width:none]">
       <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
-        <Header balance={balance} roundId={roundId} onTopUp={() => setDepositOpen(true)} />
+        <Header
+          balance={balance}
+          roundId={roundId}
+          isGuest={isGuest}
+          onSignIn={() =>
+            requirePlayer("Create your account to claim your ₹28 welcome bonus and play live.")
+          }
+          onTopUp={() => {
+            if (requirePlayer("Sign in to top up your Apex wallet via UPI.")) {
+              setDepositOpen(true);
+            }
+          }}
+        />
       </div>
+
+      <AuthModal
+        open={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        promptText={authPrompt}
+      />
 
       <WinModal
         amount={win?.amount ?? null}
@@ -339,7 +425,10 @@ function Game() {
           <div className="absolute bottom-1.5 left-1.5 z-30">
             <div
               className="rounded-full px-2 py-1 glass font-display text-[8.5px] tracking-[0.16em]"
-              style={{ color: cars[activeBet.lane].color, borderColor: `${cars[activeBet.lane].color}66` }}
+              style={{
+                color: cars[activeBet.lane].color,
+                borderColor: `${cars[activeBet.lane].color}66`,
+              }}
             >
               {formatINR(activeBet.amount)} ON {carLabel(cars[activeBet.lane])} ·{" "}
               {formatINR(activeBet.amount * cars[activeBet.lane].multiplier)}
@@ -355,7 +444,6 @@ function Game() {
             >
               ⚡ HYPER {cars.find((c) => c.kind === "hyper")?.multiplier ?? 5}×
             </div>
-
           </div>
         )}
       </div>
@@ -385,37 +473,137 @@ function Game() {
       )}
 
       {/* Bet panel */}
-      <div className="mt-2 mx-2 glass rounded-2xl p-3 space-y-3">
-        <div className="flex items-center justify-between gap-2 whitespace-nowrap">
-          <span className="text-[10px] text-white/45 font-display tracking-[0.12em] shrink-0">
-            #{String(roundId).slice(-5)}
-          </span>
-          <span className="font-display text-[11px] tracking-[0.12em] text-white truncate">
-            {locked ? "RACE IN PROGRESS" : `CLOSES IN ${countdown.toFixed(1)}s`}
-          </span>
+      <div className="mt-2 mx-2 glass rounded-2xl p-3 space-y-2.5">
+        {/* Betting Timer Urgency Indicator (Circular Ring + Step Countdown 6s... 5s... 4s... 3s... LOCKED) */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-2 whitespace-nowrap">
+            <div className="flex items-center gap-2">
+              <div className="relative w-7 h-7 grid place-items-center shrink-0">
+                <svg className="w-7 h-7 -rotate-90" viewBox="0 0 28 28">
+                  <circle
+                    cx="14"
+                    cy="14"
+                    r={ringRadius}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.1)"
+                    strokeWidth="2.6"
+                  />
+                  <circle
+                    cx="14"
+                    cy="14"
+                    r={ringRadius}
+                    fill="none"
+                    stroke={timerColor}
+                    strokeWidth="2.6"
+                    strokeLinecap="round"
+                    strokeDasharray={ringCirc}
+                    strokeDashoffset={ringOffset}
+                    style={{ transition: "stroke-dashoffset 90ms linear, stroke 200ms ease" }}
+                  />
+                </svg>
+                <span
+                  className={`font-display text-[9px] tabular ${isUrgent ? "animate-ping" : ""}`}
+                  style={{ color: timerColor, animationDuration: "0.9s" }}
+                >
+                  {locked ? "×" : `${secLeft}s`}
+                </span>
+              </div>
 
-          <span
-            className={`text-[10px] font-display tracking-[0.15em] ${locked ? "text-white/40" : "text-[#26ff9a]"}`}
-          >
-            {locked ? "CLOSED" : "OPEN"}
-          </span>
-        </div>
+              <div>
+                <div className="text-[9px] text-white/45 font-display tracking-[0.14em]">
+                  ROUND #{String(roundId).slice(-5)}
+                </div>
+                <div
+                  className={`font-display text-[11px] tracking-[0.12em] tabular ${
+                    isUrgent ? "animate-pulse" : ""
+                  }`}
+                  style={{ color: locked ? "rgba(255,255,255,0.65)" : timerColor }}
+                >
+                  {locked
+                    ? "LOCKED · RACE IN PROGRESS"
+                    : isUrgent
+                      ? `HURRY · LOCKS IN ${countdown.toFixed(1)}s`
+                      : `BETTING OPEN · ${countdown.toFixed(1)}s`}
+                </div>
+              </div>
+            </div>
 
-        {/* betting-window progress bar — the anticipation driver */}
-        <div className="h-1 rounded-full bg-white/8 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-[width] duration-100 ease-linear"
-            style={{
-              width: locked ? "0%" : `${Math.min(100, (countdown / 6) * 100)}%`,
-              background: countdown < 2 ? "#ff4d6d" : "linear-gradient(90deg,#26ff9a,#35e6ff)",
-            }}
-          />
+            <span
+              className={`px-2 py-0.5 rounded-md text-[9.5px] font-display tracking-[0.15em] border ${
+                locked
+                  ? "bg-[#ff4d6d]/15 border-[#ff4d6d]/40 text-[#ff6b84]"
+                  : isUrgent
+                    ? "bg-[#ff3b5c]/20 border-[#ff3b5c]/60 text-[#ff6b84] animate-pulse"
+                    : isWarning
+                      ? "bg-[#ffc32b]/20 border-[#ffc32b]/50 text-[#ffd83a]"
+                      : "bg-[#26ff9a]/15 border-[#26ff9a]/40 text-[#26ff9a]"
+              }`}
+            >
+              {locked ? "LOCKED" : `${secLeft}s`}
+            </span>
+          </div>
+
+          {/* 6-second segmented urgency bar + smooth fill */}
+          <div className="relative h-2 rounded-full bg-white/8 overflow-hidden p-[1px]">
+            <div
+              className={`h-full rounded-full transition-[width] duration-75 ease-linear ${
+                isUrgent ? "animate-pulse" : ""
+              }`}
+              style={{
+                width: locked ? "100%" : `${Math.min(100, (countdown / 6) * 100)}%`,
+                background: locked
+                  ? "rgba(255,77,109,0.22)"
+                  : isUrgent
+                    ? "linear-gradient(90deg,#ff1e42,#ff6b3b)"
+                    : isWarning
+                      ? "linear-gradient(90deg,#ff9900,#ffd83a)"
+                      : "linear-gradient(90deg,#26ff9a,#35e6ff)",
+                boxShadow: isUrgent ? "0 0 12px #ff3b5c" : undefined,
+              }}
+            />
+          </div>
+
+          {/* Discrete countdown steps: 6s · 5s · 4s · 3s · 2s · 1s · LOCKED */}
+          <div className="flex items-center justify-between px-0.5 text-[8.5px] font-display tracking-[0.12em] tabular">
+            {[6, 5, 4, 3, 2, 1].map((s) => {
+              const activeStep = !locked && secLeft === s;
+              const passedStep = locked || secLeft < s;
+              const urgentStep = s <= 3;
+              return (
+                <span
+                  key={s}
+                  className={`transition-colors ${
+                    activeStep
+                      ? urgentStep
+                        ? "text-[#ff4d6d] font-bold scale-110"
+                        : "text-[#ffc32b] font-bold scale-105"
+                      : passedStep
+                        ? "text-white/20"
+                        : "text-white/45"
+                  }`}
+                >
+                  {s}s
+                </span>
+              );
+            })}
+            <span
+              className={`flex items-center gap-0.5 ${
+                locked ? "text-[#ff4d6d] font-bold" : "text-white/30"
+              }`}
+            >
+              <Timer size={9} />
+              LOCKED
+            </span>
+          </div>
         </div>
 
         <PredictionCards
           cars={cars}
           selected={selectedLane}
           onSelect={(i) => {
+            if (!requirePlayer("Sign in to pick your car and claim your ₹28 welcome bonus.")) {
+              return;
+            }
             if (locked || confirmed) return;
             setSelected(i);
             buzz(10);
@@ -428,9 +616,12 @@ function Game() {
 
         <BettingPanel
           amount={amount}
-          balance={balance}
+          balance={isGuest ? 28 : balance}
           locked={locked || placing}
-          onChange={setAmount}
+          onChange={(n) => {
+            if (!requirePlayer("Sign in to set your stake and bet on live races.")) return;
+            setAmount(n);
+          }}
           selectedLabel={selectedLabel}
           confirmed={confirmed}
           phaseLabel={phase}
@@ -438,59 +629,40 @@ function Game() {
           onConfirm={() => void placeBet()}
         />
 
-
         {/* provably-fair status */}
         <Link
           to="/verify/$roundId"
           params={{ roundId: String(Math.max(0, roundId - 1)) }}
-          className="flex items-center gap-1.5 text-[9px] font-display tracking-[0.14em] text-white/40 min-h-[28px]"
+          className="flex items-center gap-1 text-[8px] font-display tracking-[0.12em] text-white/35 py-0.5 leading-none"
         >
           <ShieldCheck
-            size={12}
-            className={fairness.verified ? "text-[#26ff9a]" : "text-white/35"}
+            size={10}
+            className={fairness.verified ? "text-[#26ff9a]" : "text-white/30"}
           />
           <span className="truncate">
             {fairness.verified
-              ? "PROVABLY FAIR · RESULT VERIFIED"
+              ? "PROVABLY FAIR · VERIFIED"
               : fairness.online
-                ? `COMMIT ${fairness.commit?.slice(0, 12) ?? "…"}`
-                : "OFFLINE MODE · LOCAL SIMULATION"}
+                ? `COMMIT ${fairness.commit?.slice(0, 10) ?? "…"}`
+                : "LOCAL SIMULATION"}
           </span>
-          <span className="ml-auto underline text-white/45">VERIFY</span>
+          <span className="ml-auto underline text-white/40">VERIFY</span>
         </Link>
       </div>
 
-      <div className="mt-2 mx-2 pb-4 space-y-2">
+      <div className="mt-1.5 mx-2 pb-2">
         <Results entries={history} />
       </div>
 
-      {/* Bottom nav */}
-      <div
-        className="sticky bottom-0 mt-auto z-40 bg-gradient-to-t from-[#04060c] via-[#04060c] to-transparent pt-3 px-2"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
-      >
-        <div className="glass rounded-2xl grid grid-cols-4 py-1.5">
-          {([
-            { icon: Home, label: "Home", active: true },
-            { icon: BarChart3, label: "History", href: "/history" },
-            { icon: Banknote, label: "Cash out", action: () => setWithdrawOpen(true) },
-            { icon: Settings, label: "Profile", href: "/profile" },
-          ] as { icon: typeof Home; label: string; active?: boolean; action?: () => void; href?: "/history" | "/profile" }[])
-            .map(({ icon: Icon, label, active, action, href }) => (
-              <button
-                key={label}
-                onClick={href ? () => void nav({ to: href }) : action}
-                className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl min-h-[44px] ${
-                  active ? "text-[#a24bff]" : "text-white/45"
-                }`}
-                style={active ? { background: "rgba(162,75,255,0.12)" } : undefined}
-              >
-                <Icon size={16} />
-                <span className="text-[9px] font-display tracking-wide">{label}</span>
-              </button>
-            ))}
-        </div>
-      </div>
+      {/* Shared Bottom Navigation */}
+      <BottomNav
+        active="home"
+        onCashOut={() => {
+          if (requirePlayer("Sign in to view your wallet and cash out winnings via UPI.")) {
+            setWithdrawOpen(true);
+          }
+        }}
+      />
     </div>
   );
 }

@@ -12,4 +12,53 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  nitro: {
+    preset: "node-server",
+    output: {
+      dir: "dist",
+      serverDir: "dist/server",
+      publicDir: "dist/public",
+    },
+  },
+  vite: {
+    plugins: [
+      {
+        name: "strip-node-modules-use-client",
+        enforce: "pre",
+        transform(code, id) {
+          if (id.includes("node_modules") && (code.includes('"use client"') || code.includes("'use client'"))) {
+            return {
+              code: code.replace(/^\s*["']use client["'];?\s*/gm, ""),
+              map: null,
+            };
+          }
+          return null;
+        },
+      },
+    ],
+    build: {
+      rolldownOptions: {
+        onwarn(warning, warn) {
+          if (
+            warning.code === "MODULE_LEVEL_DIRECTIVE" ||
+            warning.message?.includes('"use client"')
+          ) {
+            return;
+          }
+          warn(warning);
+        },
+      },
+      rollupOptions: {
+        onwarn(warning, warn) {
+          if (
+            warning.code === "MODULE_LEVEL_DIRECTIVE" ||
+            warning.message?.includes('"use client"')
+          ) {
+            return;
+          }
+          warn(warning);
+        },
+      },
+    },
+  },
 });

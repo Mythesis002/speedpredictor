@@ -1,5 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Link as RouterLink } from "@tanstack/react-router";
+import { createFileRoute, Link, Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { phoneToEmail, useAuthSession } from "@/lib/use-auth";
@@ -88,12 +87,15 @@ function AuthPage() {
   return (
     <main className="min-h-[100dvh] w-full bg-[#04060c] text-white flex flex-col justify-center px-5 py-10">
       <div className="mx-auto w-full max-w-sm">
-        <div className="mb-7 flex justify-center">
-          <img
-            src="/apex-logo.svg"
-            alt="Apex logo"
-            className="h-16 w-auto drop-shadow-[0_0_24px_rgba(255,195,43,0.45)]"
-          />
+        <div className="mb-6 flex flex-col items-center">
+          <Link to="/" aria-label="Watch live races">
+            <img
+              src="/apex-logo.svg"
+              alt="Apex logo"
+              referrerPolicy="no-referrer"
+              className="h-16 w-auto drop-shadow-[0_0_24px_rgba(255,195,43,0.45)]"
+            />
+          </Link>
         </div>
 
         <div className="glass rounded-2xl p-4">

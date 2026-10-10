@@ -230,22 +230,71 @@ function AdminPage() {
         />
       </section>
 
-      {/* Payment wiring */}
-      <div className="mt-2 mx-2 glass rounded-2xl px-3 py-2 flex items-center gap-2">
-        <span
-          className="w-2 h-2 rounded-full shrink-0"
-          style={{
-            background: payments.data?.configured ? "#26ff9a" : "#ffc32b",
-            boxShadow: `0 0 8px ${payments.data?.configured ? "#26ff9a" : "#ffc32b"}`,
-          }}
-        />
-        <div className="text-[11px] text-white/70 leading-tight">
-          {payments.data?.configured
-            ? `Payments live (${payments.data.mode}) · ${payments.data.keyIdMasked}`
-            : "Payments waiting for keys — add them and deposits start working instantly."}
-          {payments.data && !payments.data.webhookReady && (
-            <span className="text-[#ffc32b]"> · webhook secret missing</span>
-          )}
+      {/* Payment & Webhook Environment Verification */}
+      <div className="mt-2 mx-2 glass rounded-2xl p-3 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span
+              className="w-2 h-2 rounded-full shrink-0"
+              style={{
+                background:
+                  payments.data?.configured && payments.data?.webhookReady ? "#26ff9a" : "#ffc32b",
+                boxShadow: `0 0 8px ${
+                  payments.data?.configured && payments.data?.webhookReady ? "#26ff9a" : "#ffc32b"
+                }`,
+              }}
+            />
+            <span className="font-display text-[10px] tracking-[0.16em] text-white/80">
+              RAZORPAY ENVIRONMENT VERIFICATION
+            </span>
+          </div>
+          <span className="text-[9.5px] font-display tracking-wider uppercase text-[#ffc32b]">
+            {payments.data?.mode === "live"
+              ? "LIVE MODE"
+              : payments.data?.mode === "test"
+                ? "TEST MODE"
+                : "KEYS MISSING"}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-1.5 text-[10px]">
+          <div className="rounded-xl bg-black/35 px-2.5 py-1.5 border border-white/5">
+            <div className="text-white/40">KEY ID</div>
+            <div
+              className="font-display tabular truncate mt-0.5"
+              style={{ color: payments.data?.hasKeyId ? "#26ff9a" : "#ff6b6b" }}
+            >
+              {payments.data?.keyIdMasked ?? "Missing"}
+            </div>
+          </div>
+          <div className="rounded-xl bg-black/35 px-2.5 py-1.5 border border-white/5">
+            <div className="text-white/40">KEY SECRET</div>
+            <div
+              className="font-display mt-0.5"
+              style={{ color: payments.data?.hasKeySecret ? "#26ff9a" : "#ff6b6b" }}
+            >
+              {payments.data?.hasKeySecret ? "Configured" : "Missing"}
+            </div>
+          </div>
+          <div className="rounded-xl bg-black/35 px-2.5 py-1.5 border border-white/5">
+            <div className="text-white/40">WEBHOOK SECRET</div>
+            <div
+              className="font-display mt-0.5"
+              style={{ color: payments.data?.webhookReady ? "#26ff9a" : "#ff6b6b" }}
+            >
+              {payments.data?.webhookReady ? "Verified" : "Missing"}
+            </div>
+          </div>
+        </div>
+
+        <div className="text-[10.5px] text-white/55 leading-snug flex items-center justify-between gap-2">
+          <span>
+            Webhook listener:{" "}
+            <code className="text-white/80 font-mono">
+              {payments.data?.webhookEndpoint ?? "/api/public/razorpay-webhook"}
+            </code>{" "}
+            (event: <code className="text-white/80 font-mono">qr_code.credited</code>)
+          </span>
         </div>
       </div>
 

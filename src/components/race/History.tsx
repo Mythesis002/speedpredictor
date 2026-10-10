@@ -94,15 +94,18 @@ export function History({ entries }: { entries: BetHistoryEntry[] }) {
 
 /** Floating left rail: recent round winners. Kept slim so it never hides the track. */
 export function RecentRounds({ entries }: { entries: HistoryEntry[] }) {
+  const uniqueEntries = entries.filter(
+    (e, idx, arr) => arr.findIndex((item) => item.id === e.id) === idx,
+  );
   return (
     <div className="glass rounded-xl p-1 w-[54px] pointer-events-none">
       <div className="text-[7px] font-display tracking-[0.15em] text-white/50 px-0.5 pb-1">
         RECENT
       </div>
       <div className="space-y-[3px]">
-        {entries.slice(0, 4).map((e, i) => (
+        {uniqueEntries.slice(0, 4).map((e) => (
           <div
-            key={`${e.id}-${i}`}
+            key={e.id}
             className="flex items-center justify-between rounded bg-white/5 px-1 py-[2px]"
           >
             <span className="text-[7.5px] text-white/40 tabular">{String(e.id).slice(-3)}</span>
@@ -165,45 +168,53 @@ const TEAM = [
 ];
 
 export function Results({ entries }: { entries: HistoryEntry[] }) {
-  const last = entries.slice(0, 20);
+  const uniqueEntries = entries.filter(
+    (e, idx, arr) => arr.findIndex((item) => item.id === e.id) === idx,
+  );
+  const last = uniqueEntries.slice(0, 12);
   const pct = TEAM.map((t) => {
-    const n = entries.filter((e) => e.car.colorName === t.name).length;
-    return { ...t, p: entries.length ? Math.round((n / entries.length) * 100) : 0 };
+    const n = uniqueEntries.filter((e) => e.car.colorName === t.name).length;
+    return { ...t, p: uniqueEntries.length ? Math.round((n / uniqueEntries.length) * 100) : 0 };
   });
   return (
-    <div className="glass rounded-2xl p-3">
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-display text-[10px] tracking-[0.2em] text-white/60">LAST RESULTS</span>
-        <span className="text-[9px] text-white/35">Last {last.length} rounds</span>
-      </div>
-      <div className="flex gap-3 mb-2">
-        {pct.map((t) => (
-          <span key={t.name} className="flex items-center gap-1 text-[10px] text-white/60">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ background: t.hex }} />
-            {t.name} {t.p}%
-          </span>
-        ))}
-        <span className="text-[9px] text-white/30 ml-auto self-center">of last {entries.length}</span>
+    <div className="glass rounded-xl px-2.5 py-1.5">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <span className="font-display text-[8.5px] tracking-[0.16em] text-white/50 shrink-0">
+          LAST RESULTS
+        </span>
+        <div className="flex items-center gap-2 ml-auto">
+          {pct.map((t) => (
+            <span key={t.name} className="flex items-center gap-1 text-[8.5px] text-white/55 tabular">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.hex }} />
+              {t.p}%
+            </span>
+          ))}
+        </div>
       </div>
       {last.length === 0 ? (
-        <div className="py-5 text-center text-[11px] text-white/40">
+        <div className="py-1 text-center text-[9.5px] text-white/35">
           Results appear here as soon as a race finishes.
         </div>
       ) : (
-        <div className="grid grid-cols-5 gap-1.5">
+        <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] py-0.5">
           {last.map((e) => (
             <Link
               key={e.id}
               to="/verify/$roundId"
               params={{ roundId: String(e.id) }}
-              className="rounded-xl bg-white/[0.04] px-1 py-1.5 flex flex-col items-center gap-1 min-h-[44px]"
+              className="rounded-md bg-white/[0.04] px-1.5 py-1 flex items-center gap-1 shrink-0 hover:bg-white/10 transition-colors"
               aria-label={`Round ${e.id}: ${e.car.colorName} won. Verify`}
             >
               <span
-                className="w-3.5 h-3.5 rounded-full"
-                style={{ background: e.car.color, boxShadow: `0 0 8px ${e.car.color}`, border: "1px solid rgba(255,255,255,0.22)" }}
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{
+                  background: e.car.color,
+                  boxShadow: `0 0 5px ${e.car.color}`,
+                }}
               />
-              <span className="text-[8px] tabular text-white/40 leading-none">#{e.id}</span>
+              <span className="text-[7.5px] tabular text-white/40 leading-none">
+                #{String(e.id).slice(-3)}
+              </span>
             </Link>
           ))}
         </div>
