@@ -6,21 +6,33 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+if (process.argv.includes("build") && !process.argv.includes("development")) {
+  process.env.NODE_ENV = "production";
+}
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
   },
-  nitro: {
-    preset: "node-server",
-    output: {
-      dir: "dist",
-      serverDir: "dist/server",
-      publicDir: "dist/public",
-    },
-  },
+  nitro: process.env.LOVABLE_SANDBOX
+    ? undefined
+    : {
+        preset: "node-server",
+        output: {
+          dir: "dist",
+          serverDir: "dist/server",
+          publicDir: "dist/public",
+        },
+      },
   vite: {
+    oxc: {
+      jsx: {
+        runtime: "automatic",
+        development: false,
+      },
+    },
     plugins: [
       {
         name: "strip-node-modules-use-client",

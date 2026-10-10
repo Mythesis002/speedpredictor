@@ -52,6 +52,7 @@ function createSupabaseAdminClient() {
 }
 
 let _supabaseAdmin: ReturnType<typeof createSupabaseAdminClient> | undefined;
+let _supabaseAdminIsMock = false;
 
 // Server-side Supabase client with service role - bypasses RLS
 // SECURITY: Only use this for trusted server-side operations, never expose to client code
@@ -59,7 +60,11 @@ let _supabaseAdmin: ReturnType<typeof createSupabaseAdminClient> | undefined;
 // Top-level import is safe only in other .server.ts modules - route files and *.functions.ts ship to the client bundle.
 export const supabaseAdmin = new Proxy({} as ReturnType<typeof createSupabaseAdminClient>, {
   get(_, prop, receiver) {
-    if (!_supabaseAdmin) _supabaseAdmin = createSupabaseAdminClient();
+    const hasEnv = Boolean(process.env['SUPABASE_URL'] && process.env['SUPABASE_SERVICE_ROLE_KEY']);
+    if (!_supabaseAdmin || (_supabaseAdminIsMock && hasEnv)) {
+      _supabaseAdminIsMock = !hasEnv;
+      _supabaseAdmin = createSupabaseAdminClient();
+    }
     return Reflect.get(_supabaseAdmin, prop, receiver);
   },
 });
