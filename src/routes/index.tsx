@@ -104,6 +104,7 @@ function Game({ isGuest }: { isGuest: boolean }) {
   const settle = useServerFn(settleRound);
 
   const [balance, setBalance] = useState(0);
+  const [heldBalance, setHeldBalance] = useState(0);
   const [amount, setAmount] = useState(10);
   const [bet, setBet] = useState<Bet | null>(null);
   const betRef = useRef<Bet | null>(null);
@@ -137,12 +138,14 @@ function Game({ isGuest }: { isGuest: boolean }) {
   const refreshWallet = useCallback(async () => {
     if (isGuest) {
       setBalance(0);
+      setHeldBalance(0);
       setBet(null);
       return;
     }
     try {
       const w = await loadWallet({});
-      setBalance(w.balancePaise / 100);
+      setBalance((w.availablePaise ?? w.balancePaise) / 100);
+      setHeldBalance((w.heldPaise ?? 0) / 100);
       setBet(
         w.activeBet
           ? {
@@ -193,7 +196,8 @@ function Game({ isGuest }: { isGuest: boolean }) {
       void (async () => {
         try {
           const res = await settle({ data: { roundId } });
-          setBalance(res.balancePaise / 100);
+          setBalance((res.availablePaise ?? res.balancePaise) / 100);
+          setHeldBalance((res.heldPaise ?? 0) / 100);
           setBet(null);
           if (res.status === "won") {
             setWin({
@@ -283,8 +287,9 @@ function Game({ isGuest }: { isGuest: boolean }) {
     const pull = () => {
       void loadStats({})
         .then((s) => {
-          setPlayers(s.players);
-          setTotalBets(Math.round(s.stakedPaise / 100));
+          if (!s) return;
+          setPlayers(Number(s.players ?? 0) || 0);
+          setTotalBets(Math.round((Number(s.stakedPaise ?? 0) || 0) / 100));
         })
         .catch(() => {});
     };
@@ -323,7 +328,8 @@ function Game({ isGuest }: { isGuest: boolean }) {
       const res = await submitBet({
         data: { roundId, lane, amountPaise: Math.round(staked * 100) },
       });
-      setBalance(res.balancePaise / 100);
+      setBalance((res.availablePaise ?? res.balancePaise) / 100);
+      setHeldBalance((res.heldPaise ?? 0) / 100);
       setBet({ roundId, lane, amount: staked });
       playBetPlacedChime();
       buzz(22);
@@ -358,6 +364,7 @@ function Game({ isGuest }: { isGuest: boolean }) {
       <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <Header
           balance={balance}
+          heldBalance={heldBalance}
           roundId={roundId}
           isGuest={isGuest}
           onSignIn={() =>
@@ -368,6 +375,7 @@ function Game({ isGuest }: { isGuest: boolean }) {
               setDepositOpen(true);
             }
           }}
+          onOpenCashOut={() => setWithdrawOpen(true)}
         />
       </div>
 
@@ -387,7 +395,10 @@ function Game({ isGuest }: { isGuest: boolean }) {
       <DepositModal
         open={depositOpen}
         onClose={() => setDepositOpen(false)}
-        onCredited={(paise) => setBalance(paise / 100)}
+        onCredited={(paise) => {
+          setBalance(paise / 100);
+          void refreshWallet();
+        }}
       />
 
       <WithdrawModal
@@ -397,6 +408,11 @@ function Game({ isGuest }: { isGuest: boolean }) {
           void refreshWallet();
         }}
         balancePaise={Math.round(balance * 100)}
+        heldPaise={Math.round(heldBalance * 100)}
+        onRequested={(availPaise, heldPaiseVal) => {
+          setBalance(availPaise / 100);
+          setHeldBalance(heldPaiseVal / 100);
+        }}
       />
 
       {/* Race stage */}

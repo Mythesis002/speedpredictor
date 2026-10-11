@@ -1,5 +1,5 @@
 import { Car, type CarSpec } from "./Car";
-import { carClassTag, carLabel, formatINR } from "@/lib/car-label";
+import { carLabel, formatINR } from "@/lib/car-label";
 
 interface Props {
   cars: [CarSpec, CarSpec, CarSpec];
@@ -28,7 +28,6 @@ export function PredictionCards({
         const isSelected = selected === i;
         const isWinner = winner === i;
         const isLoser = winner !== null && winner !== i;
-        const tag = carClassTag(car);
         return (
           <button
             key={car.id}
@@ -49,11 +48,6 @@ export function PredictionCards({
                   : `inset 0 0 24px ${car.color}18`,
             }}
           >
-            {tag && !(isSelected && confirmed) && (
-              <span className="absolute left-1 top-1 z-10 rounded-md bg-black/55 px-1.5 py-[1px] text-[7.5px] font-display tracking-[0.16em] text-white/70">
-                {tag}
-              </span>
-            )}
             {isSelected && confirmed && (
               <span className="absolute left-1 top-1 z-10 rounded-md bg-[#26ff9a] px-1.5 py-[1px] text-[7.5px] font-display tracking-[0.12em] text-black">
                 YOUR PICK

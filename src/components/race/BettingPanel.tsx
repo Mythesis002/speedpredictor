@@ -35,13 +35,6 @@ export function BettingPanel({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-display text-[10px] tracking-[0.22em] text-white/45">BET AMOUNT</span>
-        <span className="text-[10px] tracking-[0.18em] text-white/40 font-display tabular">
-          BALANCE {formatINR(balance)}
-        </span>
-      </div>
-
       <div className="flex items-center gap-2">
         <div className="flex items-center h-11 rounded-xl bg-black/40 border border-white/10 overflow-hidden">
           <button

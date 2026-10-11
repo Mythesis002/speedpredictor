@@ -218,7 +218,9 @@ function HistoryPage() {
           setWithdrawOpen(false);
           void walletQ.refetch();
         }}
-        balancePaise={walletQ.data?.balancePaise ?? 0}
+        balancePaise={walletQ.data?.availablePaise ?? walletQ.data?.balancePaise ?? 0}
+        heldPaise={walletQ.data?.heldPaise ?? 0}
+        onRequested={() => void walletQ.refetch()}
       />
 
       <BottomNav active="history" onCashOut={() => setWithdrawOpen(true)} />

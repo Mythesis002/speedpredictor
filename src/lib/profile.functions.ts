@@ -6,6 +6,8 @@ export interface MyProfile {
   displayName: string | null;
   createdAt: string;
   balancePaise: number;
+  heldPaise: number;
+  availablePaise: number;
   selfExcludedUntil: string | null;
   dailyLossLimitPaise: number | null;
   isBanned: boolean;
@@ -15,19 +17,37 @@ export const getMyProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<MyProfile> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
-      .from("profiles")
-      .select("phone, display_name, created_at, balance_paise, self_excluded_until, daily_loss_limit_paise, is_banned")
-      .eq("id", context.userId)
-      .maybeSingle();
+    const [{ data, error }, { data: pendingWithdrawals }] = await Promise.all([
+      supabaseAdmin
+        .from("profiles")
+        .select(
+          "phone, display_name, created_at, balance_paise, self_excluded_until, daily_loss_limit_paise, is_banned",
+        )
+        .eq("id", context.userId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("withdrawals")
+        .select("amount_paise")
+        .eq("user_id", context.userId)
+        .eq("status", "pending"),
+    ]);
     if (error || !data) throw new Error("Profile not found");
+    const balancePaise = Math.max(0, Number(data.balance_paise ?? 0));
+    const heldPaise = (pendingWithdrawals ?? []).reduce(
+      (sum, w) => sum + Math.max(0, Number(w.amount_paise ?? 0)),
+      0,
+    );
+    const availablePaise = Math.max(0, balancePaise - heldPaise);
     return {
       phone: data.phone,
       displayName: data.display_name,
       createdAt: data.created_at,
-      balancePaise: Number(data.balance_paise),
+      balancePaise,
+      heldPaise,
+      availablePaise,
       selfExcludedUntil: data.self_excluded_until,
-      dailyLossLimitPaise: data.daily_loss_limit_paise === null ? null : Number(data.daily_loss_limit_paise),
+      dailyLossLimitPaise:
+        data.daily_loss_limit_paise === null ? null : Number(data.daily_loss_limit_paise),
       isBanned: Boolean(data.is_banned),
     };
   });

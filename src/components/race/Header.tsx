@@ -6,13 +6,23 @@ import { isSoundMuted, subscribeSoundMuted, toggleSoundMuted } from "@/lib/sound
 
 interface Props {
   balance: number;
+  heldBalance?: number;
   roundId: number;
   onTopUp?: () => void;
+  onOpenCashOut?: () => void;
   isGuest?: boolean;
   onSignIn?: () => void;
 }
 
-export function Header({ balance, roundId, onTopUp, isGuest = false, onSignIn }: Props) {
+export function Header({
+  balance,
+  heldBalance = 0,
+  roundId,
+  onTopUp,
+  onOpenCashOut,
+  isGuest = false,
+  onSignIn,
+}: Props) {
   const [muted, setMuted] = useState(false);
 
   useEffect(() => {
@@ -77,9 +87,21 @@ export function Header({ balance, roundId, onTopUp, isGuest = false, onSignIn }:
           <div className="w-6 h-6 rounded-lg grid place-items-center bg-gradient-to-br from-[#a24bff] to-[#5b2bff] text-white">
             <Wallet size={13} />
           </div>
-          <span className="font-display text-[12px] tabular text-white">
-            ₹<RollingNumber value={balance} />
-          </span>
+          <div className="flex flex-col leading-none">
+            <span className="font-display text-[12px] tabular text-white">
+              ₹<RollingNumber value={balance} />
+            </span>
+            {heldBalance > 0 && (
+              <button
+                type="button"
+                onClick={onOpenCashOut}
+                title="Reserved in 24-hour payout escrow (debited after 24h)"
+                className="text-[8px] font-display tracking-wide text-[#ffc32b] text-left whitespace-nowrap mt-0.5"
+              >
+                +₹{Math.round(heldBalance)} IN 24H ESCROW
+              </button>
+            )}
+          </div>
           <button
             type="button"
             onClick={onTopUp}

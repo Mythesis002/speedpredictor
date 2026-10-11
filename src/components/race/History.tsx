@@ -20,8 +20,10 @@ export interface BetHistoryEntry {
   status: "pending" | "won" | "lost";
 }
 
-const inr = (n: number) =>
-  `₹${n.toLocaleString("en-IN", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+const inr = (n: number) => {
+  const safe = Number.isFinite(n) ? n : 0;
+  return `₹${safe.toLocaleString("en-IN", { minimumFractionDigits: safe % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+};
 
 /** The player's own bet history — what they picked, staked and took home. */
 export function History({ entries }: { entries: BetHistoryEntry[] }) {
@@ -126,21 +128,23 @@ export function RecentRounds({ entries }: { entries: HistoryEntry[] }) {
 
 /** Floating right rail: live stats. */
 export function LiveStats({
-  players,
-  totalBets,
+  players = 0,
+  totalBets = 0,
 }: {
-  players: number;
-  totalBets: number;
+  players?: number;
+  totalBets?: number;
   biggestWin?: number;
 }) {
+  const safePlayers = Number.isFinite(players) ? players : 0;
+  const safeTotalBets = Number.isFinite(totalBets) ? totalBets : 0;
   const rows = [
-    { label: "Players", value: players.toLocaleString("en-IN") },
+    { label: "Players", value: safePlayers.toLocaleString("en-IN") },
     {
       label: "Staked",
       value:
-        totalBets >= 100000
-          ? `₹${(totalBets / 1000).toFixed(1)}K`
-          : `₹${Math.round(totalBets).toLocaleString("en-IN")}`,
+        safeTotalBets >= 100000
+          ? `₹${(safeTotalBets / 1000).toFixed(1)}K`
+          : `₹${Math.round(safeTotalBets).toLocaleString("en-IN")}`,
     },
   ];
   return (
@@ -172,25 +176,8 @@ export function Results({ entries }: { entries: HistoryEntry[] }) {
     (e, idx, arr) => arr.findIndex((item) => item.id === e.id) === idx,
   );
   const last = uniqueEntries.slice(0, 12);
-  const pct = TEAM.map((t) => {
-    const n = uniqueEntries.filter((e) => e.car.colorName === t.name).length;
-    return { ...t, p: uniqueEntries.length ? Math.round((n / uniqueEntries.length) * 100) : 0 };
-  });
   return (
     <div className="glass rounded-xl px-2.5 py-1.5">
-      <div className="flex items-center justify-between gap-2 mb-1">
-        <span className="font-display text-[8.5px] tracking-[0.16em] text-white/50 shrink-0">
-          LAST RESULTS
-        </span>
-        <div className="flex items-center gap-2 ml-auto">
-          {pct.map((t) => (
-            <span key={t.name} className="flex items-center gap-1 text-[8.5px] text-white/55 tabular">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.hex }} />
-              {t.p}%
-            </span>
-          ))}
-        </div>
-      </div>
       {last.length === 0 ? (
         <div className="py-1 text-center text-[9.5px] text-white/35">
           Results appear here as soon as a race finishes.

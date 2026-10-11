@@ -16,24 +16,55 @@ import {
 
 export interface WalletState {
   balancePaise: number;
+  heldPaise: number;
+  availablePaise: number;
   phone: string;
   activeBet: { roundId: number; lane: number; amountPaise: number; multiplier: number } | null;
 }
 
-/** Current balance + the bet (if any) that is still riding on a live round. */
+async function computeWalletBalances(supabaseAdmin: any, userId: string) {
+  const [{ data: profile, error }, { data: pendingWithdrawals }] = await Promise.all([
+    supabaseAdmin
+      .from("profiles")
+      .select("phone, balance_paise, is_banned")
+      .eq("id", userId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("withdrawals")
+      .select("amount_paise")
+      .eq("user_id", userId)
+      .eq("status", "pending"),
+  ]);
+  if (error) throw new Error(error.message);
+  if (!profile) throw new Error("Profile not found");
+
+  const balancePaise = Math.max(0, Number(profile.balance_paise ?? 0));
+  const heldPaise = (pendingWithdrawals ?? []).reduce(
+    (sum: number, w: { amount_paise?: unknown }) => sum + Math.max(0, Number(w.amount_paise ?? 0)),
+    0,
+  );
+  const availablePaise = Math.max(0, balancePaise - heldPaise);
+
+  return {
+    phone: String(profile.phone ?? ""),
+    isBanned: Boolean(profile.is_banned),
+    balancePaise,
+    heldPaise,
+    availablePaise,
+  };
+}
+
+/** Current balance + held payout amount + the bet (if any) that is still riding on a live round. */
 export const getWallet = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<WalletState> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const userId = context.userId;
 
-    const { data: profile, error } = await supabaseAdmin
-      .from("profiles")
-      .select("phone, balance_paise")
-      .eq("id", userId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!profile) throw new Error("Profile not found");
+    const { phone, balancePaise, heldPaise, availablePaise } = await computeWalletBalances(
+      supabaseAdmin,
+      userId,
+    );
 
     const { data: bet } = await supabaseAdmin
       .from("bets")
@@ -45,8 +76,10 @@ export const getWallet = createServerFn({ method: "GET" })
       .maybeSingle();
 
     return {
-      balancePaise: Number(profile.balance_paise),
-      phone: profile.phone,
+      balancePaise,
+      heldPaise,
+      availablePaise,
+      phone,
       activeBet: bet
         ? {
             roundId: Number(bet.round_id),
@@ -74,6 +107,15 @@ export const placeBet = createServerFn({ method: "POST" })
     const multiplier = laneMultiplier(data.roundId, data.lane);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Prevent spending funds currently reserved for a pending 24h payout
+    const { availablePaise } = await computeWalletBalances(supabaseAdmin, context.userId);
+    if (data.amountPaise > availablePaise) {
+      throw new Error(
+        "Insufficient available balance (funds reserved for a pending payout cannot be staked).",
+      );
+    }
+
     const { data: rows, error } = await supabaseAdmin.rpc("place_bet", {
       p_user_id: context.userId,
       p_round_id: data.roundId,
@@ -88,9 +130,13 @@ export const placeBet = createServerFn({ method: "POST" })
       throw new Error(msg);
     }
     const row = Array.isArray(rows) ? rows[0] : rows;
+    const { heldPaise } = await computeWalletBalances(supabaseAdmin, context.userId);
+    const totalBalancePaise = Number(row?.out_balance_paise ?? 0);
     return {
       betId: row?.out_bet_id as string,
-      balancePaise: Number(row?.out_balance_paise ?? 0),
+      balancePaise: totalBalancePaise,
+      heldPaise,
+      availablePaise: Math.max(0, totalBalancePaise - heldPaise),
       multiplier,
     };
   });
@@ -116,11 +162,15 @@ export const settleRound = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     const row = Array.isArray(rows) ? rows[0] : rows;
+    const { heldPaise } = await computeWalletBalances(supabaseAdmin, context.userId);
+    const totalBalancePaise = Number(row?.out_balance_paise ?? 0);
     return {
       winnerLane,
       status: (row?.out_status as string) ?? "none",
       payoutPaise: Number(row?.out_payout_paise ?? 0),
-      balancePaise: Number(row?.out_balance_paise ?? 0),
+      balancePaise: totalBalancePaise,
+      heldPaise,
+      availablePaise: Math.max(0, totalBalancePaise - heldPaise),
     };
   });
 
@@ -160,6 +210,11 @@ export const createDeposit = createServerFn({ method: "POST" })
 
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+      const { isBanned } = await computeWalletBalances(supabaseAdmin, context.userId);
+      if (isBanned) {
+        return emptyResult("Deposits are unavailable while this account is suspended.");
+      }
 
       const { data: dep, error } = await supabaseAdmin
         .from("deposits")
@@ -214,14 +269,19 @@ export const checkDeposit = createServerFn({ method: "POST" })
 
     if (dep.status !== "paid" && dep.qr_id) {
       const payments = await fetchQrPayments(dep.qr_id);
+      const expectedPaise = Number(dep.amount_paise);
       const captured = payments.find(
-        (p) => p.status === "captured" && p.amount >= Number(dep.amount_paise),
+        (p) =>
+          p.status === "captured" &&
+          typeof p.id === "string" &&
+          p.id.length > 0 &&
+          Number(p.amount) >= expectedPaise,
       );
       if (captured) {
         await supabaseAdmin.rpc("credit_deposit", {
           p_deposit_id: dep.id,
           p_payment_id: captured.id,
-          p_amount_paise: Number(dep.amount_paise),
+          p_amount_paise: expectedPaise,
         });
         await closeRazorpayQr(dep.qr_id);
       }
@@ -229,27 +289,30 @@ export const checkDeposit = createServerFn({ method: "POST" })
 
     const { data: fresh } = await supabaseAdmin
       .from("deposits")
-      .select("status")
+      .select("status, amount_paise, paid_at")
       .eq("id", dep.id)
       .maybeSingle();
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("balance_paise")
-      .eq("id", context.userId)
-      .maybeSingle();
+    const { balancePaise, heldPaise, availablePaise } = await computeWalletBalances(
+      supabaseAdmin,
+      context.userId,
+    );
 
     return {
       status: fresh?.status ?? "pending",
-      balancePaise: Number(profile?.balance_paise ?? 0),
+      amountPaise: Number(fresh?.amount_paise ?? dep.amount_paise ?? 0),
+      paidAt: (fresh?.paid_at as string | null) ?? null,
+      balancePaise,
+      heldPaise,
+      availablePaise,
     };
   });
 
-/** A player asks for a payout. Money leaves the wallet only when an admin approves. */
+/** A player asks for a payout. Money is reserved immediately and debited after the 24-hour verification window. */
 export const requestWithdrawal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: { amountPaise: number; upiId: string }) => {
     const amountPaise = data?.amountPaise;
-    const upiId = (data?.upiId ?? "").trim();
+    const upiId = (data?.upiId ?? "").trim().toLowerCase();
     if (!Number.isInteger(amountPaise) || amountPaise < 10000)
       throw new Error("Minimum payout is ₹100.");
     if (amountPaise > MAX_DEPOSIT_PAISE)
@@ -266,7 +329,11 @@ export const requestWithdrawal = createServerFn({ method: "POST" })
       p_upi_id: data.upiId,
     });
     if (error) throw new Error(error.message.replace(/^.*ERROR:\s*/, "").replace(/^[A-Z_]+:\s*/, ""));
-    return { ok: true as const };
+    const { balancePaise, heldPaise, availablePaise } = await computeWalletBalances(
+      supabaseAdmin,
+      context.userId,
+    );
+    return { ok: true as const, balancePaise, heldPaise, availablePaise };
   });
 
 /** The player's own payout requests, newest first. */
@@ -275,15 +342,17 @@ export const myWithdrawals = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data } = await context.supabase
       .from("withdrawals")
-      .select("id, amount_paise, upi_id, status, created_at")
+      .select("id, amount_paise, upi_id, status, admin_note, created_at, processed_at")
       .order("created_at", { ascending: false })
       .limit(20);
     return (data ?? []).map((w) => ({
-      id: w.id,
+      id: w.id as string,
       amountPaise: Number(w.amount_paise),
-      upiId: w.upi_id,
-      status: w.status,
-      createdAt: w.created_at,
+      upiId: w.upi_id as string,
+      status: w.status as string,
+      adminNote: (w.admin_note as string | null) ?? null,
+      createdAt: w.created_at as string,
+      processedAt: (w.processed_at as string | null) ?? null,
     }));
   });
 

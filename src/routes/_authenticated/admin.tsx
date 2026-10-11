@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import {
   actOnWithdrawal,
+  amIAdmin,
   getAdminOverview,
   getPaymentsStatus,
   listDeposits,
@@ -85,6 +86,7 @@ function Stat({
 }
 
 function AdminPage() {
+  const checkAdminFn = useServerFn(amIAdmin);
   const overviewFn = useServerFn(getAdminOverview);
   const withdrawalsFn = useServerFn(listWithdrawals);
   const depositsFn = useServerFn(listDeposits);
@@ -93,35 +95,47 @@ function AdminPage() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("payouts");
 
+  const adminCheck = useQuery({
+    queryKey: ["am-i-admin"],
+    queryFn: () => checkAdminFn({}),
+  });
+  const isOwner = adminCheck.data === true;
+
   const overview = useQuery({
     queryKey: ["admin", "overview"],
     queryFn: () => overviewFn({}),
+    enabled: isOwner,
     refetchInterval: 20_000,
   });
   const withdrawals = useQuery({
     queryKey: ["admin", "withdrawals"],
     queryFn: () => withdrawalsFn({}),
+    enabled: isOwner,
     refetchInterval: 20_000,
   });
   const deposits = useQuery({
     queryKey: ["admin", "deposits"],
     queryFn: () => depositsFn({}),
-    enabled: tab === "deposits",
+    enabled: isOwner && tab === "deposits",
   });
   const players = useQuery({
     queryKey: ["admin", "players"],
     queryFn: () => playersFn({}),
-    enabled: tab === "players",
+    enabled: isOwner && tab === "players",
   });
   const roundsFn = useServerFn(listRounds);
   const rounds = useQuery({
     queryKey: ["admin", "rounds"],
     queryFn: () => roundsFn({}),
-    enabled: tab === "races",
+    enabled: isOwner && tab === "races",
     refetchInterval: 15_000,
   });
   const payFn = useServerFn(getPaymentsStatus);
-  const payments = useQuery({ queryKey: ["admin", "payments"], queryFn: () => payFn({}) });
+  const payments = useQuery({
+    queryKey: ["admin", "payments"],
+    queryFn: () => payFn({}),
+    enabled: isOwner,
+  });
 
   const act = useMutation({
     mutationFn: (v: { withdrawalId: string; action: "approve" | "reject" }) => actFn({ data: v }),
@@ -132,14 +146,24 @@ function AdminPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  if (adminCheck.isLoading) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-[#04060c] text-white/45">
+        <div className="font-display text-[11px] tracking-[0.2em] animate-pulse">VERIFYING ACCESS</div>
+      </div>
+    );
+  }
+
   const forbidden =
-    overview.error && /forbidden/i.test((overview.error as Error).message ?? "");
+    adminCheck.data === false ||
+    adminCheck.isError ||
+    (overview.error && /forbidden/i.test((overview.error as Error).message ?? ""));
 
   if (forbidden) {
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center gap-3 px-6 text-center">
-        <h1 className="font-display text-xl text-white">Owner access required</h1>
-        <p className="text-sm text-white/50">This console is restricted to authorized owner accounts.</p>
+        <h1 className="font-display text-xl text-white">Not Found</h1>
+        <p className="text-sm text-white/50">The page you requested does not exist.</p>
         <Link to="/" className="glass rounded-xl px-4 py-2 text-sm text-white">
           Back to race
         </Link>
@@ -329,42 +353,66 @@ function AdminPage() {
                 No pending payout requests.
               </div>
             )}
-            {pending.map((w) => (
-              <div key={w.id} className="glass rounded-2xl p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="font-display text-white text-[13px]">+91 {w.phone}</div>
-                    <div className="text-[10px] text-white/45 truncate">{w.upiId}</div>
-                    <div className="text-[10px] text-white/35">{when(w.createdAt)}</div>
+            {pending.map((w) => {
+              const createdMs = new Date(w.createdAt).getTime();
+              const dueMs = createdMs + 24 * 60 * 60 * 1000;
+              const remMs = dueMs - Date.now();
+              const readyFor24h = remMs <= 0;
+              const hrs = Math.max(0, Math.floor(remMs / 3_600_000));
+              const mins = Math.max(0, Math.floor((remMs % 3_600_000) / 60_000));
+              return (
+                <div key={w.id} className="glass rounded-2xl p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-display text-white text-[13px]">+91 {w.phone}</div>
+                      <div className="text-[10px] text-white/45 truncate">UPI: {w.upiId}</div>
+                      <div className="text-[10px] text-white/35">Requested {when(w.createdAt)}</div>
+                      <div
+                        className="mt-1 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[9.5px] font-display tracking-wide"
+                        style={{
+                          color: readyFor24h ? "#26ff9a" : "#ffc32b",
+                          background: readyFor24h
+                            ? "rgba(38,255,154,0.12)"
+                            : "rgba(255,195,43,0.12)",
+                        }}
+                      >
+                        {readyFor24h
+                          ? "24H VERIFICATION COMPLETE · READY TO DEBIT"
+                          : `24H ESCROW WINDOW · ${hrs}h ${String(mins).padStart(2, "0")}m LEFT`}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-display tabular text-[17px] text-[#ffc32b]">
+                        {rupees(w.amountPaise)}
+                      </div>
+                      <div className="text-[10px] text-white/40">
+                        Pre-debit wallet {rupees(w.balancePaise)}
+                      </div>
+                      <div className="text-[9.5px] text-white/50">
+                        After debit {rupees(Math.max(0, w.balancePaise - w.amountPaise))}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <div className="font-display tabular text-[17px] text-[#ffc32b]">
-                      {rupees(w.amountPaise)}
-                    </div>
-                    <div className="text-[10px] text-white/40">
-                      Wallet {rupees(w.balancePaise)}
-                    </div>
+                  <div className="grid grid-cols-2 gap-2 mt-2.5">
+                    <button
+                      disabled={act.isPending}
+                      onClick={() => act.mutate({ withdrawalId: w.id, action: "approve" })}
+                      className="rounded-xl py-2 text-[11.5px] font-display text-black disabled:opacity-50"
+                      style={{ background: "#26ff9a" }}
+                    >
+                      Approve & Debit Wallet
+                    </button>
+                    <button
+                      disabled={act.isPending}
+                      onClick={() => act.mutate({ withdrawalId: w.id, action: "reject" })}
+                      className="rounded-xl py-2 text-[11.5px] font-display text-white/80 border border-white/15 disabled:opacity-50"
+                    >
+                      Decline & Unlock Funds
+                    </button>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  <button
-                    disabled={act.isPending}
-                    onClick={() => act.mutate({ withdrawalId: w.id, action: "approve" })}
-                    className="rounded-xl py-2 text-[12px] font-display text-black disabled:opacity-50"
-                    style={{ background: "#26ff9a" }}
-                  >
-                    Approve & mark paid
-                  </button>
-                  <button
-                    disabled={act.isPending}
-                    onClick={() => act.mutate({ withdrawalId: w.id, action: "reject" })}
-                    className="rounded-xl py-2 text-[12px] font-display text-white/80 border border-white/15 disabled:opacity-50"
-                  >
-                    Reject request
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
 
             {history.length > 0 && (
               <div className="glass rounded-2xl p-3">

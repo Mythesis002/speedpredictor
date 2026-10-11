@@ -19,7 +19,14 @@ export const Route = createFileRoute("/api/public/razorpay-webhook")({
         let event: {
           event?: string;
           payload?: {
-            payment?: { entity?: { id?: string; amount?: number; status?: string } };
+            payment?: {
+              entity?: {
+                id?: string;
+                amount?: number;
+                status?: string;
+                notes?: Record<string, string>;
+              };
+            };
             qr_code?: { entity?: { id?: string; notes?: Record<string, string> } };
           };
         };
@@ -35,28 +42,47 @@ export const Route = createFileRoute("/api/public/razorpay-webhook")({
 
         const payment = event.payload?.payment?.entity;
         const qrId = event.payload?.qr_code?.entity?.id;
-        if (!payment?.id || !qrId) return new Response("ignored");
+        const noteDepositId =
+          event.payload?.qr_code?.entity?.notes?.deposit_id ||
+          payment?.notes?.deposit_id;
+
+        if (!payment?.id || (!qrId && !noteDepositId)) {
+          return new Response("ignored");
+        }
+        // Only credit captured payments
+        if (payment.status && payment.status !== "captured") {
+          return new Response("not captured");
+        }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: dep } = await supabaseAdmin
+        let depQuery = supabaseAdmin
           .from("deposits")
-          .select("id, amount_paise, status")
-          .eq("qr_id", qrId)
-          .maybeSingle();
+          .select("id, amount_paise, qr_id, status");
+
+        const { data: dep } = qrId
+          ? await depQuery.eq("qr_id", qrId).maybeSingle()
+          : await depQuery.eq("id", noteDepositId!).maybeSingle();
 
         if (!dep) return new Response("unknown deposit");
         if (dep.status === "paid") return new Response("already credited");
 
-        // never credit more than the amount that actually arrived
-        const credited = Math.min(Number(dep.amount_paise), Number(payment.amount ?? 0));
-        if (credited < Number(dep.amount_paise)) return new Response("underpaid");
+        const expectedPaise = Number(dep.amount_paise);
+        const arrivedPaise = Number(payment.amount ?? 0);
+        if (!Number.isFinite(arrivedPaise) || arrivedPaise < expectedPaise) {
+          return new Response("underpaid");
+        }
 
         const { error } = await supabaseAdmin.rpc("credit_deposit", {
           p_deposit_id: dep.id,
           p_payment_id: payment.id,
-          p_amount_paise: credited,
+          p_amount_paise: expectedPaise,
         });
         if (error) return new Response("credit failed", { status: 500 });
+
+        if (dep.qr_id || qrId) {
+          const { closeRazorpayQr } = await import("@/lib/wallet.server");
+          await closeRazorpayQr((dep.qr_id || qrId)!);
+        }
 
         return new Response("ok");
       },

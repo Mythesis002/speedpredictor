@@ -28,7 +28,7 @@ export function BottomNav({ active, onCashOut }: Props) {
       className="sticky bottom-0 mt-auto z-40 bg-gradient-to-t from-[#04060c] via-[#04060c] to-transparent pt-3 px-2 w-full"
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
     >
-      <div className="glass rounded-2xl grid grid-cols-4 py-1.5">
+      <div className="glass rounded-2xl grid grid-cols-4 items-center gap-1.5 p-1.5">
         {items.map(({ id, icon: Icon, label, href, action }) => {
           const isActive = id === active;
           return (
@@ -36,13 +36,13 @@ export function BottomNav({ active, onCashOut }: Props) {
               key={label}
               type="button"
               onClick={href ? () => void nav({ to: href }) : action}
-              className={`flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl min-h-[44px] transition-colors ${
+              className={`flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl min-h-[48px] transition-colors ${
                 isActive ? "text-[#a24bff]" : "text-white/45 hover:text-white/75"
               }`}
               style={isActive ? { background: "rgba(162,75,255,0.12)" } : undefined}
             >
-              <Icon size={16} />
-              <span className="text-[9px] font-display tracking-wide whitespace-nowrap">
+              <Icon size={17} strokeWidth={2} className="shrink-0" />
+              <span className="text-[10px] leading-none font-display tracking-wide whitespace-nowrap">
                 {label}
               </span>
             </button>

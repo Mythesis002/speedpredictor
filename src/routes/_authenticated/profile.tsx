@@ -112,9 +112,23 @@ function ProfilePage() {
                 <span className="tabular">+91 {p.phone}</span>
               </div>
               <div className="flex justify-between">
-                <span>Wallet balance</span>
-                <span className="tabular text-[#ffc32b] font-display">{inr(p.balancePaise)}</span>
+                <span>Available balance</span>
+                <span className="tabular text-[#26ff9a] font-display">
+                  {inr(p.availablePaise ?? p.balancePaise)}
+                </span>
               </div>
+              {(p.heldPaise ?? 0) > 0 && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-[#ffc32b]">Reserved in 24h payout escrow</span>
+                    <span className="tabular text-[#ffc32b] font-display">{inr(p.heldPaise)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Total wallet (pre-debit)</span>
+                    <span className="tabular text-white font-display">{inr(p.balancePaise)}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between">
                 <span>Member since</span>
                 <span>{new Date(p.createdAt).toLocaleDateString()}</span>
@@ -279,7 +293,9 @@ function ProfilePage() {
           setWithdrawOpen(false);
           void q.refetch();
         }}
-        balancePaise={p?.balancePaise ?? 0}
+        balancePaise={p?.availablePaise ?? p?.balancePaise ?? 0}
+        heldPaise={p?.heldPaise ?? 0}
+        onRequested={() => void q.refetch()}
       />
 
       <BottomNav active="profile" onCashOut={() => setWithdrawOpen(true)} />

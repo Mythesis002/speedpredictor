@@ -70,14 +70,43 @@ export interface AdminPlayer {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Every admin function verifies the caller's role through their own RLS session. */
-async function assertAdmin(context: { supabase: any; userId: string }) {
+function getConfiguredOwnerPhones(): Set<string> {
+  const raw = process.env["OWNER_PHONE"] ?? "";
+  return new Set(
+    raw
+      .split(",")
+      .map((s) => s.replace(/\D/g, "").slice(-10))
+      .filter((s) => s.length === 10),
+  );
+}
+
+async function isAuthorizedOwner(context: { supabase: any; userId: string }): Promise<boolean> {
   const { data, error } = await context.supabase.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
   });
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Forbidden");
+  if (error) return false;
+  if (data) return true;
+
+  const ownerPhones = getConfiguredOwnerPhones();
+  if (ownerPhones.size > 0) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("phone")
+      .eq("id", context.userId)
+      .maybeSingle();
+    if (profile?.phone && ownerPhones.has(String(profile.phone).replace(/\D/g, "").slice(-10))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Every admin function verifies the caller's role through their own RLS session. */
+async function assertAdmin(context: { supabase: any; userId: string }) {
+  const allowed = await isAuthorizedOwner(context);
+  if (!allowed) throw new Error("Forbidden");
 }
 
 function sum(rows: { [k: string]: unknown }[] | null, key: string): number {
@@ -92,11 +121,7 @@ function sum(rows: { [k: string]: unknown }[] | null, key: string): number {
 export const amIAdmin = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<boolean> => {
-    const { data } = await context.supabase.rpc("has_role", {
-      _user_id: context.userId,
-      _role: "admin",
-    });
-    return Boolean(data);
+    return isAuthorizedOwner(context);
   });
 
 export const getAdminOverview = createServerFn({ method: "GET" })

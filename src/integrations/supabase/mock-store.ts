@@ -250,7 +250,6 @@ export function ensureProfileForUser(userId: string, phoneInput?: string): MockP
       banned_reason: null,
     };
     store.profiles.set(userId, profile);
-    store.admins.add(userId);
     store.transactions.push({
       id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       user_id: userId,
@@ -716,7 +715,24 @@ export function createMockSupabaseClient(defaultUserId?: string) {
       }
 
       case "has_role": {
-        return { data: true, error: null };
+        const uid = String(args._user_id ?? "");
+        const role = String(args._role ?? "");
+        if (role !== "admin") {
+          return { data: true, error: null };
+        }
+        const ownerPhoneEnv =
+          (typeof process !== "undefined" && process.env?.["OWNER_PHONE"]) || "";
+        const ownerPhones = new Set(
+          ownerPhoneEnv
+            .split(",")
+            .map((p) => p.replace(/\D/g, "").slice(-10))
+            .filter((p) => p.length === 10),
+        );
+        const prof = store.profiles.get(uid);
+        const isAdmin =
+          store.admins.has(uid) ||
+          Boolean(prof?.phone && ownerPhones.has(prof.phone));
+        return { data: isAdmin, error: null };
       }
 
       case "admin_set_ban": {
