@@ -124,39 +124,72 @@ export const settleRound = createServerFn({ method: "POST" })
     };
   });
 
+export interface CreateDepositResult {
+  ok?: boolean;
+  error?: string;
+  depositId: string;
+  qrImageUrl: string;
+  qrContent: string | null;
+  cleanQrDataUrl: string | null;
+  amountPaise: number;
+}
+
 export const createDeposit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: { amountPaise: number }) => {
-    const amountPaise = data?.amountPaise;
-    if (!Number.isInteger(amountPaise) || amountPaise < MIN_DEPOSIT_PAISE)
-      throw new Error("Minimum deposit is ₹10");
-    if (amountPaise > MAX_DEPOSIT_PAISE) throw new Error("Amount is above the deposit limit");
+    const amountPaise = Number(data?.amountPaise ?? 0);
     return { amountPaise };
   })
-  .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { data: dep, error } = await supabaseAdmin
-      .from("deposits")
-      .insert({ user_id: context.userId, amount_paise: data.amountPaise })
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-
-    const qr = await createRazorpayQr(data.amountPaise, dep.id, context.userId);
-    const cleanImageUrl = qr.clean_qr_data_url || qr.image_url;
-    await supabaseAdmin
-      .from("deposits")
-      .update({ qr_id: qr.id, qr_image_url: cleanImageUrl })
-      .eq("id", dep.id);
-
-    return {
-      depositId: dep.id,
-      qrImageUrl: cleanImageUrl,
-      qrContent: qr.image_content ?? null,
-      cleanQrDataUrl: qr.clean_qr_data_url ?? null,
+  .handler(async ({ data, context }): Promise<CreateDepositResult> => {
+    const emptyResult = (errorMsg: string): CreateDepositResult => ({
+      ok: false,
+      error: errorMsg,
+      depositId: "",
+      qrImageUrl: "",
+      qrContent: null,
+      cleanQrDataUrl: null,
       amountPaise: data.amountPaise,
-    };
+    });
+
+    if (!Number.isInteger(data.amountPaise) || data.amountPaise < MIN_DEPOSIT_PAISE) {
+      return emptyResult("Minimum deposit is ₹10");
+    }
+    if (data.amountPaise > MAX_DEPOSIT_PAISE) {
+      return emptyResult("Amount is above the deposit limit");
+    }
+
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+      const { data: dep, error } = await supabaseAdmin
+        .from("deposits")
+        .insert({ user_id: context.userId, amount_paise: data.amountPaise })
+        .select("id")
+        .single();
+      if (error || !dep) {
+        return emptyResult(error?.message || "Could not initialize deposit record");
+      }
+
+      const qr = await createRazorpayQr(data.amountPaise, dep.id, context.userId);
+      const cleanImageUrl = qr.clean_qr_data_url || qr.image_url;
+      await supabaseAdmin
+        .from("deposits")
+        .update({ qr_id: qr.id, qr_image_url: cleanImageUrl })
+        .eq("id", dep.id);
+
+      return {
+        ok: true,
+        depositId: dep.id,
+        qrImageUrl: cleanImageUrl,
+        qrContent: qr.image_content ?? null,
+        cleanQrDataUrl: qr.clean_qr_data_url ?? null,
+        amountPaise: data.amountPaise,
+      };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Payment gateway temporarily unavailable. Please try again.";
+      return emptyResult(message);
+    }
   });
 
 /** Polls Razorpay for the deposit and credits it exactly once. */

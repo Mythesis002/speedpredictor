@@ -23,7 +23,7 @@ export const MAX_DEPOSIT_PAISE = 20_000_000; // ₹2,00,000
 const encoder = new TextEncoder();
 
 function masterSeed(): string {
-  const seed = process.env["RACE_MASTER_SEED"] || "apex-default-provably-fair-master-seed-2026-0001";
+  const seed = readFreshEnv("RACE_MASTER_SEED") || "apex-default-provably-fair-master-seed-2026-0001";
   if (!seed || seed.length < 32) throw new Error("Race service is temporarily unavailable");
   return seed;
 }
@@ -95,19 +95,62 @@ export function normalisePhone(raw: string): string {
 /* Razorpay (QR-only deposits)                                         */
 /* ------------------------------------------------------------------ */
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
 import { PNG } from "pngjs";
 
+/**
+ * Reloads `.env` / `.env.local` from disk into `process.env` at call time so
+ * updated credentials (such as `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET`) take
+ * effect immediately without requiring a process restart.
+ */
+function readFreshEnv(key: string): string | undefined {
+  try {
+    if (typeof process !== "undefined" && typeof process.cwd === "function") {
+      const root = process.cwd();
+      for (const file of [".env.local", ".env"]) {
+        try {
+          const content = readFileSync(resolve(root, file), "utf8");
+          for (const rawLine of content.split(/\r?\n/)) {
+            const line = rawLine.trim();
+            if (!line || line.startsWith("#")) continue;
+            const eqIdx = line.indexOf("=");
+            if (eqIdx <= 0) continue;
+            const k = line.slice(0, eqIdx).trim();
+            let v = line.slice(eqIdx + 1).trim();
+            if (
+              (v.startsWith('"') && v.endsWith('"')) ||
+              (v.startsWith("'") && v.endsWith("'"))
+            ) {
+              v = v.slice(1, -1);
+            }
+            if (v) {
+              process.env[k] = v;
+            }
+          }
+        } catch {
+          /* file doesn't exist or FS unavailable on edge runtime */
+        }
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  const val = process.env[key]?.trim();
+  return val ? val : undefined;
+}
+
 function razorpayAuth(): string {
-  const id = process.env["RAZORPAY_KEY_ID"];
-  const secret = process.env["RAZORPAY_KEY_SECRET"];
+  const id = readFreshEnv("RAZORPAY_KEY_ID");
+  const secret = readFreshEnv("RAZORPAY_KEY_SECRET");
   if (!id || !secret) throw new Error("Payments are not configured yet");
   return `Basic ${btoa(`${id}:${secret}`)}`;
 }
 
 export function paymentsConfigured(): boolean {
-  return Boolean(process.env["RAZORPAY_KEY_ID"] && process.env["RAZORPAY_KEY_SECRET"]);
+  return Boolean(readFreshEnv("RAZORPAY_KEY_ID") && readFreshEnv("RAZORPAY_KEY_SECRET"));
 }
 
 export interface RazorpayQr {
@@ -316,7 +359,7 @@ export async function verifyRazorpaySignature(
   rawBody: string,
   signature: string | null,
 ): Promise<boolean> {
-  const secret = process.env["RAZORPAY_WEBHOOK_SECRET"];
+  const secret = readFreshEnv("RAZORPAY_WEBHOOK_SECRET");
   if (!secret || !signature) return false;
   const key = await crypto.subtle.importKey(
     "raw",

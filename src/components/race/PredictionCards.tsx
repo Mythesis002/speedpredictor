@@ -62,26 +62,26 @@ export function PredictionCards({
 
 
             <div className="relative flex flex-col items-center px-1 pt-2.5 pb-2">
-              <div className="scale-[0.92] -mt-1">
-                <Car spec={car} size={78} glow={isSelected || isWinner} reflection={false} />
+              <div className="h-[58px] w-full flex items-center justify-center">
+                <Car spec={car} size={84} glow={isSelected || isWinner} reflection={false} />
               </div>
               <div
-                className="-mt-3 font-display text-[11px] tracking-[0.18em]"
-                style={{ color: car.kind === "hyper" ? "#d9c98f" : car.color }}
+                className="mt-0.5 font-display text-[11px] tracking-[0.18em] leading-none"
+                style={{ color: car.kind === "hyper" ? "#ffd66b" : car.color }}
               >
                 {carLabel(car)}
               </div>
               <div
-                className="mt-1 px-2 py-0.5 rounded-full text-[10px] font-display tabular"
+                className="mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-display tabular leading-tight"
                 style={{
                   background:
                     car.kind === "hyper"
                       ? "linear-gradient(90deg,#8a6a12,#ffd66b)"
                       : car.kind === "small"
                         ? "rgba(255,255,255,0.1)"
-                        : "linear-gradient(90deg,#7e1020,#ff3b4d)",
+                        : `linear-gradient(90deg,${car.color}88,${car.color})`,
                   color: car.kind === "hyper" ? "#1a1405" : "#fff",
-                  border: "1px solid rgba(255,255,255,0.15)",
+                  border: "1px solid rgba(255,255,255,0.18)",
                 }}
               >
                 {car.multiplier}x

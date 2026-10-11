@@ -73,6 +73,11 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
     setError(null);
     try {
       const res = await start({ data: { amountPaise: Math.round(amount * 100) } });
+      if (res.ok === false || res.error || !res.depositId) {
+        setError(res.error || "Could not start the payment. Please try again.");
+        setBusy(false);
+        return;
+      }
       let cleanQrDataUrl: string | null = res.cleanQrDataUrl ?? null;
       if (!cleanQrDataUrl && res.qrContent) {
         try {
@@ -96,7 +101,11 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
         amountPaise: res.amountPaise,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start the payment");
+      setError(
+        err instanceof Error && !err.message.includes("500")
+          ? err.message
+          : "Payment gateway could not be reached. Please check your connection and try again.",
+      );
     }
     setBusy(false);
   };
@@ -142,7 +151,11 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
                 </button>
               ))}
             </div>
-            {error && <p className="text-[11px] text-[#ff4d6d] mb-2">{error}</p>}
+            {error && (
+              <div className="rounded-xl bg-[#ff4d6d]/12 border border-[#ff4d6d]/35 px-3 py-2 text-[11px] text-[#ff8a9c] mb-2.5 leading-snug">
+                {error}
+              </div>
+            )}
             <button
               disabled={amount < 10 || busy}
               onClick={generate}

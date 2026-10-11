@@ -35,8 +35,8 @@ const DASH_LEN = 0.34;
 const DASH_SPAN = DASHES * DASH_PERIOD;
 
 /* ---- car depth model ---- */
-const Z_CAR_NEAR = 1.5; // trailing car, closest to the lens
-const CAR_SPREAD = 2.0; // how much depth the leader gains
+const Z_CAR_NEAR = 1.46; // trailing car, closest to the lens
+const CAR_SPREAD = 2.05; // how much depth the leader gains
 const BASE_CAR = 150; // px width the <Car/> svg is authored at
 
 export function Highway({
@@ -60,6 +60,8 @@ export function Highway({
   const bodyRefs = useRef<Array<HTMLDivElement | null>>([null, null, null]);
   const posRefs = useRef<Array<HTMLDivElement | null>>([null, null, null]);
   const dashRefs = useRef<Array<HTMLSpanElement | null>>([]);
+  const seamRefs = useRef<Array<HTMLSpanElement | null>>([]);
+  const roadGrainRef = useRef<HTMLDivElement | null>(null);
 
   const zCar = useRef<[number, number, number]>([Z_CAR_NEAR, Z_CAR_NEAR, Z_CAR_NEAR]);
   const zVel = useRef<[number, number, number]>([0, 0, 0]);
@@ -67,6 +69,7 @@ export function Highway({
   const speedS = useRef<[number, number, number]>([0, 0, 0]);
   const shownPos = useRef<[number, number, number]>([0, 0, 0]);
   const flow = useRef(0); // accumulated road scroll, in world z units
+  const grainOffset = useRef(0); // continuous pixel scroll for surface texture
   const flowSpeed = useRef(0);
   const camShake = useRef(0);
   const camPunch = useRef(0);
@@ -145,7 +148,7 @@ export function Highway({
       for (let i = 0; i < 3; i++) {
         const z = Math.max(Z_CAR_NEAR, Math.min(6, zCar.current[i]));
         const s = scaleAt(z);
-        const carW = laneWidthAt(z, w) * 0.94;
+        const carW = laneWidthAt(z, w) * 0.88;
         const k = carW / BASE_CAR;
 
         const throttleI = Math.min(1, speedS.current[i] * 2.6);
@@ -153,11 +156,11 @@ export function Highway({
         const tSec = ts / 1000;
         const sway =
           throttleI *
-          0.085 *
+          0.072 *
           (Math.sin(tSec * 0.9 + i * 2.3) * 0.65 + Math.sin(tSec * 2.17 + i * 5.1) * 0.35);
         const swayVel =
           throttleI *
-          0.085 *
+          0.072 *
           (Math.cos(tSec * 0.9 + i * 2.3) * 0.9 * 0.65 + Math.cos(tSec * 2.17 + i * 5.1) * 2.17 * 0.35);
 
         const x = xAt(LANE_U[i] + sway, z, w);
@@ -200,10 +203,41 @@ export function Highway({
         }
       }
 
-      /* ---- road markings: spawn at the horizon, sweep to the camera ---- */
+      /* ---- road markings & solid tarmac surface scroll ---- */
       const targetFlow = live ? 2.2 + Math.min(fastest, 0.35) * 42 : 0;
       flowSpeed.current += (targetFlow - flowSpeed.current) * Math.min(1, dt * 3.2);
       flow.current = (flow.current + flowSpeed.current * dt) % DASH_SPAN;
+      grainOffset.current = (grainOffset.current + flowSpeed.current * dt * 28) % 64;
+
+      if (roadGrainRef.current) {
+        roadGrainRef.current.style.backgroundPosition = `0px ${grainOffset.current.toFixed(1)}px, 0px ${(grainOffset.current * 1.5).toFixed(1)}px`;
+      }
+
+      // Project lateral tarmac expansion joints / concrete slab seams across the road width
+      const SEAM_COUNT = 8;
+      const SEAM_PERIOD = DASH_SPAN / SEAM_COUNT;
+      for (let i = 0; i < SEAM_COUNT; i++) {
+        const seamEl = seamRefs.current[i];
+        if (!seamEl) continue;
+        let z = Z_NEAR + (((i * SEAM_PERIOD - flow.current) % DASH_SPAN) + DASH_SPAN) % DASH_SPAN;
+        if (z > Z_FAR) {
+          seamEl.style.opacity = "0";
+          continue;
+        }
+        const zBack = Math.min(z + 0.055, Z_FAR);
+        const yFront = yAt(z, h);
+        const yBack = yAt(zBack, h);
+        const xLeftNear = xAt(-0.98, z, w);
+        const xRightNear = xAt(0.98, z, w);
+        const xLeftFar = xAt(-0.98, zBack, w);
+        const xRightFar = xAt(0.98, zBack, w);
+        seamEl.style.clipPath =
+          `polygon(${xLeftFar.toFixed(2)}px ${yBack.toFixed(2)}px,` +
+          ` ${xRightFar.toFixed(2)}px ${yBack.toFixed(2)}px,` +
+          ` ${xRightNear.toFixed(2)}px ${yFront.toFixed(2)}px,` +
+          ` ${xLeftNear.toFixed(2)}px ${yFront.toFixed(2)}px)`;
+        seamEl.style.opacity = (Math.min(1, (Z_FAR - z) / (Z_FAR * 0.4)) * 0.45).toFixed(3);
+      }
 
       for (let d = 0; d < DIVIDER_U.length; d++) {
         for (let i = 0; i < DASHES; i++) {
@@ -366,45 +400,134 @@ export function Highway({
           ))}
         </div>
 
-        {/* ---------- Road: one perspective plane ---------- */}
+        {/* ---------- Road: solid textured asphalt perspective plane ---------- */}
         <div className="absolute inset-0 overflow-hidden">
-          {/* tarmac */}
+          {/* Outer concrete roadbed / gravel verge */}
           <div
             className="absolute inset-0"
             style={{
               background:
-                "linear-gradient(180deg,#0a0e18 0%, #12141f 35%, #191c29 75%, #1d202e 100%)",
-              clipPath: roadClip,
+                "linear-gradient(180deg, #0b0d14 0%, #151922 40%, #1e2330 100%)",
+              clipPath: `polygon(${EDGE_PCT.topLeft - 1.2}% ${EDGE_PCT.horizonPct}%, ${EDGE_PCT.topRight + 1.2}% ${EDGE_PCT.horizonPct}%, ${EDGE_PCT.bottomRight + 8}% 100%, ${EDGE_PCT.bottomLeft - 8}% 100%)`,
             }}
           />
-          {/* distance light bloom on the tarmac */}
+
+          {/* Heavy solid tarmac base coat with crown shading */}
           <div
-            className="absolute inset-0 mix-blend-screen opacity-45"
-            style={{
-              background: `radial-gradient(70% 55% at 50% ${EDGE_PCT.horizonPct}%, oklch(0.62 0.2 300 / 0.4), transparent 70%)`,
-              clipPath: roadClip,
-            }}
-          />
-          {/* wet-asphalt neon reflections */}
-          <div
-            className="absolute inset-0 opacity-35 mix-blend-screen"
+            className="absolute inset-0"
             style={{
               background:
-                "linear-gradient(90deg, #b14bff33 0%, transparent 22%, transparent 78%, #35e6ff33 100%)",
-              clipPath: roadClip,
-            }}
-          />
-          {/* asphalt grain */}
-          <div
-            className="absolute inset-0 opacity-[0.1] pointer-events-none"
-            style={{
-              backgroundImage: "radial-gradient(circle, #ffffff 0.4px, transparent 0.9px)",
-              backgroundSize: "4px 4px",
+                "linear-gradient(180deg, #12151e 0%, #1b202c 28%, #232938 68%, #282f40 100%)",
               clipPath: roadClip,
             }}
           />
 
-          {/* neon edge rails — same vanishing point as the tarmac */}
+          {/* Lateral road crown & 3-lane worn tyre rubber grooves */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(90deg, " +
+                "#11141d 0%, " +
+                "#262d3d 7%, " +
+                "#181c26 14%, #252b3b 19%, #181c26 24%, " +
+                "#2c3345 33.3%, " +
+                "#181c26 42%, #262c3c 50%, #181c26 58%, " +
+                "#2c3345 66.6%, " +
+                "#181c26 76%, #252b3b 81%, #181c26 86%, " +
+                "#262d3d 93%, " +
+                "#11141d 100%)",
+              opacity: 0.88,
+              clipPath: roadClip,
+            }}
+          />
+
+          {/* SVG procedural coarse stone & bitumen aggregate texture */}
+          <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
+            <defs>
+              <filter id="asphalt-aggregate" x="0%" y="0%" width="100%" height="100%">
+                <feTurbulence
+                  type="fractalNoise"
+                  baseFrequency="0.65 0.95"
+                  numOctaves="3"
+                  seed="19"
+                  result="noise"
+                />
+                <feColorMatrix
+                  type="matrix"
+                  values="0.35 0 0 0 0.14
+                          0.35 0 0 0 0.16
+                          0.40 0 0 0 0.21
+                          0    0 0 0.52 0"
+                />
+              </filter>
+            </defs>
+          </svg>
+          <div
+            className="absolute inset-0 pointer-events-none mix-blend-overlay"
+            style={{
+              filter: "url(#asphalt-aggregate)",
+              clipPath: roadClip,
+            }}
+          />
+
+          {/* Scrolling micro-aggregate & mineral speckle matrix */}
+          <div
+            ref={roadGrainRef}
+            className="absolute inset-0 pointer-events-none opacity-45"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 2px 3px, rgba(255,255,255,0.22) 0.75px, transparent 1.2px), " +
+                "radial-gradient(circle at 6px 7px, rgba(8,10,16,0.65) 1px, transparent 1.6px)",
+              backgroundSize: "8px 12px, 11px 16px",
+              clipPath: roadClip,
+            }}
+          />
+
+          {/* Scrolling lateral tarmac expansion seams / paving joints */}
+          <div className="absolute inset-0 pointer-events-none">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <span
+                key={i}
+                ref={(el) => {
+                  seamRefs.current[i] = el;
+                }}
+                className="absolute inset-0 block gpu"
+                style={{
+                  background:
+                    "linear-gradient(180deg, rgba(8,10,16,0.85) 0%, rgba(160,175,205,0.18) 100%)",
+                  opacity: 0,
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Solid painted shoulder boundary lines (inner track limits) */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              clipPath: `polygon(${EDGE_PCT.topLeft + 0.25}% ${EDGE_PCT.horizonPct}%, ${EDGE_PCT.topLeft + 0.55}% ${EDGE_PCT.horizonPct}%, ${EDGE_PCT.bottomLeft + 4.8}% 100%, ${EDGE_PCT.bottomLeft + 3.2}% 100%)`,
+              background: "linear-gradient(180deg, rgba(255,255,255,0.25), rgba(240,246,255,0.82))",
+            }}
+          />
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              clipPath: `polygon(${EDGE_PCT.topRight - 0.55}% ${EDGE_PCT.horizonPct}%, ${EDGE_PCT.topRight - 0.25}% ${EDGE_PCT.horizonPct}%, ${EDGE_PCT.bottomRight - 3.2}% 100%, ${EDGE_PCT.bottomRight - 4.8}% 100%)`,
+              background: "linear-gradient(180deg, rgba(255,255,255,0.25), rgba(240,246,255,0.82))",
+            }}
+          />
+
+          {/* Subtle distance horizon blend so the solid road meets the gantry cleanly */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: `linear-gradient(180deg, #0b0e18 ${EDGE_PCT.horizonPct}%, transparent ${EDGE_PCT.horizonPct + 11}%)`,
+              clipPath: roadClip,
+            }}
+          />
+
+          {/* Neon outer barrier rails — same vanishing point as the tarmac */}
           <div
             className="absolute inset-0"
             style={{
@@ -456,18 +579,19 @@ export function Highway({
               className="absolute left-0 top-0 z-20 gpu"
               style={{ transformOrigin: "0 0" }}
             >
-              <div style={{ transform: "translate(-50%, -100%)" }}>
+              {/* Anchor at horizontal center (-50%) and exact tyre-tarmac contact line (-97.3%) */}
+              <div style={{ transform: "translate(-50%, -97.3%)" }}>
                 <div
                   ref={(el) => {
                     posRefs.current[i] = el;
                   }}
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 font-display text-[10px] tracking-[0.2em] opacity-0 transition-opacity"
+                  className="absolute -top-2.5 left-1/2 -translate-x-1/2 font-display text-[10px] tracking-[0.2em] opacity-0 transition-opacity drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
                 />
                 <div
                   ref={(el) => {
                     bodyRefs.current[i] = el;
                   }}
-                  className="gpu relative"
+                  className="gpu relative flex items-center justify-center"
                 >
                   {/* launch tyre smoke */}
                   {phase === "launch" && (
@@ -477,7 +601,7 @@ export function Highway({
                           key={s}
                           className="absolute bottom-0 rounded-full bg-white/45 blur-[3px]"
                           style={{
-                            left: `${s < 3 ? 12 + s * 5 : 62 + (s - 3) * 5}%`,
+                            left: `${s < 3 ? 6 + s * 4 : 74 + (s - 3) * 4}%`,
                             width: 16,
                             height: 16,
                             animation: `tyre-smoke ${0.62 + s * 0.06}s ease-out ${s * 0.045}s both`,
@@ -489,21 +613,21 @@ export function Highway({
 
                   {/* contact shadow + road light bounce */}
                   <div
-                    className="pointer-events-none absolute left-1/2 -translate-x-1/2 -bottom-1 rounded-[50%]"
+                    className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[0%] rounded-[50%]"
                     style={{
-                      width: BASE_CAR * 0.78,
-                      height: BASE_CAR * 0.13,
+                      width: BASE_CAR * 0.94,
+                      height: BASE_CAR * 0.12,
                       background:
-                        "radial-gradient(closest-side, rgba(0,0,0,0.75), rgba(0,0,0,0.28) 62%, transparent 100%)",
+                        "radial-gradient(closest-side, rgba(0,0,0,0.86), rgba(0,0,0,0.34) 64%, transparent 100%)",
                       filter: "blur(2px)",
                     }}
                   />
                   <div
-                    className="pointer-events-none absolute left-1/2 -translate-x-1/2 -bottom-2 rounded-[50%] mix-blend-screen"
+                    className="pointer-events-none absolute left-1/2 -translate-x-1/2 -bottom-[2%] rounded-[50%] mix-blend-screen"
                     style={{
-                      width: BASE_CAR * 0.6,
+                      width: BASE_CAR * 0.76,
                       height: BASE_CAR * 0.1,
-                      background: `radial-gradient(closest-side, ${car.color}55, transparent 100%)`,
+                      background: `radial-gradient(closest-side, ${car.color}66, transparent 100%)`,
                       filter: "blur(5px)",
                     }}
                   />
@@ -519,18 +643,18 @@ export function Highway({
 
                 {myLane === i && !isWinner && (
                   <div
-                    className="absolute -top-8 left-1/2 -translate-x-1/2 rounded-full px-1.5 py-[1px] font-display text-[7.5px] tracking-[0.2em] whitespace-nowrap"
+                    className="absolute -top-7 left-1/2 -translate-x-1/2 rounded-full px-1.5 py-[1px] font-display text-[7.5px] tracking-[0.2em] whitespace-nowrap"
                     style={{
-                      background: "rgba(0,0,0,0.55)",
+                      background: "rgba(4,6,12,0.78)",
                       color: car.color,
-                      boxShadow: `0 0 0 1px ${car.color}66`,
+                      boxShadow: `0 0 0 1px ${car.color}88, 0 4px 10px rgba(0,0,0,0.6)`,
                     }}
                   >
                     YOUR BET
                   </div>
                 )}
                 {isWinner && (
-                  <div className="absolute -top-9 left-1/2 -translate-x-1/2 font-display text-[10px] tracking-[0.3em] text-[#ffd66b] text-neon whitespace-nowrap">
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 font-display text-[10px] tracking-[0.3em] text-[#ffd66b] text-neon whitespace-nowrap">
                     WINNER
                   </div>
                 )}

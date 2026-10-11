@@ -56,8 +56,18 @@ export default {
       }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
+      if (request.url.includes("_serverFn")) {
+        return response;
+      }
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
+      if (
+        request.signal?.aborted ||
+        (error instanceof Error &&
+          (error.name === "AbortError" || error.message.includes("aborted")))
+      ) {
+        return new Response(null, { status: 204 });
+      }
       console.error(error);
       return new Response(renderErrorPage(), {
         status: 500,
