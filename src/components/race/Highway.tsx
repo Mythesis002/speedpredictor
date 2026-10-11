@@ -170,7 +170,7 @@ export function Highway({
         if (el) {
           el.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(${k.toFixed(4)})`;
           el.style.zIndex = String(30 - Math.round((z - Z_CAR_NEAR) * 6));
-          el.style.opacity = (1 - (1 - s) * 0.22).toFixed(3);
+          el.style.opacity = "1";
           /* wheels spin at the car's real speed, not a React snapshot */
           const rolling = speedS.current[i] > 0.004;
           const dur = Math.max(0.055, 0.5 - throttleI * 0.44);
@@ -179,15 +179,15 @@ export function Highway({
           el.style.setProperty("--wheel-play", rolling ? "running" : "paused");
         }
 
-        /* suspension: launch squat, braking dive, high-speed jitter, body roll */
+        /* suspension: subtle body roll & micro-vibration anchored at the tyre-road contact line */
         const bodyEl = bodyRefs.current[i];
         if (bodyEl) {
-          const pitch = ph === "launch" ? 4.2 : ph === "finish" ? -2.6 : -throttleI * 1.3;
-          const jitter = live ? Math.sin(ts * 0.06 + i * 2.1) * 0.5 * throttleI : 0;
-          const roll = -swayVel * 26; // lean into the direction of the weave
+          const squat = ph === "launch" ? 0.8 : ph === "finish" ? -0.4 : 0;
+          const jitter = live ? Math.sin(ts * 0.06 + i * 2.1) * 0.35 * throttleI : 0;
+          const roll = -swayVel * 14; // subtle lean into the direction of the weave
           bodyEl.style.transform =
-            `translate3d(${jitter.toFixed(2)}px, ${(pitch * 0.4).toFixed(2)}px, 0)` +
-            ` rotate(${(pitch * 0.1 + roll).toFixed(2)}deg)`;
+            `translate3d(${jitter.toFixed(2)}px, ${squat.toFixed(2)}px, 0)` +
+            ` rotate(${roll.toFixed(2)}deg)`;
         }
 
 
@@ -579,8 +579,8 @@ export function Highway({
               className="absolute left-0 top-0 z-20 gpu"
               style={{ transformOrigin: "0 0" }}
             >
-              {/* Anchor at horizontal center (-50%) and exact tyre-tarmac contact line (-97.3%) */}
-              <div style={{ transform: "translate(-50%, -97.3%)" }}>
+              {/* Anchor at horizontal center (-50%) and exact tyre-tarmac contact plane (-97.4%) */}
+              <div style={{ transform: "translate(-50%, -97.4%)" }}>
                 <div
                   ref={(el) => {
                     posRefs.current[i] = el;
@@ -592,43 +592,60 @@ export function Highway({
                     bodyRefs.current[i] = el;
                   }}
                   className="gpu relative flex items-center justify-center"
+                  style={{ transformOrigin: "50% 97.4%" }}
                 >
-                  {/* launch tyre smoke */}
+                  {/* launch tyre smoke — localized at left & right rear tyres */}
                   {phase === "launch" && (
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6">
-                      {Array.from({ length: 6 }).map((__, s) => (
+                    <div className="pointer-events-none absolute inset-x-0 bottom-[2.2%] h-4">
+                      {Array.from({ length: 4 }).map((__, s) => (
                         <span
                           key={s}
-                          className="absolute bottom-0 rounded-full bg-white/45 blur-[3px]"
+                          className="absolute bottom-0 rounded-full bg-white/25 blur-[2px]"
                           style={{
-                            left: `${s < 3 ? 6 + s * 4 : 74 + (s - 3) * 4}%`,
-                            width: 16,
-                            height: 16,
-                            animation: `tyre-smoke ${0.62 + s * 0.06}s ease-out ${s * 0.045}s both`,
+                            left: `${s < 2 ? 4 + s * 4 : 84 + (s - 2) * 4}%`,
+                            width: 11,
+                            height: 7,
+                            animation: `tyre-smoke ${0.5 + s * 0.05}s ease-out ${s * 0.04}s both`,
                           }}
                         />
                       ))}
                     </div>
                   )}
 
-                  {/* contact shadow + road light bounce */}
-                  <div
-                    className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[0%] rounded-[50%]"
+                  {/* Tightly localized tyre-road contact patches + recessed under-chassis AO */}
+                  {/* Left rear tyre contact shadow */}
+                  <span
+                    className="pointer-events-none absolute rounded-full"
                     style={{
-                      width: BASE_CAR * 0.94,
-                      height: BASE_CAR * 0.12,
+                      left: "1.6%",
+                      bottom: "1.8%",
+                      width: "13.2%",
+                      height: "3.4%",
                       background:
-                        "radial-gradient(closest-side, rgba(0,0,0,0.86), rgba(0,0,0,0.34) 64%, transparent 100%)",
-                      filter: "blur(2px)",
+                        "radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.82) 55%, rgba(0,0,0,0) 100%)",
                     }}
                   />
-                  <div
-                    className="pointer-events-none absolute left-1/2 -translate-x-1/2 -bottom-[2%] rounded-[50%] mix-blend-screen"
+                  {/* Right rear tyre contact shadow */}
+                  <span
+                    className="pointer-events-none absolute rounded-full"
                     style={{
-                      width: BASE_CAR * 0.76,
-                      height: BASE_CAR * 0.1,
-                      background: `radial-gradient(closest-side, ${car.color}66, transparent 100%)`,
-                      filter: "blur(5px)",
+                      right: "1.6%",
+                      bottom: "1.8%",
+                      width: "13.2%",
+                      height: "3.4%",
+                      background:
+                        "radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.82) 55%, rgba(0,0,0,0) 100%)",
+                    }}
+                  />
+                  {/* Subtle recessed ambient occlusion directly beneath the rear diffuser */}
+                  <span
+                    className="pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-full"
+                    style={{
+                      bottom: "2.4%",
+                      width: "76%",
+                      height: "4.6%",
+                      background:
+                        "radial-gradient(ellipse at 50% 35%, rgba(2,3,6,0.78) 0%, rgba(2,3,6,0.42) 58%, rgba(2,3,6,0) 100%)",
                     }}
                   />
 

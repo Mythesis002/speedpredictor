@@ -147,7 +147,7 @@ export const Car = memo(function Car({
   const h = w * (1501.3 / 2048);
 
   const uid = spec.id.replace(/[^a-zA-Z0-9_-]/g, "");
-  const specGlow = isHyper ? "#ffd66b" : spec.color;
+  const accentColor = isHyper ? "#ffd66b" : spec.color;
   const t = Math.max(0, Math.min(1, throttle));
 
   const svgMarkup = useMemo(() => {
@@ -158,52 +158,95 @@ export const Car = memo(function Car({
     );
   }, [uid, spec.color, isHyper]);
 
+  // Taillight intensity scales smoothly and stays strictly inside the rear taillight housings
+  const tailOpacity = glow ? 0.9 : braking ? 0.78 : 0.25 + t * 0.35;
+  const tailColor = glow
+    ? accentColor
+    : braking
+      ? "#ff1e38"
+      : accentColor;
+
   return (
     <div
       className="relative select-none"
       style={{
         width: w,
         height: h,
-        filter: glow
-          ? `drop-shadow(0 0 16px ${specGlow}) drop-shadow(0 0 36px ${specGlow}66)`
-          : braking
-            ? `drop-shadow(0 0 14px rgba(255,30,48,0.65)) drop-shadow(0 10px 16px rgba(0,0,0,0.82))`
-            : `drop-shadow(0 10px 16px rgba(0,0,0,0.82))`,
       }}
     >
+      {/* Crisp, unblurred SVG body — no container-level drop-shadow or halo */}
       <div
         className="w-full h-full"
         dangerouslySetInnerHTML={{ __html: svgMarkup }}
       />
 
-      {/* Active exhaust flame bloom at high throttle */}
+      {/* Localized rear taillight LED bar accents (strictly inside the left & right lamp housings) */}
+      <span
+        className="pointer-events-none absolute rounded-full transition-opacity duration-200"
+        style={{
+          left: "12.2%",
+          top: "41.8%",
+          width: "13.5%",
+          height: "3.2%",
+          opacity: tailOpacity,
+          background: `radial-gradient(ellipse at center, #ffffff 0%, ${tailColor} 52%, transparent 100%)`,
+          boxShadow: glow || braking ? `0 0 5px ${tailColor}` : "none",
+        }}
+      />
+      <span
+        className="pointer-events-none absolute rounded-full transition-opacity duration-200"
+        style={{
+          right: "12.2%",
+          top: "41.8%",
+          width: "13.5%",
+          height: "3.2%",
+          opacity: tailOpacity,
+          background: `radial-gradient(ellipse at center, #ffffff 0%, ${tailColor} 52%, transparent 100%)`,
+          boxShadow: glow || braking ? `0 0 5px ${tailColor}` : "none",
+        }}
+      />
+
+      {/* Restrained central diffuser rain-light accent when braking or winning */}
+      {(braking || glow) && (
+        <span
+          className="pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-sm transition-opacity duration-200"
+          style={{
+            bottom: "15.2%",
+            width: "3.6%",
+            height: "2.2%",
+            opacity: glow ? 0.92 : 0.75,
+            background: glow ? "#ffd66b" : "#ff2438",
+            boxShadow: glow ? "0 0 4px #ffd66b" : "0 0 4px #ff2438",
+          }}
+        />
+      )}
+
+      {/* Tightly localized twin exhaust tips at high throttle */}
       {t > 0.14 && (
         <>
           <span
             className="pointer-events-none absolute rounded-full"
             style={{
-              left: "16.5%",
-              bottom: "15.5%",
-              width: 8 + t * 6,
-              height: 8 + t * 6,
+              left: "19.2%",
+              bottom: "17.6%",
+              width: 4 + t * 3.5,
+              height: 4 + t * 3.5,
               background: isHyper
-                ? "radial-gradient(circle,#ffd66b,#ff5b1f 55%,transparent 72%)"
-                : "radial-gradient(circle,#ffffff,#5ce1ff 55%,transparent 72%)",
-              filter: "blur(1px)",
+                ? "radial-gradient(circle, #fffbe6 0%, #ff9d2e 55%, transparent 75%)"
+                : "radial-gradient(circle, #ffffff 0%, #5ce1ff 55%, transparent 75%)",
               animation: `exhaust ${0.64 - t * 0.3}s ease-out infinite`,
             }}
           />
           <span
             className="pointer-events-none absolute rounded-full"
             style={{
-              right: "16.5%",
-              bottom: "15.5%",
-              width: 8 + t * 6,
-              height: 8 + t * 6,
+              right: "19.2%",
+              bottom: "17.6%",
+              width: 4 + t * 3.5,
+              height: 4 + t * 3.5,
               background: isHyper
-                ? "radial-gradient(circle,#ffd66b,#ff5b1f 55%,transparent 72%)"
-                : "radial-gradient(circle,#ffffff,#5ce1ff 55%,transparent 72%)",
-              filter: "blur(1px)",
+                ? "radial-gradient(circle, #fffbe6 0%, #ff9d2e 55%, transparent 75%)"
+                : "radial-gradient(circle, #ffffff 0%, #5ce1ff 55%, transparent 75%)",
               animation: `exhaust ${0.64 - t * 0.3}s ease-out infinite ${(0.64 - t * 0.3) / 2}s`,
             }}
           />
