@@ -48,7 +48,7 @@ export function WinModal({ amount, colorName, color = "#26ff9a", onClose }: Prop
       <div className="relative w-full max-w-[320px] glass rounded-3xl p-6 text-center animate-scale-in">
         <button
           onClick={onClose}
-          aria-label="Close"
+          aria-label="Close win notification"
           className="absolute right-3 top-3 text-white/45 hover:text-white"
         >
           <X size={16} />
@@ -72,7 +72,7 @@ export function WinModal({ amount, colorName, color = "#26ff9a", onClose }: Prop
         </p>
         {colorName && (
           <p className="mt-2 text-[11px] tracking-[0.2em] text-white/50 font-display">
-            {colorName} TOOK THE CHEQUERED FLAG
+            {colorName} FINISHED FIRST
           </p>
         )}
 
@@ -81,7 +81,7 @@ export function WinModal({ amount, colorName, color = "#26ff9a", onClose }: Prop
           className="mt-5 w-full rounded-xl py-3 font-display text-[12px] tracking-[0.25em] text-black"
           style={{ background: `linear-gradient(90deg, ${color}, #ffd66b)` }}
         >
-          COLLECT
+          CONTINUE
         </button>
       </div>
     </div>

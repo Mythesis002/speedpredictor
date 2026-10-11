@@ -46,7 +46,7 @@ export function History({ entries }: { entries: BetHistoryEntry[] }) {
 
       {entries.length === 0 ? (
         <div className="py-5 text-center text-[11px] text-white/40">
-          No bets yet — pick a car to start your history.
+          No bets placed yet. Select a car to place your first bet.
         </div>
       ) : (
         <div className="space-y-1">
@@ -68,7 +68,7 @@ export function History({ entries }: { entries: BetHistoryEntry[] }) {
               />
               <span className="text-[10.5px] text-white/70 truncate flex-1">
                 {e.car.colorName}
-                <span className="text-white/35"> · {e.multiplier.toFixed(2)}x</span>
+                <span className="text-white/35"> · {e.multiplier.toFixed(2)}×</span>
               </span>
               <span className="text-[10.5px] tabular text-white/55 shrink-0">{inr(e.amount)}</span>
               <span
@@ -79,7 +79,7 @@ export function History({ entries }: { entries: BetHistoryEntry[] }) {
                 }}
               >
                 {e.status === "pending"
-                  ? "live"
+                  ? "in progress"
                   : e.status === "won"
                     ? `+${inr(e.payout)}`
                     : `−${inr(e.amount)}`}
@@ -203,7 +203,7 @@ export function Results({ entries }: { entries: HistoryEntry[] }) {
               to="/verify/$roundId"
               params={{ roundId: String(e.id) }}
               className="rounded-md bg-white/[0.04] px-1.5 py-1 flex items-center gap-1 shrink-0 hover:bg-white/10 transition-colors"
-              aria-label={`Round ${e.id}: ${e.car.colorName} won. Verify`}
+              aria-label={`Verify Round #${e.id} (${e.car.colorName} won)`}
             >
               <span
                 className="w-2 h-2 rounded-full shrink-0"

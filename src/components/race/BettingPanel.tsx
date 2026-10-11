@@ -38,14 +38,14 @@ export function BettingPanel({
       <div className="flex items-center justify-between mb-2">
         <span className="font-display text-[10px] tracking-[0.22em] text-white/45">BET AMOUNT</span>
         <span className="text-[10px] tracking-[0.18em] text-white/40 font-display tabular">
-          BAL {formatINR(balance)}
+          BALANCE {formatINR(balance)}
         </span>
       </div>
 
       <div className="flex items-center gap-2">
         <div className="flex items-center h-11 rounded-xl bg-black/40 border border-white/10 overflow-hidden">
           <button
-            aria-label="Decrease bet"
+            aria-label="Decrease bet amount"
             disabled={locked}
             onClick={() => onChange(clamp(amount - STEP))}
             className="h-11 w-10 grid place-items-center active:scale-95 disabled:opacity-40"
@@ -56,7 +56,7 @@ export function BettingPanel({
             {formatINR(amount)}
           </span>
           <button
-            aria-label="Increase bet"
+            aria-label="Increase bet amount"
             disabled={locked}
             onClick={() => onChange(clamp(amount + STEP))}
             className="h-11 w-10 grid place-items-center active:scale-95 disabled:opacity-40"
@@ -83,7 +83,7 @@ export function BettingPanel({
             {confirmed
               ? "BET PLACED"
               : locked
-                ? "BETS CLOSED"
+                ? "BETS LOCKED"
                 : insufficient
                   ? "LOW BALANCE"
                   : selectedLabel
@@ -93,19 +93,6 @@ export function BettingPanel({
 
           {!disabled && <span className="absolute inset-0 animate-shimmer" />}
         </button>
-      </div>
-
-      {/* the single number a player actually cares about */}
-      <div className="mt-2 flex items-center justify-between rounded-lg bg-white/[0.04] px-2.5 py-1.5">
-        <span className="text-[9px] font-display tracking-[0.2em] text-white/45">
-          POTENTIAL RETURN
-        </span>
-        <span
-          className="font-display text-[13px] tabular"
-          style={{ color: multiplier ? "#26ff9a" : "rgba(255,255,255,0.35)" }}
-        >
-          {multiplier ? formatINR(amount * multiplier) : "—"}
-        </span>
       </div>
 
       <div className="mt-2 grid grid-cols-5 gap-1.5">

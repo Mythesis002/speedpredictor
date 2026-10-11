@@ -53,7 +53,7 @@ function ProfilePage() {
       toast.success(msg);
       await qc.invalidateQueries({ queryKey: ["my-profile"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save");
+      toast.error(e instanceof Error ? e.message : "Could not save your changes. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -92,14 +92,14 @@ function ProfilePage() {
 
         {q.isLoading && (
           <div className="glass rounded-2xl p-6 grid place-items-center">
-            <Loader2 className="animate-spin" />
+            <Loader2 className="animate-spin" aria-label="Loading profile" />
           </div>
         )}
         {q.isError && (
           <div className="glass rounded-2xl p-4 text-sm">
-            Could not load.{" "}
+            We couldn't load your profile settings.{" "}
             <button className="underline" onClick={() => void q.refetch()}>
-              Retry
+              Try again
             </button>
           </div>
         )}
@@ -108,19 +108,21 @@ function ProfilePage() {
           <>
             <section className="glass rounded-2xl p-4 space-y-1.5 text-[12px] text-white/70">
               <div className="flex justify-between">
-                <span>Phone</span>
+                <span>Phone number</span>
                 <span className="tabular">+91 {p.phone}</span>
               </div>
               <div className="flex justify-between">
-                <span>Balance</span>
+                <span>Wallet balance</span>
                 <span className="tabular text-[#ffc32b] font-display">{inr(p.balancePaise)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Joined</span>
+                <span>Member since</span>
                 <span>{new Date(p.createdAt).toLocaleDateString()}</span>
               </div>
               {p.isBanned && (
-                <div className="text-[#ff4d6d]">Account suspended — contact support.</div>
+                <div className="text-[#ff4d6d]">
+                  Your account is currently suspended. Please contact support for assistance.
+                </div>
               )}
             </section>
 
@@ -133,12 +135,12 @@ function ProfilePage() {
                   value={name ?? p.displayName ?? ""}
                   onChange={(e) => setName(e.target.value)}
                   maxLength={20}
-                  placeholder="Pick a name"
+                  placeholder="Enter display name"
                   className="flex-1 h-11 rounded-xl bg-black/40 border border-white/10 px-3 outline-none text-sm"
                 />
                 <button
                   disabled={busy || !name}
-                  onClick={() => void run({ displayName: name ?? "" }, "Name saved")}
+                  onClick={() => void run({ displayName: name ?? "" }, "Display name saved")}
                   className="h-11 px-4 rounded-xl bg-white/10 text-sm disabled:opacity-40"
                 >
                   Save
@@ -180,42 +182,47 @@ function ProfilePage() {
               <div className="space-y-1">
                 <div className="text-[12px] text-white/70">
                   Daily loss limit{" "}
-                  {p.dailyLossLimitPaise ? `(now ${inr(p.dailyLossLimitPaise)})` : "(off)"}
+                  {p.dailyLossLimitPaise ? `(active: ${inr(p.dailyLossLimitPaise)})` : "(not set)"}
                 </div>
                 <div className="flex gap-2">
                   <input
                     inputMode="numeric"
                     value={limit ?? ""}
                     onChange={(e) => setLimit(e.target.value.replace(/\D/g, ""))}
-                    placeholder="₹ amount"
+                    placeholder="Daily limit in ₹ (min ₹10)"
                     className="flex-1 h-11 rounded-xl bg-black/40 border border-white/10 px-3 outline-none text-sm"
                   />
                   <button
                     disabled={busy || !limit}
                     onClick={() =>
-                      void run({ dailyLossLimitPaise: Number(limit) * 100 }, "Limit set")
+                      void run(
+                        { dailyLossLimitPaise: Number(limit) * 100 },
+                        "Daily loss limit updated",
+                      )
                     }
-                    className="h-11 px-4 rounded-xl bg-white/10 text-sm disabled:opacity-40"
+                    className="h-11 px-3.5 rounded-xl bg-white/10 text-sm disabled:opacity-40 whitespace-nowrap"
                   >
-                    Set
+                    Save limit
                   </button>
                   {p.dailyLossLimitPaise && (
                     <button
                       disabled={busy}
-                      onClick={() => void run({ dailyLossLimitPaise: null }, "Limit removed")}
+                      onClick={() =>
+                        void run({ dailyLossLimitPaise: null }, "Daily loss limit removed")
+                      }
                       className="h-11 px-3 rounded-xl bg-white/5 text-sm"
                     >
-                      Off
+                      Remove
                     </button>
                   )}
                 </div>
               </div>
               <div className="space-y-1">
                 <div className="text-[12px] text-white/70">
-                  Take a break{" "}
+                  Pause betting{" "}
                   {paused && p.selfExcludedUntil && (
                     <span className="text-[#ffc32b]">
-                      — paused until {new Date(p.selfExcludedUntil).toLocaleString()}
+                      · paused until {new Date(p.selfExcludedUntil).toLocaleString()}
                     </span>
                   )}
                 </div>
@@ -225,7 +232,10 @@ function ProfilePage() {
                       key={d}
                       disabled={busy}
                       onClick={() => {
-                        void run({ selfExcludeDays: d }, `Betting paused for ${d === 1 ? "24 hours" : `${d} days`}`);
+                        void run(
+                          { selfExcludeDays: d },
+                          `Betting paused for ${d === 1 ? "24 hours" : `${d} days`}`,
+                        );
                       }}
                       className="h-11 rounded-xl bg-white/5 text-sm"
                     >
@@ -235,7 +245,7 @@ function ProfilePage() {
                 </div>
               </div>
               <p className="text-[10px] text-white/40">
-                If gambling stops being fun, talk to someone you trust or a local support service.
+                Only bet what you can afford to lose. If playing stops being enjoyable, pause your account and reach out to a local support service.
               </p>
             </section>
 

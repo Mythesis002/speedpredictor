@@ -11,12 +11,12 @@ export const Route = createFileRoute("/auth")({
       {
         name: "description",
         content:
-          "Create your Apex account with a phone number and password. New players get a ₹28 welcome bonus and can start predicting from ₹10.",
+          "Sign in or create your Apex account with a 10-digit mobile number. New players receive a ₹28 welcome bonus and can bet from ₹10.",
       },
       { property: "og:title", content: "Sign in to Apex" },
       {
         property: "og:description",
-        content: "Phone-number sign up, ₹28 welcome bonus, ₹10 minimum prediction.",
+        content: "Mobile number sign-in, ₹28 welcome bonus, ₹10 minimum bet.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -64,12 +64,13 @@ function AuthPage() {
         if (err) throw err;
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Something went wrong";
+      const msg =
+        err instanceof Error ? err.message : "Could not complete sign-in. Please try again.";
       setError(
         msg.includes("already registered")
-          ? "This number is already registered — sign in instead."
+          ? "This phone number is already registered. Switch to Sign In above."
           : msg.includes("Invalid login")
-            ? "Wrong number or password."
+            ? "Incorrect phone number or password. Check your details and try again."
             : msg,
       );
       setBusy(false);
@@ -139,7 +140,7 @@ function AuthPage() {
                   maxLength={10}
                   value={digits}
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  placeholder="9876543210"
+                  placeholder="10-digit mobile number"
                   className="flex-1 bg-transparent outline-none font-display tabular text-base placeholder:text-white/20"
                 />
               </div>
@@ -201,7 +202,7 @@ function AuthPage() {
         </div>
 
         <p className="mt-4 text-center text-[10px] text-white/30 font-display tracking-[0.12em]">
-          MINIMUM PREDICTION ₹10 · 18+ ONLY · PLAY RESPONSIBLY
+          MINIMUM BET ₹10 · 18+ ONLY · PLAY RESPONSIBLY
         </p>
       </div>
     </main>

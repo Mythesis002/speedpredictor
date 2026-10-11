@@ -11,10 +11,10 @@ import { WithdrawModal } from "@/components/race/WithdrawModal";
 export const Route = createFileRoute("/_authenticated/history")({
   head: () => ({
     meta: [
-      { title: "My bets — Apex" },
-      { name: "description", content: "Your Apex bet history, win rate and profit." },
-      { property: "og:title", content: "My bets — Apex" },
-      { property: "og:description", content: "Bet history and results." },
+      { title: "Bet History — Apex" },
+      { name: "description", content: "Your Apex bet history, win rate, and net profit." },
+      { property: "og:title", content: "Bet History — Apex" },
+      { property: "og:description", content: "Bet history and verified race results." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -87,17 +87,17 @@ function HistoryPage() {
               onClick={exportCsv}
               className="inline-flex items-center gap-1 text-[12px] text-white/60 min-h-[44px]"
             >
-              <Download size={13} /> CSV
+              <Download size={13} /> Export CSV
             </button>
           )}
         </div>
-        <h1 className="font-display text-xl">My bets</h1>
+        <h1 className="font-display text-xl">Bet history</h1>
 
         <div className="grid grid-cols-4 gap-2">
           {[
-            ["Bets", String(summary.total)],
+            ["Total bets", String(summary.total)],
             ["Win rate", `${summary.rate}%`],
-            ["Net", `${summary.net >= 0 ? "+" : "−"}${inr(Math.abs(summary.net))}`],
+            ["Net P&L", `${summary.net >= 0 ? "+" : "−"}${inr(Math.abs(summary.net))}`],
             ["Best win", inr(summary.best)],
           ].map(([k, v]) => (
             <div key={k} className="glass rounded-xl p-2">
@@ -123,23 +123,34 @@ function HistoryPage() {
 
         {q.isLoading && (
           <div className="glass rounded-2xl p-6 grid place-items-center">
-            <Loader2 className="animate-spin" />
+            <Loader2 className="animate-spin" aria-label="Loading bet history" />
           </div>
         )}
         {q.isError && (
           <div className="glass rounded-2xl p-4 text-sm">
-            Could not load.{" "}
+            We couldn't load your bet history.{" "}
             <button className="underline" onClick={() => void q.refetch()}>
-              Retry
+              Try again
             </button>
           </div>
         )}
-        {!q.isLoading && shown.length === 0 && (
+        {!q.isLoading && !q.isError && shown.length === 0 && (
           <div className="glass rounded-2xl p-6 text-center text-sm text-white/55">
-            No bets yet.{" "}
-            <Link to="/" className="underline">
-              Play now
-            </Link>
+            {bets.length === 0 ? (
+              <>
+                You haven't placed any bets yet.{" "}
+                <Link to="/" className="underline text-white/80">
+                  Go to live race
+                </Link>
+              </>
+            ) : (
+              <>
+                No {filter} bets found.{" "}
+                <button className="underline text-white/80" onClick={() => setFilter("all")}>
+                  Show all bets
+                </button>
+              </>
+            )}
           </div>
         )}
 
@@ -166,7 +177,7 @@ function HistoryPage() {
                 />
                 <div className="flex-1 min-w-0">
                   <div className="text-[12px]">
-                    Round #{b.roundId} · {car.colorName} · {b.multiplier}x
+                    Round #{b.roundId} · {car.colorName} · {b.multiplier}×
                   </div>
                   <div
                     className="text-[10px] text-white/40"
@@ -177,7 +188,7 @@ function HistoryPage() {
                 </div>
                 <div className="text-right">
                   <div
-                    className={`text-[10px] uppercase ${
+                    className={`text-[10px] uppercase font-display tracking-wide ${
                       b.status === "won"
                         ? "text-[#26ff9a]"
                         : b.status === "lost"
@@ -185,7 +196,7 @@ function HistoryPage() {
                           : "text-white/50"
                     }`}
                   >
-                    {b.status}
+                    {b.status === "pending" ? "in progress" : b.status}
                   </div>
                   <div
                     className={`text-[12px] tabular ${

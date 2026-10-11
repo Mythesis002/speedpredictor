@@ -138,10 +138,10 @@ function AdminPage() {
   if (forbidden) {
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center gap-3 px-6 text-center">
-        <h1 className="font-display text-xl text-white">Owner access only</h1>
-        <p className="text-sm text-white/50">This console is restricted to the account owner.</p>
+        <h1 className="font-display text-xl text-white">Owner access required</h1>
+        <p className="text-sm text-white/50">This console is restricted to authorized owner accounts.</p>
         <Link to="/" className="glass rounded-xl px-4 py-2 text-sm text-white">
-          Back to the game
+          Back to race
         </Link>
       </div>
     );
@@ -157,7 +157,7 @@ function AdminPage() {
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
     >
       <header className="flex items-center gap-2 px-3 py-3">
-        <Link to="/" className="glass rounded-xl p-2 text-white/70">
+        <Link to="/" aria-label="Back to race" className="glass rounded-xl p-2 text-white/70">
           <ArrowLeft size={16} />
         </Link>
         <div className="leading-none">
@@ -185,36 +185,36 @@ function AdminPage() {
         />
         <Stat
           icon={TrendingUp}
-          label="TODAY'S EARNING"
+          label="TODAY'S NET REVENUE"
           value={o ? rupees(o.game.todayGrossPaise) : "—"}
           sub={o ? `All-time ${rupees(o.game.grossPaise)}` : undefined}
           tone={o && o.game.todayGrossPaise < 0 ? "warn" : "good"}
         />
         <Stat
           icon={Clock}
-          label="UNPAID DEPOSITS"
+          label="PENDING DEPOSITS"
           value={o ? String(o.money.depositsPendingCount) : "—"}
-          sub={o ? `${rupees(o.money.depositsPendingPaise)} not paid yet` : undefined}
+          sub={o ? `${rupees(o.money.depositsPendingPaise)} awaiting payment` : undefined}
           tone="warn"
         />
         <Stat
           icon={Banknote}
-          label="WANTS TO WITHDRAW"
+          label="PENDING PAYOUTS"
           value={o ? String(o.money.withdrawPendingCount) : "—"}
           sub={o ? `${rupees(o.money.withdrawPendingPaise)} requested` : undefined}
           tone="warn"
         />
         <Stat
           icon={Users}
-          label="PLAYERS JOINED"
+          label="REGISTERED PLAYERS"
           value={o ? String(o.players.total) : "—"}
           sub={o ? `${o.players.today} today · ${o.players.week} this week` : undefined}
         />
         <Stat
           icon={Wallet}
-          label="WALLET LIABILITY"
+          label="PLAYER BALANCES"
           value={o ? rupees(o.money.liabilityPaise) : "—"}
-          sub={o ? `Bonus given ${rupees(o.money.bonusPaise)}` : undefined}
+          sub={o ? `Bonuses credited ${rupees(o.money.bonusPaise)}` : undefined}
         />
         <Stat
           icon={Coins}
@@ -224,7 +224,7 @@ function AdminPage() {
         />
         <Stat
           icon={Banknote}
-          label="PAID OUT TO PLAYERS"
+          label="TOTAL WINNINGS PAID"
           value={o ? rupees(o.game.paidOutPaise) : "—"}
           sub={o ? `Withdrawn ${rupees(o.money.withdrawnPaise)}` : undefined}
         />
@@ -353,14 +353,14 @@ function AdminPage() {
                     className="rounded-xl py-2 text-[12px] font-display text-black disabled:opacity-50"
                     style={{ background: "#26ff9a" }}
                   >
-                    Mark paid
+                    Approve & mark paid
                   </button>
                   <button
                     disabled={act.isPending}
                     onClick={() => act.mutate({ withdrawalId: w.id, action: "reject" })}
                     className="rounded-xl py-2 text-[12px] font-display text-white/80 border border-white/15 disabled:opacity-50"
                   >
-                    Reject
+                    Reject request
                   </button>
                 </div>
               </div>
@@ -415,10 +415,10 @@ function AdminPage() {
                 <div className="text-right">
                   <div className="tabular text-[13px] text-white">{rupees(d.amountPaise)}</div>
                   <div
-                    className="text-[10px]"
+                    className="text-[10px] font-display uppercase tracking-wide"
                     style={{ color: d.status === "paid" ? "#26ff9a" : "#ffc32b" }}
                   >
-                    {d.status === "paid" ? "paid" : "not paid yet"}
+                    {d.status === "paid" ? "paid" : "pending"}
                   </div>
                 </div>
               </div>
@@ -437,7 +437,7 @@ function AdminPage() {
                   </div>
                 </div>
                 {p.isBanned && (
-                  <div className="text-[10px] text-[#ff4d6d]">Banned: {p.bannedReason}</div>
+                  <div className="text-[10px] text-[#ff4d6d]">Suspended: {p.bannedReason}</div>
                 )}
                 <PlayerActions id={p.id} banned={p.isBanned} />
                 <div className="text-[10px] text-white/40 mt-0.5">
@@ -502,30 +502,43 @@ function PlayerActions({ id, banned }: { id: string; banned: boolean }) {
     toast.success(m);
     void qc.invalidateQueries({ queryKey: ["admin"] });
   };
-  const fail = (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed");
+  const fail = (e: unknown) =>
+    toast.error(e instanceof Error ? e.message : "Action could not be completed");
   return (
     <div className="flex gap-2 mt-1">
       <button
         className="h-8 px-3 rounded-lg bg-white/5 text-[10px]"
         onClick={() => {
-          const reason = prompt(banned ? "Reason for unban" : "Reason for ban");
+          const reason = prompt(
+            banned
+              ? "Enter reason for restoring this account (3–300 characters):"
+              : "Enter reason for suspending this account (3–300 characters):",
+          );
           if (!reason) return;
-          ban({ data: { userId: id, banned: !banned, reason } }).then(() => done(banned ? "Unbanned" : "Banned"), fail);
+          ban({ data: { userId: id, banned: !banned, reason } }).then(
+            () => done(banned ? "Account restored" : "Account suspended"),
+            fail,
+          );
         }}
       >
-        {banned ? "Unban" : "Ban"}
+        {banned ? "Restore account" : "Suspend"}
       </button>
       <button
         className="h-8 px-3 rounded-lg bg-white/5 text-[10px]"
         onClick={() => {
-          const amt = Number(prompt("Adjust balance in ₹ (use minus to debit, e.g. -50)"));
+          const amt = Number(
+            prompt("Enter balance adjustment in ₹ (use a negative value to debit, e.g. -50):"),
+          );
           if (!Number.isFinite(amt) || amt === 0) return;
-          const reason = prompt("Reason (required)");
+          const reason = prompt("Enter audit reason for this adjustment (3–300 characters):");
           if (!reason) return;
-          adjust({ data: { userId: id, amountPaise: Math.round(amt * 100), reason } }).then(() => done("Balance adjusted"), fail);
+          adjust({ data: { userId: id, amountPaise: Math.round(amt * 100), reason } }).then(
+            () => done("Wallet balance adjusted"),
+            fail,
+          );
         }}
       >
-        Adjust ₹
+        Adjust balance
       </button>
     </div>
   );

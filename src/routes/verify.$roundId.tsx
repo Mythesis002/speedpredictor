@@ -60,16 +60,23 @@ function VerifyPage() {
         <h1 className="font-display text-xl">Verify Round #{roundId}</h1>
 
         {q.isLoading && (
-          <div className="glass rounded-2xl p-6 grid place-items-center"><Loader2 className="animate-spin" /></div>
+          <div className="glass rounded-2xl p-6 grid place-items-center">
+            <Loader2 className="animate-spin" aria-label="Verifying round" />
+          </div>
         )}
         {q.isError && (
           <div className="glass rounded-2xl p-4 text-sm">
-            Could not load this round. <button className="underline" onClick={() => void q.refetch()}>Retry</button>
+            We couldn't load verification data for this round.{" "}
+            <button className="underline" onClick={() => void q.refetch()}>
+              Try again
+            </button>
           </div>
         )}
         {d && !d.ok && (
           <div className="glass rounded-2xl p-4 text-sm text-white/70">
-            {d.reason === "early" ? "This round is still taking bets. Its secret is revealed the moment betting closes." : "This round is too old to verify here."}
+            {d.reason === "early"
+              ? "Betting is still open for this round. The server secret is revealed as soon as betting locks."
+              : "Verification records are only retained for the most recent 500 rounds."}
           </div>
         )}
 
@@ -81,18 +88,18 @@ function VerifyPage() {
             >
               {passed ? <CheckCircle2 className="text-[#26ff9a]" /> : <XCircle className="text-[#ff4d6d]" />}
               <div>
-                <div className="font-display text-sm">{passed ? "Verified ✓" : "Mismatch ✗"}</div>
+                <div className="font-display text-sm">{passed ? "Outcome verified ✓" : "Verification mismatch ✗"}</div>
                 <div className="text-[11px] text-white/60">
-                  Winner: <b style={{ color: lineup[d.winner].color }}>{lineup[d.winner].colorName}</b> · checked in your browser
+                  Winner: <b style={{ color: lineup[d.winner].color }}>{lineup[d.winner].colorName}</b> · Verified locally in your browser
                 </div>
               </div>
             </div>
 
             <div className="glass rounded-2xl p-4 space-y-2 text-[11px] break-all">
-              <Row k="Commitment (published before betting)" v={d.commit} />
-              <Row k="Revealed secret" v={d.reveal} />
-              <Row k="SHA-256 of secret (computed here)" v={d.hash} ok={d.hashOk} />
-              <Row k="Finish order (lanes)" v={d.order.map((l) => lineup[l].colorName).join(" → ")} ok={d.winnerOk} />
+              <Row k="Pre-race SHA-256 commitment" v={d.commit} />
+              <Row k="Revealed round secret" v={d.reveal} />
+              <Row k="Browser SHA-256 check" v={d.hash} ok={d.hashOk} />
+              <Row k="Finishing order" v={d.order.map((l) => lineup[l].colorName).join(" → ")} ok={d.winnerOk} />
             </div>
 
             <div className="glass rounded-2xl p-4">
@@ -100,19 +107,19 @@ function VerifyPage() {
               {lineup.map((c, i) => (
                 <div key={c.id} className="flex justify-between text-[12px] py-1">
                   <span style={{ color: c.color }}>{c.colorName}</span>
-                  <span className="tabular text-white/70">{(probs[i] * 100).toFixed(1)}% chance · pays {c.multiplier}x</span>
+                  <span className="tabular text-white/70">{(probs[i] * 100).toFixed(1)}% win chance · {c.multiplier}× payout</span>
                 </div>
               ))}
-              <div className="text-[10px] text-white/45 mt-2">Payout = {RTP} ÷ win chance. House edge: {Math.round((1 - RTP) * 100)}%.</div>
+              <div className="text-[10px] text-white/45 mt-2">Payout multiplier = {RTP} ÷ win probability ({Math.round((1 - RTP) * 100)}% house edge).</div>
             </div>
           </>
         )}
 
         <div className="glass rounded-2xl p-4 text-[11px] text-white/60 space-y-1.5">
-          <div className="font-display text-[10px] tracking-[0.2em] text-white/55">HOW IT WORKS</div>
-          <p>1. Before betting opens we publish a fingerprint (SHA-256) of a secret for the round.</p>
-          <p>2. When betting closes we reveal the secret. Your browser hashes it — it must match the fingerprint.</p>
-          <p>3. The finish order is computed from that secret, weighted by each car's published win chance. Since the secret was locked in first, nobody could change the result after seeing bets.</p>
+          <div className="font-display text-[10px] tracking-[0.2em] text-white/55">HOW VERIFICATION WORKS</div>
+          <p>1. Before betting opens, we publish the SHA-256 commitment hash of the round's secret.</p>
+          <p>2. As soon as betting locks, we reveal the secret so your browser can hash it and confirm it matches the commitment.</p>
+          <p>3. The finishing order is deterministically derived from that secret and each car's published win probability, ensuring no result can be altered after bets are placed.</p>
         </div>
       </div>
     </main>

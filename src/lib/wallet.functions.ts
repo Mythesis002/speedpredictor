@@ -62,11 +62,11 @@ export const placeBet = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: { roundId: number; lane: number; amountPaise: number }) => {
     const { roundId, lane, amountPaise } = data ?? {};
-    if (!Number.isInteger(roundId)) throw new Error("Invalid round");
-    if (!Number.isInteger(lane) || lane < 0 || lane > 2) throw new Error("Invalid lane");
+    if (!Number.isInteger(roundId)) throw new Error("Invalid race round.");
+    if (!Number.isInteger(lane) || lane < 0 || lane > 2) throw new Error("Select a valid car lane.");
     if (!Number.isInteger(amountPaise) || amountPaise < MIN_BET_PAISE)
-      throw new Error("Minimum bet is ₹10");
-    if (amountPaise > MAX_BET_PAISE) throw new Error("Stake is above the table limit");
+      throw new Error("Minimum bet is ₹10.");
+    if (amountPaise > MAX_BET_PAISE) throw new Error("Maximum bet per round is ₹1,00,000.");
     return { roundId, lane, amountPaise };
   })
   .handler(async ({ data, context }) => {
@@ -83,7 +83,7 @@ export const placeBet = createServerFn({ method: "POST" })
     });
     if (error) {
       const msg = error.message.includes("duplicate key")
-        ? "You already have a bet on this round"
+        ? "You already placed a bet on this round."
         : error.message.replace(/^.*ERROR:\s*/, "").replace(/^[A-Z_]+:\s*/, "");
       throw new Error(msg);
     }
@@ -152,10 +152,10 @@ export const createDeposit = createServerFn({ method: "POST" })
     });
 
     if (!Number.isInteger(data.amountPaise) || data.amountPaise < MIN_DEPOSIT_PAISE) {
-      return emptyResult("Minimum deposit is ₹10");
+      return emptyResult("Minimum deposit is ₹10.");
     }
     if (data.amountPaise > MAX_DEPOSIT_PAISE) {
-      return emptyResult("Amount is above the deposit limit");
+      return emptyResult("Maximum single deposit is ₹2,00,000.");
     }
 
     try {
@@ -167,7 +167,7 @@ export const createDeposit = createServerFn({ method: "POST" })
         .select("id")
         .single();
       if (error || !dep) {
-        return emptyResult(error?.message || "Could not initialize deposit record");
+        return emptyResult(error?.message || "Could not start your deposit. Please try again.");
       }
 
       const qr = await createRazorpayQr(data.amountPaise, dep.id, context.userId);
@@ -187,7 +187,9 @@ export const createDeposit = createServerFn({ method: "POST" })
       };
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Payment gateway temporarily unavailable. Please try again.";
+        err instanceof Error
+          ? err.message
+          : "Payment service is temporarily unavailable. Please try again.";
       return emptyResult(message);
     }
   });
@@ -249,9 +251,11 @@ export const requestWithdrawal = createServerFn({ method: "POST" })
     const amountPaise = data?.amountPaise;
     const upiId = (data?.upiId ?? "").trim();
     if (!Number.isInteger(amountPaise) || amountPaise < 10000)
-      throw new Error("Minimum withdrawal is ₹100");
-    if (amountPaise > MAX_DEPOSIT_PAISE) throw new Error("Amount is above the payout limit");
-    if (!/^[\w.\-]{2,64}@[a-zA-Z]{2,32}$/.test(upiId)) throw new Error("Enter a valid UPI ID");
+      throw new Error("Minimum payout is ₹100.");
+    if (amountPaise > MAX_DEPOSIT_PAISE)
+      throw new Error("Maximum single payout is ₹2,00,000.");
+    if (!/^[\w.\-]{2,64}@[a-zA-Z]{2,32}$/.test(upiId))
+      throw new Error("Enter a valid UPI ID (for example, name@upi).");
     return { amountPaise, upiId };
   })
   .handler(async ({ data, context }) => {

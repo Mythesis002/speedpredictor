@@ -74,7 +74,7 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
     try {
       const res = await start({ data: { amountPaise: Math.round(amount * 100) } });
       if (res.ok === false || res.error || !res.depositId) {
-        setError(res.error || "Could not start the payment. Please try again.");
+        setError(res.error || "Could not generate a payment QR code. Please try again.");
         setBusy(false);
         return;
       }
@@ -104,7 +104,7 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
       setError(
         err instanceof Error && !err.message.includes("500")
           ? err.message
-          : "Payment gateway could not be reached. Please check your connection and try again.",
+          : "Unable to connect to the payment service. Check your connection and try again.",
       );
     }
     setBusy(false);
@@ -115,13 +115,13 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
       <div className="w-full max-w-sm glass rounded-2xl p-4 relative overflow-hidden">
         <button
           onClick={onClose}
-          aria-label="Close"
+          aria-label="Close deposit dialog"
           className="absolute right-3 top-3 w-8 h-8 rounded-lg grid place-items-center bg-white/10"
         >
           <X size={15} />
         </button>
 
-        <div className="font-display text-[13px] tracking-[0.18em] mb-3">ADD MONEY</div>
+        <div className="font-display text-[13px] tracking-[0.18em] mb-3">ADD FUNDS</div>
 
         {!qr && (
           <>
@@ -203,7 +203,7 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
               onClick={onClose}
               className="mt-4 w-full h-11 rounded-xl font-display text-[12px] tracking-[0.14em] bg-white/10"
             >
-              BACK TO THE RACE
+              BACK TO RACE
             </button>
           </div>
         )}

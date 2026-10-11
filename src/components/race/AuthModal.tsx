@@ -50,12 +50,13 @@ export function AuthModal({ open, onClose, promptText }: Props) {
       setBusy(false);
       onClose();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Something went wrong";
+      const msg =
+        err instanceof Error ? err.message : "Could not complete sign-in. Please try again.";
       setError(
         msg.includes("already registered")
-          ? "This number is already registered — sign in instead."
+          ? "This phone number is already registered. Switch to Sign In above."
           : msg.includes("Invalid login")
-            ? "Wrong number or password."
+            ? "Incorrect phone number or password. Check your details and try again."
             : msg,
       );
       setBusy(false);
@@ -71,7 +72,7 @@ export function AuthModal({ open, onClose, promptText }: Props) {
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close sign in modal"
+          aria-label="Close sign-in dialog"
           className="absolute right-3 top-3 w-8 h-8 rounded-lg grid place-items-center bg-white/10 text-white/70 hover:text-white"
         >
           <X size={15} />
@@ -130,7 +131,7 @@ export function AuthModal({ open, onClose, promptText }: Props) {
                 maxLength={10}
                 value={digits}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                placeholder="9876543210"
+                placeholder="10-digit mobile number"
                 className="flex-1 bg-transparent outline-none font-display tabular text-base placeholder:text-white/20 text-white"
               />
             </div>

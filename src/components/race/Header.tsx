@@ -23,7 +23,7 @@ export function Header({ balance, roundId, onTopUp, isGuest = false, onSignIn }:
   return (
     <div className="flex items-center gap-1.5 px-2.5 py-2">
       {/* Official Golden SVG Logo */}
-      <Link to="/" className="shrink-0 flex items-center" aria-label="Apex Home">
+      <Link to="/" className="shrink-0 flex items-center" aria-label="Apex live race">
         <img
           src="/apex-logo.svg"
           alt="Apex"
@@ -49,7 +49,7 @@ export function Header({ balance, roundId, onTopUp, isGuest = false, onSignIn }:
         type="button"
         onClick={() => setMuted(toggleSoundMuted())}
         aria-label={muted ? "Unmute sound effects" : "Mute sound effects"}
-        title={muted ? "Unmute sound" : "Mute sound"}
+        title={muted ? "Unmute sound effects" : "Mute sound effects"}
         className="glass w-8 h-8 rounded-xl grid place-items-center text-white/75 hover:text-white active:scale-95 shrink-0"
       >
         {muted ? <VolumeX size={14} className="text-white/40" /> : <Volume2 size={14} className="text-[#ffc32b]" />}

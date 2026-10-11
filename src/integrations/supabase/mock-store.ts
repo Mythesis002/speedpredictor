@@ -515,13 +515,21 @@ export function createMockSupabaseClient(defaultUserId?: string) {
 
         const profile = ensureProfileForUser(userId);
         if (profile.is_banned) {
-          return { data: null, error: { message: "Account is suspended" } };
+          return { data: null, error: { message: "Your account is suspended. Please contact support." } };
         }
         if (profile.self_excluded_until && new Date(profile.self_excluded_until) > new Date()) {
-          return { data: null, error: { message: "Self-exclusion is active" } };
+          return {
+            data: null,
+            error: {
+              message: `Betting is paused on your account until ${new Date(profile.self_excluded_until).toLocaleString()}.`,
+            },
+          };
         }
         if (profile.balance_paise < amountPaise) {
-          return { data: null, error: { message: "Insufficient balance" } };
+          return {
+            data: null,
+            error: { message: "Insufficient wallet balance. Add funds to place this bet." },
+          };
         }
         const existing = store.bets.find((b) => b.user_id === userId && b.round_id === roundId);
         if (existing) {
@@ -615,7 +623,7 @@ export function createMockSupabaseClient(defaultUserId?: string) {
         const amountPaise = Number(args.p_amount_paise);
         const dep = store.deposits.find((d) => d.id === depId);
         if (!dep) {
-          return { data: null, error: { message: "Deposit not found" } };
+          return { data: null, error: { message: "Deposit record not found." } };
         }
         const profile = ensureProfileForUser(dep.user_id);
         if (dep.status === "paid") {
@@ -644,7 +652,10 @@ export function createMockSupabaseClient(defaultUserId?: string) {
         const upiId = String(args.p_upi_id);
         const profile = ensureProfileForUser(userId);
         if (profile.balance_paise < amountPaise) {
-          return { data: null, error: { message: "Insufficient balance" } };
+          return {
+            data: null,
+            error: { message: "Requested payout exceeds your available wallet balance." },
+          };
         }
         store.withdrawals.push({
           id: `wd-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -664,12 +675,15 @@ export function createMockSupabaseClient(defaultUserId?: string) {
         const action = String(args.p_action);
         const note = args.p_note ? String(args.p_note) : null;
         const wd = store.withdrawals.find((w) => w.id === wdId);
-        if (!wd) return { data: null, error: { message: "Withdrawal not found" } };
+        if (!wd) return { data: null, error: { message: "Payout request not found." } };
         const profile = ensureProfileForUser(wd.user_id);
         if (wd.status === "pending") {
           if (action === "approve") {
             if (profile.balance_paise < wd.amount_paise) {
-              return { data: null, error: { message: "Insufficient player balance" } };
+              return {
+                data: null,
+                error: { message: "Player's current wallet balance is lower than this payout amount." },
+              };
             }
             profile.balance_paise -= wd.amount_paise;
             wd.status = "paid";

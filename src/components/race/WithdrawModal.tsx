@@ -35,7 +35,7 @@ export function WithdrawModal({ open, onClose, balancePaise }: Props) {
         data: { amountPaise: Math.round(Number(amount) * 100), upiId: upi.trim() },
       }),
     onSuccess: () => {
-      toast.success("Payout request sent — you'll be paid after review");
+      toast.success("Payout request submitted. Funds are sent to your UPI ID after review.");
       setAmount("100");
       setUpi("");
       void qc.invalidateQueries({ queryKey: ["my-withdrawals"] });
@@ -65,27 +65,27 @@ export function WithdrawModal({ open, onClose, balancePaise }: Props) {
       >
         <div className="flex items-center justify-between">
           <div className="font-display text-white text-[15px]">Cash out</div>
-          <button onClick={onClose} aria-label="Close" className="text-white/50 p-1">
+          <button onClick={onClose} aria-label="Close cash out dialog" className="text-white/50 p-1">
             <X size={18} />
           </button>
         </div>
 
         <div className="text-[11px] text-white/50 mt-1">
-          Withdrawable balance <span className="text-white font-display tabular">{rupees(balancePaise)}</span> · minimum ₹100
+          Available balance <span className="text-white font-display tabular">{rupees(balancePaise)}</span> · ₹100 minimum payout
         </div>
 
-        {/* Encouraging helper banner when balance < ₹100 */}
+        {/* Progress helper banner when balance < ₹100 */}
         {belowMinimum && (
           <div className="mt-3 rounded-2xl p-3 bg-[#ffc32b]/10 border border-[#ffc32b]/35 space-y-2">
             <div className="flex items-start gap-2">
               <Sparkles size={15} className="text-[#ffc32b] shrink-0 mt-0.5" />
               <p className="text-[11.5px] text-[#ffe28a] leading-snug font-medium">
-                Bonus unlocked! Win up to ₹100 to cash out instantly via UPI.
+                Reach ₹100 in your wallet to request a UPI payout.
               </p>
             </div>
             <div className="space-y-1">
               <div className="flex justify-between text-[10px] font-display tracking-wide text-white/60 tabular">
-                <span>PROGRESS TO CASHOUT</span>
+                <span>PROGRESS TO ₹100 MINIMUM</span>
                 <span>{rupees(balancePaise)} / ₹100</span>
               </div>
               <div className="h-1.5 rounded-full bg-black/40 overflow-hidden">
@@ -119,7 +119,7 @@ export function WithdrawModal({ open, onClose, balancePaise }: Props) {
           disabled={belowMinimum}
           value={upi}
           onChange={(e) => setUpi(e.target.value)}
-          placeholder="name@upi"
+          placeholder="yourname@upi"
           className="w-full mt-1 rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-white outline-none disabled:opacity-45"
         />
 
@@ -130,21 +130,21 @@ export function WithdrawModal({ open, onClose, balancePaise }: Props) {
           style={{ background: "#26ff9a" }}
         >
           {submit.isPending
-            ? "Sending…"
+            ? "Submitting request…"
             : belowMinimum
-              ? `Reach ₹100 to cash out (${rupees(MIN_WITHDRAW_PAISE - balancePaise)} to go)`
-              : "Request payout"}
+              ? `${rupees(MIN_WITHDRAW_PAISE - balancePaise)} more needed to cash out`
+              : "Request UPI payout"}
         </button>
         {!belowMinimum && !canSubmit && (amount || upi) && (
           <p className="mt-2 text-center text-[10px] text-white/40">
-            Enter at least ₹100, within your balance, and a valid UPI ID.
+            Enter an amount between ₹100 and {rupees(balancePaise)}, plus a valid UPI ID (e.g. name@upi).
           </p>
         )}
 
         {(list.data ?? []).length > 0 && (
           <div className="mt-4">
             <div className="text-[9px] font-display tracking-[0.16em] text-white/40 mb-1">
-              YOUR REQUESTS
+              RECENT PAYOUT REQUESTS
             </div>
             {(list.data ?? []).map((w) => (
               <div
@@ -153,7 +153,7 @@ export function WithdrawModal({ open, onClose, balancePaise }: Props) {
               >
                 <span className="text-white/70 tabular">{rupees(w.amountPaise)}</span>
                 <span
-                  className="text-[10px]"
+                  className="text-[10px] font-display uppercase tracking-wide"
                   style={{
                     color:
                       w.status === "paid"

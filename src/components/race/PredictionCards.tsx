@@ -34,7 +34,7 @@ export function PredictionCards({
             key={car.id}
             disabled={locked}
             aria-pressed={isSelected}
-            aria-label={`${carLabel(car)} car, pays ${car.multiplier} times`}
+            aria-label={`Select ${carLabel(car)} car, ${car.multiplier}× payout (${formatINR(amount * car.multiplier)} return)`}
             onClick={() => onSelect(i)}
             className={`relative rounded-2xl overflow-hidden border transition-all duration-300 active:scale-[0.97] ${
               isLoser ? "opacity-40" : ""
@@ -84,7 +84,7 @@ export function PredictionCards({
                   border: "1px solid rgba(255,255,255,0.18)",
                 }}
               >
-                {car.multiplier}x
+                {car.multiplier}×
               </div>
               <div className="mt-1 text-[10px] font-display tabular text-white/55">
                 WIN {formatINR(amount * car.multiplier)}

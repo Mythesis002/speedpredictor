@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Highway } from "@/components/race/Highway";
@@ -33,7 +33,6 @@ import {
   playLaunchRoar,
   playWinChime,
 } from "@/lib/sound";
-import { ShieldCheck, Timer } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -113,7 +112,7 @@ function Game({ isGuest }: { isGuest: boolean }) {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authPrompt, setAuthPrompt] = useState<string>(
-    "Sign in or create an account to claim your ₹28 welcome bonus and start predicting.",
+    "Sign in or create an account to claim your ₹28 welcome bonus and place bets.",
   );
   const [betError, setBetError] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
@@ -207,7 +206,7 @@ function Game({ isGuest }: { isGuest: boolean }) {
           } else if (res.status === "lost") {
             setResult({
               won: false,
-              text: `${carLabel(cars[res.winnerLane])} won · you lost ${formatINR(b.amount)}`,
+              text: `${carLabel(cars[res.winnerLane])} won · Stake ${formatINR(b.amount)} not returned`,
               color: cars[res.winnerLane].color,
             });
             buzz(30);
@@ -312,7 +311,7 @@ function Game({ isGuest }: { isGuest: boolean }) {
   }, [balance, isGuest]);
 
   const placeBet = async () => {
-    if (!requirePlayer("Sign in to place your prediction and claim your ₹28 welcome bonus.")) {
+    if (!requirePlayer("Sign in to place your bet and claim your ₹28 welcome bonus.")) {
       return;
     }
     if (selected === null || locked || confirmed || placing) return;
@@ -329,7 +328,9 @@ function Game({ isGuest }: { isGuest: boolean }) {
       playBetPlacedChime();
       buzz(22);
     } catch (err) {
-      setBetError(err instanceof Error ? err.message : "Could not place the bet");
+      setBetError(
+        err instanceof Error ? err.message : "Could not place your bet. Please try again.",
+      );
       void refreshWallet();
     }
     setPlacing(false);
@@ -360,10 +361,10 @@ function Game({ isGuest }: { isGuest: boolean }) {
           roundId={roundId}
           isGuest={isGuest}
           onSignIn={() =>
-            requirePlayer("Create your account to claim your ₹28 welcome bonus and play live.")
+            requirePlayer("Create an account to claim your ₹28 welcome bonus and play live.")
           }
           onTopUp={() => {
-            if (requirePlayer("Sign in to top up your Apex wallet via UPI.")) {
+            if (requirePlayer("Sign in to add funds to your Apex wallet via UPI.")) {
               setDepositOpen(true);
             }
           }}
@@ -430,7 +431,7 @@ function Game({ isGuest }: { isGuest: boolean }) {
                 borderColor: `${cars[activeBet.lane].color}66`,
               }}
             >
-              {formatINR(activeBet.amount)} ON {carLabel(cars[activeBet.lane])} ·{" "}
+              {formatINR(activeBet.amount)} ON {carLabel(cars[activeBet.lane])} · PAYS{" "}
               {formatINR(activeBet.amount * cars[activeBet.lane].multiplier)}
             </div>
           </div>
@@ -476,8 +477,8 @@ function Game({ isGuest }: { isGuest: boolean }) {
       <div className="mt-2 mx-2 glass rounded-2xl p-3 space-y-2.5">
         {/* Betting Timer Urgency Indicator (Circular Ring + Step Countdown 6s... 5s... 4s... 3s... LOCKED) */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-2 whitespace-nowrap">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <div className="relative w-7 h-7 grid place-items-center shrink-0">
                 <svg className="w-7 h-7 -rotate-90" viewBox="0 0 28 28">
                   <circle
@@ -509,27 +510,27 @@ function Game({ isGuest }: { isGuest: boolean }) {
                 </span>
               </div>
 
-              <div>
-                <div className="text-[9px] text-white/45 font-display tracking-[0.14em]">
+              <div className="min-w-0 flex-1">
+                <div className="text-[9px] text-white/45 font-display tracking-[0.14em] truncate">
                   ROUND #{String(roundId).slice(-5)}
                 </div>
                 <div
-                  className={`font-display text-[11px] tracking-[0.12em] tabular ${
+                  className={`font-display text-[10.5px] tracking-[0.1em] tabular truncate ${
                     isUrgent ? "animate-pulse" : ""
                   }`}
                   style={{ color: locked ? "rgba(255,255,255,0.65)" : timerColor }}
                 >
                   {locked
-                    ? "LOCKED · RACE IN PROGRESS"
+                    ? "BETS LOCKED · RACING"
                     : isUrgent
-                      ? `HURRY · LOCKS IN ${countdown.toFixed(1)}s`
+                      ? `CLOSING · ${countdown.toFixed(1)}s LEFT`
                       : `BETTING OPEN · ${countdown.toFixed(1)}s`}
                 </div>
               </div>
             </div>
 
             <span
-              className={`px-2 py-0.5 rounded-md text-[9.5px] font-display tracking-[0.15em] border ${
+              className={`shrink-0 whitespace-nowrap px-2 py-0.5 rounded-md text-[9.5px] font-display tracking-[0.15em] border ${
                 locked
                   ? "bg-[#ff4d6d]/15 border-[#ff4d6d]/40 text-[#ff6b84]"
                   : isUrgent
@@ -563,45 +564,13 @@ function Game({ isGuest }: { isGuest: boolean }) {
             />
           </div>
 
-          {/* Discrete countdown steps: 6s · 5s · 4s · 3s · 2s · 1s · LOCKED */}
-          <div className="flex items-center justify-between px-0.5 text-[8.5px] font-display tracking-[0.12em] tabular">
-            {[6, 5, 4, 3, 2, 1].map((s) => {
-              const activeStep = !locked && secLeft === s;
-              const passedStep = locked || secLeft < s;
-              const urgentStep = s <= 3;
-              return (
-                <span
-                  key={s}
-                  className={`transition-colors ${
-                    activeStep
-                      ? urgentStep
-                        ? "text-[#ff4d6d] font-bold scale-110"
-                        : "text-[#ffc32b] font-bold scale-105"
-                      : passedStep
-                        ? "text-white/20"
-                        : "text-white/45"
-                  }`}
-                >
-                  {s}s
-                </span>
-              );
-            })}
-            <span
-              className={`flex items-center gap-0.5 ${
-                locked ? "text-[#ff4d6d] font-bold" : "text-white/30"
-              }`}
-            >
-              <Timer size={9} />
-              LOCKED
-            </span>
-          </div>
         </div>
 
         <PredictionCards
           cars={cars}
           selected={selectedLane}
           onSelect={(i) => {
-            if (!requirePlayer("Sign in to pick your car and claim your ₹28 welcome bonus.")) {
+            if (!requirePlayer("Sign in to select a car and claim your ₹28 welcome bonus.")) {
               return;
             }
             if (locked || confirmed) return;
@@ -628,26 +597,6 @@ function Game({ isGuest }: { isGuest: boolean }) {
           multiplier={selectedMultiplier}
           onConfirm={() => void placeBet()}
         />
-
-        {/* provably-fair status */}
-        <Link
-          to="/verify/$roundId"
-          params={{ roundId: String(Math.max(0, roundId - 1)) }}
-          className="flex items-center gap-1 text-[8px] font-display tracking-[0.12em] text-white/35 py-0.5 leading-none"
-        >
-          <ShieldCheck
-            size={10}
-            className={fairness.verified ? "text-[#26ff9a]" : "text-white/30"}
-          />
-          <span className="truncate">
-            {fairness.verified
-              ? "PROVABLY FAIR · VERIFIED"
-              : fairness.online
-                ? `COMMIT ${fairness.commit?.slice(0, 10) ?? "…"}`
-                : "LOCAL SIMULATION"}
-          </span>
-          <span className="ml-auto underline text-white/40">VERIFY</span>
-        </Link>
       </div>
 
       <div className="mt-1.5 mx-2 pb-2">
@@ -658,7 +607,7 @@ function Game({ isGuest }: { isGuest: boolean }) {
       <BottomNav
         active="home"
         onCashOut={() => {
-          if (requirePlayer("Sign in to view your wallet and cash out winnings via UPI.")) {
+          if (requirePlayer("Sign in to view your wallet and withdraw winnings via UPI.")) {
             setWithdrawOpen(true);
           }
         }}

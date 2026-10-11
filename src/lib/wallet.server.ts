@@ -63,13 +63,13 @@ export function assertBettingOpen(roundId: number): void {
   const now = Date.now();
   const current = roundIdAt(now);
   if (roundId !== current) {
-    throw new Error("Round is no longer accepting bets");
+    throw new Error("This round is no longer accepting bets.");
   }
   if (now < roundStartMs(roundId)) {
-    throw new Error("Round has not started");
+    throw new Error("Betting for this round has not opened yet.");
   }
   if (now >= roundLockMs(roundId) - 250) {
-    throw new Error("Betting is closed for this round");
+    throw new Error("Bets are locked for this round.");
   }
   void LOCK_OFFSET_MS;
 }
@@ -305,7 +305,7 @@ export async function createRazorpayQr(
   });
   const body = (await res.json()) as RazorpayQr & { error?: { description?: string } };
   if (!res.ok) {
-    throw new Error(body?.error?.description || "Could not create the payment QR");
+    throw new Error(body?.error?.description || "Could not generate a payment QR code. Please try again.");
   }
 
   const directPayload = body.image_content || body.qr_string || null;
