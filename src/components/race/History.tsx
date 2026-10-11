@@ -175,31 +175,32 @@ export function Results({ entries }: { entries: HistoryEntry[] }) {
   const uniqueEntries = entries.filter(
     (e, idx, arr) => arr.findIndex((item) => item.id === e.id) === idx,
   );
-  const last = uniqueEntries.slice(0, 12);
+  const last = uniqueEntries.slice(0, 10);
   return (
-    <div className="glass rounded-xl px-2.5 py-1.5">
+    <div className="glass rounded-xl p-2.5">
       {last.length === 0 ? (
-        <div className="py-1 text-center text-[9.5px] text-white/35">
+        <div className="py-1.5 text-center text-[9.5px] text-white/35">
           Results appear here as soon as a race finishes.
         </div>
       ) : (
-        <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] py-0.5">
+        <div className="grid grid-cols-5 gap-2">
           {last.map((e) => (
             <Link
               key={e.id}
               to="/verify/$roundId"
               params={{ roundId: String(e.id) }}
-              className="rounded-md bg-white/[0.04] px-1.5 py-1 flex items-center gap-1 shrink-0 hover:bg-white/10 transition-colors"
+              className="py-1 px-1 flex flex-col items-center justify-center gap-1 transition-opacity hover:opacity-80"
               aria-label={`Verify Round #${e.id} (${e.car.colorName} won)`}
             >
               <span
-                className="w-2 h-2 rounded-full shrink-0"
+                className="w-5 h-5 rounded-full shrink-0"
                 style={{
                   background: e.car.color,
-                  boxShadow: `0 0 5px ${e.car.color}`,
+                  boxShadow: `0 0 10px ${e.car.color}`,
+                  border: "1.5px solid rgba(255,255,255,0.35)",
                 }}
               />
-              <span className="text-[7.5px] tabular text-white/40 leading-none">
+              <span className="text-[9px] font-display tabular text-white/55 leading-none">
                 #{String(e.id).slice(-3)}
               </span>
             </Link>
