@@ -38,7 +38,10 @@ export default defineConfig({
         name: "strip-node-modules-use-client",
         enforce: "pre",
         transform(code, id) {
-          if (id.includes("node_modules") && (code.includes('"use client"') || code.includes("'use client'"))) {
+          if (
+            id.includes("node_modules") &&
+            (code.includes('"use client"') || code.includes("'use client'"))
+          ) {
             return {
               code: code.replace(/^\s*["']use client["'];?\s*/gm, ""),
               map: null,

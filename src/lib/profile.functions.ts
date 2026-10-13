@@ -57,12 +57,35 @@ const BLOCKED = ["fuck", "shit", "bitch", "chutiya", "madarchod", "bhenchod", "a
 export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
-    (d: { displayName?: string; dailyLossLimitPaise?: number | null; selfExcludeDays?: 1 | 7 | 30; ageConfirmed?: boolean }) => {
-      const out: { displayName?: string; dailyLossLimitPaise?: number | null; selfExcludeDays?: number; ageConfirmed?: boolean } = {};
+    (d: {
+      phone?: string;
+      displayName?: string;
+      dailyLossLimitPaise?: number | null;
+      selfExcludeDays?: 1 | 7 | 30;
+      ageConfirmed?: boolean;
+    }) => {
+      const out: {
+        phone?: string;
+        displayName?: string;
+        dailyLossLimitPaise?: number | null;
+        selfExcludeDays?: number;
+        ageConfirmed?: boolean;
+      } = {};
+      if (d?.phone !== undefined) {
+        const digits = String(d.phone).replace(/\D/g, "");
+        if (digits.length !== 10 || !/^[6-9]\d{9}$/.test(digits)) {
+          throw new Error(
+            "Please enter a valid 10-digit Indian mobile number (starting with 6, 7, 8, or 9).",
+          );
+        }
+        out.phone = digits;
+      }
       if (d?.displayName !== undefined) {
         const n = String(d.displayName).trim();
         if (!/^[A-Za-z0-9 _.-]{3,20}$/.test(n))
-          throw new Error("Display name must be 3–20 characters (letters, numbers, spaces, _ . -).");
+          throw new Error(
+            "Display name must be 3–20 characters (letters, numbers, spaces, _ . -).",
+          );
         if (BLOCKED.some((w) => n.toLowerCase().includes(w)))
           throw new Error("Please choose a different display name.");
         out.displayName = n;
@@ -84,12 +107,34 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: import("@/integrations/supabase/types").TablesUpdate<"profiles"> = { updated_at: new Date().toISOString() };
+    const patch: import("@/integrations/supabase/types").TablesUpdate<"profiles"> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (data.phone !== undefined) {
+      // Check if this mobile number is already registered to a different account
+      const { data: existingRows } = await supabaseAdmin
+        .from("profiles")
+        .select("id, phone")
+        .eq("phone", data.phone)
+        .neq("id", context.userId);
+
+      const isTaken = Array.isArray(existingRows) ? existingRows.length > 0 : Boolean(existingRows);
+
+      if (isTaken) {
+        throw new Error(
+          "Already registered: This mobile number is already linked to another user account.",
+        );
+      }
+      patch.phone = data.phone;
+    }
     if (data.displayName !== undefined) patch.display_name = data.displayName;
-    if (data.dailyLossLimitPaise !== undefined) patch.daily_loss_limit_paise = data.dailyLossLimitPaise;
+    if (data.dailyLossLimitPaise !== undefined)
+      patch.daily_loss_limit_paise = data.dailyLossLimitPaise;
     if (data.ageConfirmed) patch.age_confirmed_at = new Date().toISOString();
     if (data.selfExcludeDays) {
-      patch.self_excluded_until = new Date(Date.now() + data.selfExcludeDays * 86_400_000).toISOString();
+      patch.self_excluded_until = new Date(
+        Date.now() + data.selfExcludeDays * 86_400_000,
+      ).toISOString();
       await supabaseAdmin.from("audit_log").insert({
         actor_id: context.userId,
         action: "self_exclude",

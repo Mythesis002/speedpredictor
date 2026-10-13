@@ -64,9 +64,7 @@ export function WinModal({ amount, colorName, color = "#26ff9a", onClose }: Prop
           🏆
         </div>
 
-        <p className="font-display text-[13px] tracking-[0.3em] text-white/70">
-          CONGRATULATIONS
-        </p>
+        <p className="font-display text-[13px] tracking-[0.3em] text-white/70">CONGRATULATIONS</p>
         <p className="mt-3 font-display text-3xl tracking-wide" style={{ color }}>
           You Won ₹<RollingNumber value={amount} duration={900} />
         </p>

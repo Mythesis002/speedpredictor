@@ -199,9 +199,7 @@ export function decodeJwtPayload(token: string): Record<string, unknown> | null 
     if (parts.length !== 3) return null;
     const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
     const json =
-      typeof Buffer !== "undefined"
-        ? Buffer.from(b64, "base64").toString("utf-8")
-        : atob(b64);
+      typeof Buffer !== "undefined" ? Buffer.from(b64, "base64").toString("utf-8") : atob(b64);
     return JSON.parse(json) as Record<string, unknown>;
   } catch {
     return null;
@@ -235,7 +233,7 @@ export function ensureProfileForUser(userId: string, phoneInput?: string): MockP
   let profile = store.profiles.get(userId);
   if (!profile) {
     const now = new Date().toISOString();
-    const phone = (phoneInput ?? "9876543210").replace(/\D/g, "").slice(-10) || "9876543210";
+    const phone = phoneInput ? phoneInput.replace(/\D/g, "").slice(-10) : "";
     profile = {
       id: userId,
       phone,
@@ -299,14 +297,63 @@ class MockQueryBuilder {
     return this;
   }
 
-  eq(col: string, val: any) {
-    this.filters.push((r) => String(r[col]) === String(val));
+  eq(col: string, val: unknown) {
+    this.filters.push((r: Record<string, unknown>) => String(r[col] ?? "") === String(val ?? ""));
     return this;
   }
 
-  in(col: string, vals: any[]) {
+  neq(col: string, val: unknown) {
+    this.filters.push((r: Record<string, unknown>) => String(r[col] ?? "") !== String(val ?? ""));
+    return this;
+  }
+
+  gt(col: string, val: unknown) {
+    this.filters.push((r: Record<string, unknown>) => Number(r[col]) > Number(val));
+    return this;
+  }
+
+  gte(col: string, val: unknown) {
+    this.filters.push((r: Record<string, unknown>) => Number(r[col]) >= Number(val));
+    return this;
+  }
+
+  lt(col: string, val: unknown) {
+    this.filters.push((r: Record<string, unknown>) => Number(r[col]) < Number(val));
+    return this;
+  }
+
+  lte(col: string, val: unknown) {
+    this.filters.push((r: Record<string, unknown>) => Number(r[col]) <= Number(val));
+    return this;
+  }
+
+  is(col: string, val: unknown) {
+    this.filters.push((r: Record<string, unknown>) => r[col] === val);
+    return this;
+  }
+
+  not(col: string, op: string, val: unknown) {
+    if (op === "eq" || op === "is") {
+      this.filters.push((r: Record<string, unknown>) => String(r[col] ?? "") !== String(val ?? ""));
+    }
+    return this;
+  }
+
+  like(col: string, pattern: string) {
+    const regex = new RegExp(`^${pattern.replace(/%/g, ".*")}$`, "i");
+    this.filters.push((r: Record<string, unknown>) => regex.test(String(r[col] ?? "")));
+    return this;
+  }
+
+  ilike(col: string, pattern: string) {
+    const regex = new RegExp(`^${pattern.replace(/%/g, ".*")}$`, "i");
+    this.filters.push((r: Record<string, unknown>) => regex.test(String(r[col] ?? "")));
+    return this;
+  }
+
+  in(col: string, vals: unknown[]) {
     const set = new Set(vals.map(String));
-    this.filters.push((r) => set.has(String(r[col])));
+    this.filters.push((r: Record<string, unknown>) => set.has(String(r[col])));
     return this;
   }
 
@@ -361,7 +408,9 @@ class MockQueryBuilder {
       const items = Array.isArray(this.payload) ? this.payload : [this.payload];
       const created: any[] = [];
       for (const item of items) {
-        const id = item.id ?? `${this.table.slice(0, 3)}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const id =
+          item.id ??
+          `${this.table.slice(0, 3)}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         const row = { ...item, id, created_at: item.created_at ?? now };
         if (this.table === "deposits") {
           row.provider = row.provider ?? "razorpay";
@@ -382,8 +431,7 @@ class MockQueryBuilder {
         }
         created.push(row);
       }
-      const data =
-        this.singleMode !== "none" ? (created[0] ?? null) : created;
+      const data = this.singleMode !== "none" ? (created[0] ?? null) : created;
       return { data, error: null };
     }
 
@@ -414,6 +462,20 @@ class MockQueryBuilder {
         Object.assign(r, this.payload);
         if (this.table === "profiles") {
           store.profiles.set(r.id, r);
+          if (typeof window !== "undefined" && r.phone) {
+            try {
+              const rawSess = window.localStorage.getItem(STORAGE_KEY);
+              if (rawSess) {
+                const s = JSON.parse(rawSess);
+                if (s?.user?.id === r.id) {
+                  s.user.user_metadata = { ...(s.user.user_metadata || {}), phone: r.phone };
+                  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+                }
+              }
+            } catch {
+              // ignore
+            }
+          }
         }
       }
       return {
@@ -500,7 +562,10 @@ export function createMockSupabaseClient(defaultUserId?: string) {
     }
   }
 
-  async function handleRpc(fnName: string, args: Record<string, any> = {}): Promise<{ data: any; error: any }> {
+  async function handleRpc(
+    fnName: string,
+    args: Record<string, any> = {},
+  ): Promise<{ data: any; error: any }> {
     const store = getStore();
     const now = new Date().toISOString();
 
@@ -514,7 +579,10 @@ export function createMockSupabaseClient(defaultUserId?: string) {
 
         const profile = ensureProfileForUser(userId);
         if (profile.is_banned) {
-          return { data: null, error: { message: "Your account is suspended. Please contact support." } };
+          return {
+            data: null,
+            error: { message: "Your account is suspended. Please contact support." },
+          };
         }
         if (profile.self_excluded_until && new Date(profile.self_excluded_until) > new Date()) {
           return {
@@ -532,7 +600,10 @@ export function createMockSupabaseClient(defaultUserId?: string) {
         }
         const existing = store.bets.find((b) => b.user_id === userId && b.round_id === roundId);
         if (existing) {
-          return { data: null, error: { message: "duplicate key value violates unique constraint" } };
+          return {
+            data: null,
+            error: { message: "duplicate key value violates unique constraint" },
+          };
         }
 
         const betId = `bet-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -578,13 +649,21 @@ export function createMockSupabaseClient(defaultUserId?: string) {
         const bet = store.bets.find((b) => b.user_id === userId && b.round_id === roundId);
         if (!bet) {
           return {
-            data: [{ out_status: "none", out_payout_paise: 0, out_balance_paise: profile.balance_paise }],
+            data: [
+              { out_status: "none", out_payout_paise: 0, out_balance_paise: profile.balance_paise },
+            ],
             error: null,
           };
         }
         if (bet.status !== "pending") {
           return {
-            data: [{ out_status: bet.status, out_payout_paise: bet.payout_paise, out_balance_paise: profile.balance_paise }],
+            data: [
+              {
+                out_status: bet.status,
+                out_payout_paise: bet.payout_paise,
+                out_balance_paise: profile.balance_paise,
+              },
+            ],
             error: null,
           };
         }
@@ -611,7 +690,13 @@ export function createMockSupabaseClient(defaultUserId?: string) {
         bet.settled_at = now;
 
         return {
-          data: [{ out_status: bet.status, out_payout_paise: bet.payout_paise, out_balance_paise: profile.balance_paise }],
+          data: [
+            {
+              out_status: bet.status,
+              out_payout_paise: bet.payout_paise,
+              out_balance_paise: profile.balance_paise,
+            },
+          ],
           error: null,
         };
       }
@@ -681,7 +766,9 @@ export function createMockSupabaseClient(defaultUserId?: string) {
             if (profile.balance_paise < wd.amount_paise) {
               return {
                 data: null,
-                error: { message: "Player's current wallet balance is lower than this payout amount." },
+                error: {
+                  message: "Player's current wallet balance is lower than this payout amount.",
+                },
               };
             }
             profile.balance_paise -= wd.amount_paise;
@@ -701,7 +788,8 @@ export function createMockSupabaseClient(defaultUserId?: string) {
       case "public_stats": {
         const startOfToday = new Date(new Date().toISOString().slice(0, 10)).getTime();
         const stakedPaise = store.bets.reduce((sum, b) => sum + b.amount_paise, 0) + 1485000;
-        const betsToday = store.bets.filter((b) => new Date(b.created_at).getTime() >= startOfToday).length + 42;
+        const betsToday =
+          store.bets.filter((b) => new Date(b.created_at).getTime() >= startOfToday).length + 42;
         return {
           data: [
             {
@@ -730,8 +818,7 @@ export function createMockSupabaseClient(defaultUserId?: string) {
         );
         const prof = store.profiles.get(uid);
         const isAdmin =
-          store.admins.has(uid) ||
-          Boolean(prof?.phone && ownerPhones.has(prof.phone));
+          store.admins.has(uid) || Boolean(prof?.phone && ownerPhones.has(prof.phone));
         return { data: isAdmin, error: null };
       }
 
@@ -853,7 +940,13 @@ export function createMockSupabaseClient(defaultUserId?: string) {
         const store = getStore();
         const normalizedEmail = email.toLowerCase();
         const phone =
-          options?.data?.phone ?? normalizedEmail.split("@")[0].replace(/\D/g, "").slice(-10);
+          options?.data?.phone !== undefined
+            ? options.data.phone
+              ? options.data.phone.replace(/\D/g, "").slice(-10)
+              : ""
+            : normalizedEmail.endsWith("@speedpredict.app")
+              ? normalizedEmail.split("@")[0].replace(/\D/g, "").slice(-10)
+              : "";
 
         let entry = store.usersByEmail.get(normalizedEmail);
         if (!entry) {
@@ -879,7 +972,9 @@ export function createMockSupabaseClient(defaultUserId?: string) {
       async signInWithPassword({ email, password }: { email: string; password: string }) {
         const store = getStore();
         const normalizedEmail = email.toLowerCase();
-        const phone = normalizedEmail.split("@")[0].replace(/\D/g, "").slice(-10) || "9876543210";
+        const phone = normalizedEmail.endsWith("@speedpredict.app")
+          ? normalizedEmail.split("@")[0].replace(/\D/g, "").slice(-10)
+          : "";
         let entry = store.usersByEmail.get(normalizedEmail);
         if (!entry) {
           // Auto-provision account in preview mode if signing in with any valid phone/password

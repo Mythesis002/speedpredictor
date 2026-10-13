@@ -80,10 +80,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Apex — Live Racing Predictions" },
-      { name: "description", content: "Live three-car racing predictions with provably fair results and UPI payouts." },
+      {
+        name: "description",
+        content: "Live three-car racing predictions with provably fair results and UPI payouts.",
+      },
       { name: "author", content: "Apex" },
       { property: "og:title", content: "Apex — Live Racing Predictions" },
-      { property: "og:description", content: "Live three-car racing predictions with provably fair results." },
+      {
+        property: "og:description",
+        content: "Live three-car racing predictions with provably fair results.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

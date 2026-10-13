@@ -26,6 +26,7 @@ import {
   listWithdrawals,
 } from "@/lib/admin.functions";
 import { lineupForRound } from "@/lib/round-engine";
+import { AdminGmailPanel } from "@/components/race/AdminGmailPanel";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
@@ -54,7 +55,7 @@ const rupees = (paise: number) =>
 const when = (iso: string) =>
   new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 
-type Tab = "payouts" | "deposits" | "players" | "races";
+type Tab = "payouts" | "deposits" | "players" | "races" | "gmail";
 
 function Stat({
   icon: Icon,
@@ -149,7 +150,9 @@ function AdminPage() {
   if (adminCheck.isLoading) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-[#04060c] text-white/45">
-        <div className="font-display text-[11px] tracking-[0.2em] animate-pulse">VERIFYING ACCESS</div>
+        <div className="font-display text-[11px] tracking-[0.2em] animate-pulse">
+          VERIFYING ACCESS
+        </div>
       </div>
     );
   }
@@ -323,20 +326,21 @@ function AdminPage() {
       </div>
 
       {/* Tabs */}
-      <div className="mt-3 mx-2 glass rounded-2xl grid grid-cols-4 p-1">
+      <div className="mt-3 mx-2 glass rounded-2xl grid grid-cols-5 p-1 gap-0.5">
         {(
           [
             ["payouts", `Payouts${pending.length ? ` (${pending.length})` : ""}`],
             ["deposits", "Deposits"],
             ["players", "Players"],
             ["races", "Races"],
+            ["gmail", "Gmail"],
           ] as [Tab, string][]
         ).map(([id, label]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`py-2 rounded-xl text-[11px] font-display tracking-wide ${
-              tab === id ? "text-white" : "text-white/45"
+            className={`py-2 rounded-xl text-[10.5px] font-display tracking-wide transition truncate px-1 ${
+              tab === id ? "text-white font-semibold" : "text-white/45"
             }`}
             style={tab === id ? { background: "rgba(162,75,255,0.18)" } : undefined}
           >
@@ -480,9 +484,7 @@ function AdminPage() {
               <div key={p.id} className="py-2 border-t border-white/5 first:border-0">
                 <div className="flex items-center justify-between">
                   <div className="text-[12px] text-white/85">+91 {p.phone}</div>
-                  <div className="tabular text-[13px] text-[#ffc32b]">
-                    {rupees(p.balancePaise)}
-                  </div>
+                  <div className="tabular text-[13px] text-[#ffc32b]">{rupees(p.balancePaise)}</div>
                 </div>
                 {p.isBanned && (
                   <div className="text-[10px] text-[#ff4d6d]">Suspended: {p.bannedReason}</div>
@@ -537,6 +539,8 @@ function AdminPage() {
             })}
           </div>
         )}
+
+        {tab === "gmail" && <AdminGmailPanel />}
       </div>
     </div>
   );

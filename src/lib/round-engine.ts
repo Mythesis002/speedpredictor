@@ -31,15 +31,7 @@ export const PHASE_MS: Record<RacePhase, number> = {
   finish: 4000,
 };
 
-
-export const PHASE_ORDER: RacePhase[] = [
-  "waiting",
-  "prep",
-  "lock",
-  "launch",
-  "race",
-  "finish",
-];
+export const PHASE_ORDER: RacePhase[] = ["waiting", "prep", "lock", "launch", "race", "finish"];
 
 export const ROUND_MS = PHASE_ORDER.reduce((s, p) => s + PHASE_MS[p], 0);
 

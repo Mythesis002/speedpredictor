@@ -143,7 +143,7 @@ function buildColoredCarSvg(uid: string, targetHex: string, isHyper: boolean): s
       const newL = isHyper ? Math.min(0.92, l * 1.06) : l;
       const [nr, ng, nb] = hslToRgb(targetH, newS, newL);
       return `rgb(${nr},${ng},${nb})`;
-    }
+    },
   );
 }
 
@@ -168,17 +168,13 @@ export const Car = memo(function Car({
     const colored = buildColoredCarSvg(uid, spec.color, isHyper);
     return colored.replace(
       "<svg ",
-      `<svg width="100%" height="100%" style="display:block;width:100%;height:100%;" `
+      `<svg width="100%" height="100%" style="display:block;width:100%;height:100%;" `,
     );
   }, [uid, spec.color, isHyper]);
 
   // Taillight intensity scales smoothly and stays strictly inside the rear taillight housings
   const tailOpacity = glow ? 0.9 : braking ? 0.78 : 0.25 + t * 0.35;
-  const tailColor = glow
-    ? accentColor
-    : braking
-      ? "#ff1e38"
-      : accentColor;
+  const tailColor = glow ? accentColor : braking ? "#ff1e38" : accentColor;
 
   return (
     <div
@@ -189,10 +185,7 @@ export const Car = memo(function Car({
       }}
     >
       {/* Crisp, unblurred SVG body — no container-level drop-shadow or halo */}
-      <div
-        className="w-full h-full"
-        dangerouslySetInnerHTML={{ __html: svgMarkup }}
-      />
+      <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: svgMarkup }} />
 
       {/* Localized rear taillight LED bar accents (strictly inside the left & right lamp housings) */}
       <span

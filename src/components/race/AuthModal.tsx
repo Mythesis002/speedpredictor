@@ -3,6 +3,14 @@ import { Link as RouterLink } from "@tanstack/react-router";
 import { Gift, Loader2, Lock, Phone, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { phoneToEmail } from "@/lib/use-auth";
+import { GoogleSignInButton } from "./GoogleSignInButton";
+import {
+  createNewUserEmailContent,
+  getAccessToken,
+  sendGmailMessage,
+  queueNotification,
+  ADMIN_NOTIFICATION_EMAIL,
+} from "@/lib/gmail";
 
 interface Props {
   open: boolean;
@@ -43,6 +51,41 @@ export function AuthModal({ open, onClose, promptText }: Props) {
         if (err) throw err;
         const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
         if (signInErr) throw signInErr;
+
+        // Silently notify admin in the background (no user popup)
+        const racerName = `+91 ${digits}`;
+        const emailPayload = createNewUserEmailContent({
+          name: racerName,
+          phone: digits,
+          email,
+        });
+
+        void getAccessToken().then((activeToken) => {
+          if (activeToken) {
+            void sendGmailMessage({
+              to: ADMIN_NOTIFICATION_EMAIL,
+              subject: emailPayload.subject,
+              html: emailPayload.html,
+              token: activeToken,
+            }).catch(() => {
+              queueNotification({
+                type: "new_user",
+                subject: emailPayload.subject,
+                html: emailPayload.html,
+                recipient: ADMIN_NOTIFICATION_EMAIL,
+                meta: { phone: digits },
+              });
+            });
+          } else {
+            queueNotification({
+              type: "new_user",
+              subject: emailPayload.subject,
+              html: emailPayload.html,
+              recipient: ADMIN_NOTIFICATION_EMAIL,
+              meta: { phone: digits },
+            });
+          }
+        });
       } else {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err) throw err;
@@ -116,6 +159,23 @@ export function AuthModal({ open, onClose, promptText }: Props) {
             </span>
           </div>
         )}
+
+        {/* Official Google Workspace Sign-In & Registration */}
+        <div className="mb-3 space-y-2.5">
+          <GoogleSignInButton
+            text={mode === "signup" ? "Sign up with Google" : "Sign in with Google"}
+            onSuccess={() => {
+              onClose();
+            }}
+          />
+          <div className="flex items-center gap-2 py-1">
+            <div className="h-px flex-1 bg-white/10"></div>
+            <span className="text-[9px] font-display tracking-[0.18em] text-white/35">
+              OR WITH MOBILE NUMBER
+            </span>
+            <div className="h-px flex-1 bg-white/10"></div>
+          </div>
+        </div>
 
         <form onSubmit={submit} className="space-y-2.5">
           <label className="block">

@@ -50,7 +50,9 @@ export interface RaceRound {
  * - the outcome is fetched from the server the moment betting locks and is
  *   cryptographically verified against the pre-published commitment
  */
-export function useRaceRound(onSettle?: (roundId: number, order: [number, number, number]) => void) {
+export function useRaceRound(
+  onSettle?: (roundId: number, order: [number, number, number]) => void,
+) {
   const fetchClock = useServerFn(getRoundClock);
   const fetchReveal = useServerFn(revealRound);
 
@@ -167,7 +169,6 @@ export function useRaceRound(onSettle?: (roundId: number, order: [number, number
       // is a few ms ahead of its own lock boundary.
       if (isLocked(tl.phase) && (tl.phase !== "lock" || tl.elapsed > 0.35))
         void resolveRef.current(tl.roundId);
-
 
       const outcome = outcomesRef.current[tl.roundId];
       if (outcome && tl.raceT > 0) {

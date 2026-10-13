@@ -43,8 +43,7 @@ export const Route = createFileRoute("/api/public/razorpay-webhook")({
         const payment = event.payload?.payment?.entity;
         const qrId = event.payload?.qr_code?.entity?.id;
         const noteDepositId =
-          event.payload?.qr_code?.entity?.notes?.deposit_id ||
-          payment?.notes?.deposit_id;
+          event.payload?.qr_code?.entity?.notes?.deposit_id || payment?.notes?.deposit_id;
 
         if (!payment?.id || (!qrId && !noteDepositId)) {
           return new Response("ignored");
@@ -55,9 +54,7 @@ export const Route = createFileRoute("/api/public/razorpay-webhook")({
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        let depQuery = supabaseAdmin
-          .from("deposits")
-          .select("id, amount_paise, qr_id, status");
+        const depQuery = supabaseAdmin.from("deposits").select("id, amount_paise, qr_id, status");
 
         const { data: dep } = qrId
           ? await depQuery.eq("qr_id", qrId).maybeSingle()

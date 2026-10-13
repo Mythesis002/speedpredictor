@@ -380,8 +380,7 @@ export const setPlayerBan = createServerFn({ method: "POST" })
     if (typeof d?.userId !== "string" || d.userId.length < 10)
       throw new Error("Invalid player account.");
     if (typeof d.banned !== "boolean") throw new Error("Invalid account status action.");
-    if (!reasonOk(d.reason))
-      throw new Error("Enter a reason between 3 and 300 characters.");
+    if (!reasonOk(d.reason)) throw new Error("Enter a reason between 3 and 300 characters.");
     return { userId: d.userId, banned: d.banned, reason: d.reason.trim() };
   })
   .handler(async ({ data, context }) => {
@@ -403,10 +402,13 @@ export const adjustPlayerBalance = createServerFn({ method: "POST" })
   .validator((d: { userId: string; amountPaise: number; reason: string }) => {
     if (typeof d?.userId !== "string" || d.userId.length < 10)
       throw new Error("Invalid player account.");
-    if (!Number.isInteger(d.amountPaise) || d.amountPaise === 0 || Math.abs(d.amountPaise) > 10_000_000)
+    if (
+      !Number.isInteger(d.amountPaise) ||
+      d.amountPaise === 0 ||
+      Math.abs(d.amountPaise) > 10_000_000
+    )
       throw new Error("Adjustment amount must be non-zero and at most ₹1,00,000.");
-    if (!reasonOk(d.reason))
-      throw new Error("Enter an audit reason between 3 and 300 characters.");
+    if (!reasonOk(d.reason)) throw new Error("Enter an audit reason between 3 and 300 characters.");
     return { userId: d.userId, amountPaise: d.amountPaise, reason: d.reason.trim() };
   })
   .handler(async ({ data, context }) => {

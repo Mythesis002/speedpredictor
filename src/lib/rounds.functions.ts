@@ -80,7 +80,8 @@ export interface RoundReveal {
   winner: number;
 }
 
-export type RevealResult = ({ ok: true } & RoundReveal) | { ok: false; reason: "early" | "expired" };
+export type RevealResult =
+  ({ ok: true } & RoundReveal) | { ok: false; reason: "early" | "expired" };
 
 /**
  * Reveals a round's secret. Refuses while bets are still open (plus a 150 ms
@@ -108,7 +109,6 @@ export const revealRound = createServerFn({ method: "GET" })
     if (roundIdAt(now) - roundId > 500) {
       return { ok: false, reason: "expired" };
     }
-
 
     const [reveal, commit] = await Promise.all([perRoundSecret(roundId), commitFor(roundId)]);
     const { order } = outcomeFromReveal(reveal, roundId);
@@ -159,4 +159,3 @@ export const recentResults = createServerFn({ method: "GET" }).handler(
     }
   },
 );
-

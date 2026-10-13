@@ -2,18 +2,18 @@
 // Server-side Supabase client with service role key - bypasses RLS.
 // Use this for admin operations in server functions and server routes only.
 // For user-authenticated queries (with RLS), use the auth middleware instead.
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from './types';
-import { createMockSupabaseClient } from './mock-store';
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "./types";
+import { createMockSupabaseClient } from "./mock-store";
 
 function isNewSupabaseApiKey(value: string): boolean {
-  return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
+  return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
 }
 
 function createSupabaseFetch(supabaseKey: string): typeof fetch {
   return (input, init) => {
     const headers = new Headers(
-      typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined,
+      typeof Request !== "undefined" && input instanceof Request ? input.headers : undefined,
     );
 
     if (init?.headers) {
@@ -21,21 +21,24 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
     }
 
     // New Supabase API keys are opaque strings, not bearer JWTs.
-    if (isNewSupabaseApiKey(supabaseKey) && headers.get('Authorization') === `Bearer ${supabaseKey}`) {
-      headers.delete('Authorization');
+    if (
+      isNewSupabaseApiKey(supabaseKey) &&
+      headers.get("Authorization") === `Bearer ${supabaseKey}`
+    ) {
+      headers.delete("Authorization");
     }
 
-    headers.set('apikey', supabaseKey);
+    headers.set("apikey", supabaseKey);
     return fetch(input, { ...init, headers });
   };
 }
 
 function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env['SUPABASE_URL'];
-  const SUPABASE_SERVICE_ROLE_KEY = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+  const SUPABASE_URL = process.env["SUPABASE_URL"];
+  const SUPABASE_SERVICE_ROLE_KEY = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    console.warn('[AI Studio] Supabase admin env vars not configured — using in-memory mock store');
+    console.warn("[AI Studio] Supabase admin env vars not configured — using in-memory mock store");
     return createMockSupabaseClient() as unknown as ReturnType<typeof createClient<Database>>;
   }
 
@@ -47,7 +50,7 @@ function createSupabaseAdminClient() {
       storage: undefined,
       persistSession: false,
       autoRefreshToken: false,
-    }
+    },
   });
 }
 
@@ -60,7 +63,7 @@ let _supabaseAdminIsMock = false;
 // Top-level import is safe only in other .server.ts modules - route files and *.functions.ts ship to the client bundle.
 export const supabaseAdmin = new Proxy({} as ReturnType<typeof createSupabaseAdminClient>, {
   get(_, prop, receiver) {
-    const hasEnv = Boolean(process.env['SUPABASE_URL'] && process.env['SUPABASE_SERVICE_ROLE_KEY']);
+    const hasEnv = Boolean(process.env["SUPABASE_URL"] && process.env["SUPABASE_SERVICE_ROLE_KEY"]);
     if (!_supabaseAdmin || (_supabaseAdminIsMock && hasEnv)) {
       _supabaseAdminIsMock = !hasEnv;
       _supabaseAdmin = createSupabaseAdminClient();

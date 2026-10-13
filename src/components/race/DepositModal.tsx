@@ -4,6 +4,13 @@ import { Loader2, ShieldCheck, X } from "lucide-react";
 import QRCode from "qrcode";
 import { checkDeposit, createDeposit } from "@/lib/wallet.functions";
 import { formatINR } from "@/lib/car-label";
+import {
+  createAddFundsEmailContent,
+  getAccessToken,
+  sendGmailMessage,
+  queueNotification,
+  ADMIN_NOTIFICATION_EMAIL,
+} from "@/lib/gmail";
 
 interface Props {
   open: boolean;
@@ -36,6 +43,7 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
   const [paidInfo, setPaidInfo] = useState<{
     creditedPaise: number;
     newBalancePaise: number;
+    depositId?: string;
   } | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -64,12 +72,49 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
         const res = await poll({ data: { depositId } });
         if (res.status === "paid") {
           const newAvail = res.availablePaise ?? res.balancePaise;
+          const credited = res.amountPaise || fallbackAmountPaise;
           setPaidInfo({
-            creditedPaise: res.amountPaise || fallbackAmountPaise,
+            creditedPaise: credited,
             newBalancePaise: newAvail,
+            depositId,
           });
           onCredited(newAvail);
           if (timer.current) clearInterval(timer.current);
+
+          // Silently notify admin in the background (no user popup or badge)
+          const depositEmail = createAddFundsEmailContent({
+            amountPaise: credited,
+            depositId,
+            balancePaise: newAvail,
+          });
+
+          void getAccessToken().then((token) => {
+            if (token) {
+              void sendGmailMessage({
+                to: ADMIN_NOTIFICATION_EMAIL,
+                subject: depositEmail.subject,
+                html: depositEmail.html,
+                token,
+              }).catch(() => {
+                queueNotification({
+                  type: "add_funds",
+                  subject: depositEmail.subject,
+                  html: depositEmail.html,
+                  recipient: ADMIN_NOTIFICATION_EMAIL,
+                  meta: { depositId, amountPaise: credited, balancePaise: newAvail },
+                });
+              });
+            } else {
+              queueNotification({
+                type: "add_funds",
+                subject: depositEmail.subject,
+                html: depositEmail.html,
+                recipient: ADMIN_NOTIFICATION_EMAIL,
+                meta: { depositId, amountPaise: credited, balancePaise: newAvail },
+              });
+            }
+          });
+
           return true;
         }
         if (isManual) {
@@ -198,7 +243,9 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
             </div>
             {error && (
               <div className="rounded-xl bg-[#ff4d6d]/15 border border-[#ff4d6d]/40 p-3 text-[11px] text-[#ff8a9c] mb-3 leading-snug flex flex-col gap-1.5 animate-shake">
-                <div className="font-display tracking-wider text-[10px] text-[#ff4d6d]">ERROR CREATING QR</div>
+                <div className="font-display tracking-wider text-[10px] text-[#ff4d6d]">
+                  ERROR CREATING QR
+                </div>
                 <div>{error}</div>
               </div>
             )}
@@ -289,9 +336,10 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
                 </span>
               </div>
             </div>
+
             <button
               onClick={onClose}
-              className="mt-4 w-full h-11 rounded-xl font-display text-[12px] tracking-[0.14em] text-black"
+              className="mt-4 w-full h-11 rounded-xl font-display text-[12px] tracking-[0.14em] text-black font-bold cursor-pointer"
               style={{ background: "#26ff9a" }}
             >
               DONE · BACK TO RACE

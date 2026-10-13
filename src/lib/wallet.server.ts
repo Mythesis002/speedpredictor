@@ -149,10 +149,7 @@ function readFreshEnv(key: string): string | undefined {
             if (eqIdx <= 0) continue;
             const k = line.slice(0, eqIdx).trim();
             let v = line.slice(eqIdx + 1).trim();
-            if (
-              (v.startsWith('"') && v.endsWith('"')) ||
-              (v.startsWith("'") && v.endsWith("'"))
-            ) {
+            if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
               v = v.slice(1, -1);
             }
             if (v) {
@@ -280,8 +277,7 @@ async function extractPureQrFromRazorpayPoster(imageUrl: string): Promise<{
         const sy = Math.min(height - 1, Math.max(0, startY + y));
         const srcIdx = (sy * width + sx) * 4;
         const dstIdx = (y * qrSide + x) * 4;
-        const lum =
-          0.299 * data[srcIdx] + 0.587 * data[srcIdx + 1] + 0.114 * data[srcIdx + 2];
+        const lum = 0.299 * data[srcIdx] + 0.587 * data[srcIdx + 1] + 0.114 * data[srcIdx + 2];
         const v = lum < 165 ? 0 : 255;
         outPng.data[dstIdx] = v;
         outPng.data[dstIdx + 1] = v;
@@ -335,7 +331,9 @@ export async function createRazorpayQr(
   });
   const body = (await res.json()) as RazorpayQr & { error?: { description?: string } };
   if (!res.ok) {
-    throw new Error(body?.error?.description || "Could not generate a payment QR code. Please try again.");
+    throw new Error(
+      body?.error?.description || "Could not generate a payment QR code. Please try again.",
+    );
   }
 
   const directPayload = body.image_content || body.qr_string || null;

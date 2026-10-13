@@ -21,7 +21,6 @@ export function Header({
   isGuest = false,
   onSignIn,
 }: Props) {
-
   return (
     <div className="flex items-center gap-1.5 px-2.5 py-2">
       {/* Official Golden SVG Logo */}
@@ -37,12 +36,8 @@ export function Header({
       {/* Round ID */}
       <div className="flex-1 min-w-0 mx-0.5">
         <div className="glass rounded-xl px-2 py-1 text-center">
-          <div className="text-[7.5px] tracking-[0.2em] text-white/45 font-display">
-            ROUND ID
-          </div>
-          <div className="font-display text-[11px] tabular text-white truncate">
-            #{roundId}
-          </div>
+          <div className="text-[7.5px] tracking-[0.2em] text-white/45 font-display">ROUND ID</div>
+          <div className="font-display text-[11px] tabular text-white truncate">#{roundId}</div>
         </div>
       </div>
 

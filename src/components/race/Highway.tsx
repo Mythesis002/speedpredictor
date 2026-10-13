@@ -161,7 +161,8 @@ export function Highway({
         const swayVel =
           throttleI *
           0.072 *
-          (Math.cos(tSec * 0.9 + i * 2.3) * 0.9 * 0.65 + Math.cos(tSec * 2.17 + i * 5.1) * 2.17 * 0.35);
+          (Math.cos(tSec * 0.9 + i * 2.3) * 0.9 * 0.65 +
+            Math.cos(tSec * 2.17 + i * 5.1) * 2.17 * 0.35);
 
         const x = xAt(LANE_U[i] + sway, z, w);
         const y = yAt(z, h); // tyres land exactly on the projected tarmac
@@ -189,7 +190,6 @@ export function Highway({
             `translate3d(${jitter.toFixed(2)}px, ${squat.toFixed(2)}px, 0)` +
             ` rotate(${roll.toFixed(2)}deg)`;
         }
-
 
         const rank = [0, 1, 2].sort((a, b) => p[b] - p[a]).indexOf(i) + 1;
         const badge = posRefs.current[i];
@@ -219,7 +219,8 @@ export function Highway({
       for (let i = 0; i < SEAM_COUNT; i++) {
         const seamEl = seamRefs.current[i];
         if (!seamEl) continue;
-        let z = Z_NEAR + (((i * SEAM_PERIOD - flow.current) % DASH_SPAN) + DASH_SPAN) % DASH_SPAN;
+        const z =
+          Z_NEAR + ((((i * SEAM_PERIOD - flow.current) % DASH_SPAN) + DASH_SPAN) % DASH_SPAN);
         if (z > Z_FAR) {
           seamEl.style.opacity = "0";
           continue;
@@ -243,7 +244,8 @@ export function Highway({
         for (let i = 0; i < DASHES; i++) {
           const el = dashRefs.current[d * DASHES + i];
           if (!el) continue;
-          let z = Z_NEAR + (((i * DASH_PERIOD - flow.current) % DASH_SPAN) + DASH_SPAN) % DASH_SPAN;
+          const z =
+            Z_NEAR + ((((i * DASH_PERIOD - flow.current) % DASH_SPAN) + DASH_SPAN) % DASH_SPAN);
           if (z > Z_FAR) {
             el.style.opacity = "0";
             continue;
@@ -266,7 +268,6 @@ export function Highway({
           el.style.opacity = Math.min(1, (Z_FAR - z) / (Z_FAR * 0.45)).toFixed(3);
         }
       }
-
 
       /* ---- cinematic camera: shake + FOV punch ---- */
       const cam = cameraRef.current;
@@ -406,8 +407,7 @@ export function Highway({
           <div
             className="absolute inset-0"
             style={{
-              background:
-                "linear-gradient(180deg, #0b0d14 0%, #151922 40%, #1e2330 100%)",
+              background: "linear-gradient(180deg, #0b0d14 0%, #151922 40%, #1e2330 100%)",
               clipPath: `polygon(${EDGE_PCT.topLeft - 1.2}% ${EDGE_PCT.horizonPct}%, ${EDGE_PCT.topRight + 1.2}% ${EDGE_PCT.horizonPct}%, ${EDGE_PCT.bottomRight + 8}% 100%, ${EDGE_PCT.bottomLeft - 8}% 100%)`,
             }}
           />
@@ -561,7 +561,6 @@ export function Highway({
                     opacity: 0,
                   }}
                 />
-
               ))}
             </div>
           ))}

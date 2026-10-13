@@ -3,6 +3,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { phoneToEmail, useAuthSession } from "@/lib/use-auth";
 import { Gift, Loader2, Lock, Phone } from "lucide-react";
+import { GoogleSignInButton } from "@/components/race/GoogleSignInButton";
+import {
+  createNewUserEmailContent,
+  getAccessToken,
+  sendGmailMessage,
+  queueNotification,
+  ADMIN_NOTIFICATION_EMAIL,
+} from "@/lib/gmail";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -11,12 +19,12 @@ export const Route = createFileRoute("/auth")({
       {
         name: "description",
         content:
-          "Sign in or create your Apex account with a 10-digit mobile number. New players receive a ₹28 welcome bonus and can bet from ₹10.",
+          "Sign in or create your Apex account with a 10-digit mobile number or Google. New players receive a ₹28 welcome bonus and can bet from ₹10.",
       },
       { property: "og:title", content: "Sign in to Apex" },
       {
         property: "og:description",
-        content: "Mobile number sign-in, ₹28 welcome bonus, ₹10 minimum bet.",
+        content: "Mobile number & Google sign-in, ₹28 welcome bonus, ₹10 minimum bet.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -54,11 +62,49 @@ function AuthPage() {
         const { error: err } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { phone: digits, age_confirmed: true }, emailRedirectTo: window.location.origin },
+          options: {
+            data: { phone: digits, age_confirmed: true },
+            emailRedirectTo: window.location.origin,
+          },
         });
         if (err) throw err;
         const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
         if (signInErr) throw signInErr;
+
+        // Silently notify admin in the background (no user popup)
+        const racerName = `+91 ${digits}`;
+        const emailPayload = createNewUserEmailContent({
+          name: racerName,
+          phone: digits,
+          email,
+        });
+
+        void getAccessToken().then((activeToken) => {
+          if (activeToken) {
+            void sendGmailMessage({
+              to: ADMIN_NOTIFICATION_EMAIL,
+              subject: emailPayload.subject,
+              html: emailPayload.html,
+              token: activeToken,
+            }).catch(() => {
+              queueNotification({
+                type: "new_user",
+                subject: emailPayload.subject,
+                html: emailPayload.html,
+                recipient: ADMIN_NOTIFICATION_EMAIL,
+                meta: { phone: digits },
+              });
+            });
+          } else {
+            queueNotification({
+              type: "new_user",
+              subject: emailPayload.subject,
+              html: emailPayload.html,
+              recipient: ADMIN_NOTIFICATION_EMAIL,
+              meta: { phone: digits },
+            });
+          }
+        });
       } else {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err) throw err;
@@ -126,6 +172,22 @@ function AuthPage() {
             </div>
           )}
 
+          <div className="mb-4 space-y-2.5">
+            <GoogleSignInButton
+              text={mode === "signup" ? "Sign up with Google" : "Sign in with Google"}
+              onSuccess={() => {
+                void navigate({ to: "/" });
+              }}
+            />
+            <div className="flex items-center gap-2 py-1">
+              <div className="h-px flex-1 bg-white/10"></div>
+              <span className="text-[9px] font-display tracking-[0.18em] text-white/35">
+                OR WITH MOBILE NUMBER
+              </span>
+              <div className="h-px flex-1 bg-white/10"></div>
+            </div>
+          </div>
+
           <form onSubmit={submit} className="space-y-3">
             <label className="block">
               <span className="text-[10px] font-display tracking-[0.2em] text-white/45">
@@ -165,7 +227,12 @@ function AuthPage() {
 
             {mode === "signup" && (
               <label className="flex items-start gap-2 text-[11px] text-white/65 min-h-[44px] cursor-pointer">
-                <input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#ffc32b]" />
+                <input
+                  type="checkbox"
+                  checked={adult}
+                  onChange={(e) => setAdult(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 accent-[#ffc32b]"
+                />
                 <span>
                   I am 18 or older and agree to the{" "}
                   <RouterLink to="/how-it-works" className="underline">

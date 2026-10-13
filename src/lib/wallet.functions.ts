@@ -96,7 +96,8 @@ export const placeBet = createServerFn({ method: "POST" })
   .validator((data: { roundId: number; lane: number; amountPaise: number }) => {
     const { roundId, lane, amountPaise } = data ?? {};
     if (!Number.isInteger(roundId)) throw new Error("Invalid race round.");
-    if (!Number.isInteger(lane) || lane < 0 || lane > 2) throw new Error("Select a valid car lane.");
+    if (!Number.isInteger(lane) || lane < 0 || lane > 2)
+      throw new Error("Select a valid car lane.");
     if (!Number.isInteger(amountPaise) || amountPaise < MIN_BET_PAISE)
       throw new Error("Minimum bet is ₹10.");
     if (amountPaise > MAX_BET_PAISE) throw new Error("Maximum bet per round is ₹1,00,000.");
@@ -315,8 +316,7 @@ export const requestWithdrawal = createServerFn({ method: "POST" })
     const upiId = (data?.upiId ?? "").trim().toLowerCase();
     if (!Number.isInteger(amountPaise) || amountPaise < 10000)
       throw new Error("Minimum payout is ₹100.");
-    if (amountPaise > MAX_DEPOSIT_PAISE)
-      throw new Error("Maximum single payout is ₹2,00,000.");
+    if (amountPaise > MAX_DEPOSIT_PAISE) throw new Error("Maximum single payout is ₹2,00,000.");
     if (!/^[\w.\-]{2,64}@[a-zA-Z]{2,32}$/.test(upiId))
       throw new Error("Enter a valid UPI ID (for example, name@upi).");
     return { amountPaise, upiId };
@@ -328,7 +328,8 @@ export const requestWithdrawal = createServerFn({ method: "POST" })
       p_amount_paise: data.amountPaise,
       p_upi_id: data.upiId,
     });
-    if (error) throw new Error(error.message.replace(/^.*ERROR:\s*/, "").replace(/^[A-Z_]+:\s*/, ""));
+    if (error)
+      throw new Error(error.message.replace(/^.*ERROR:\s*/, "").replace(/^[A-Z_]+:\s*/, ""));
     const { balancePaise, heldPaise, availablePaise } = await computeWalletBalances(
       supabaseAdmin,
       context.userId,
@@ -362,7 +363,9 @@ export const myBets = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data } = await context.supabase
       .from("bets")
-      .select("id, round_id, lane, amount_paise, multiplier, status, payout_paise, winner_lane, created_at")
+      .select(
+        "id, round_id, lane, amount_paise, multiplier, status, payout_paise, winner_lane, created_at",
+      )
       .order("round_id", { ascending: false })
       .limit(50);
     return (data ?? []).map((b) => ({
