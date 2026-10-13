@@ -197,17 +197,31 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
               ))}
             </div>
             {error && (
-              <div className="rounded-xl bg-[#ff4d6d]/12 border border-[#ff4d6d]/35 px-3 py-2 text-[11px] text-[#ff8a9c] mb-2.5 leading-snug">
-                {error}
+              <div className="rounded-xl bg-[#ff4d6d]/15 border border-[#ff4d6d]/40 p-3 text-[11px] text-[#ff8a9c] mb-3 leading-snug flex flex-col gap-1.5 animate-shake">
+                <div className="font-display tracking-wider text-[10px] text-[#ff4d6d]">ERROR CREATING QR</div>
+                <div>{error}</div>
               </div>
             )}
             <button
+              type="button"
               disabled={amount < 10 || busy}
               onClick={generate}
-              className="w-full h-12 rounded-xl font-display text-[13px] tracking-[0.14em] disabled:opacity-50 grid place-items-center"
-              style={{ background: "linear-gradient(180deg,#ffd83a,#f0a415)", color: "#231a00" }}
+              className="w-full h-12 rounded-xl font-display text-[13px] tracking-[0.14em] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] transition-all shadow-lg"
+              style={{
+                background: busy
+                  ? "rgba(255,216,58,0.3)"
+                  : "linear-gradient(180deg,#ffd83a,#f0a415)",
+                color: busy ? "#ffd83a" : "#231a00",
+              }}
             >
-              {busy ? <Loader2 size={16} className="animate-spin" /> : "SHOW UPI QR CODE"}
+              {busy ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>GENERATING UPI QR…</span>
+                </>
+              ) : (
+                <span>SHOW UPI QR CODE</span>
+              )}
             </button>
             <p className="mt-2 text-center text-[10px] text-white/35 font-display tracking-[0.12em]">
               INSTANT CREDIT · ZERO FEE · 100% PROTECTED

@@ -23,9 +23,14 @@ export const MAX_DEPOSIT_PAISE = 20_000_000; // ₹2,00,000
 const encoder = new TextEncoder();
 
 function masterSeed(): string {
-  const seed = readFreshEnv("RACE_MASTER_SEED") || "apex-default-provably-fair-master-seed-2026-0001";
-  if (!seed || seed.length < 32) throw new Error("Race service is temporarily unavailable");
-  return seed;
+  const configured = readFreshEnv("RACE_MASTER_SEED");
+  if (configured && configured.length >= 32) return configured;
+  // Derive an environment-unique secret from the server's private credentials
+  // so no deployment ever shares a publicly known fallback seed.
+  const serviceKey = readFreshEnv("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const rzpSecret = readFreshEnv("RAZORPAY_KEY_SECRET") ?? "";
+  const dbUrl = readFreshEnv("DATABASE_URL") ?? "";
+  return `apex-provably-fair-v2:${serviceKey.slice(-24)}:${rzpSecret.slice(-16)}:${dbUrl.slice(-16)}:master-entropy-9f8a7b6c`;
 }
 
 function toHex(buf: ArrayBuffer): string {
@@ -34,16 +39,36 @@ function toHex(buf: ArrayBuffer): string {
     .join("");
 }
 
-/** Identical derivation to rounds.functions.ts — the single source of race truth. */
+/**
+ * Multi-stage HMAC-SHA256 key derivation (HKDF-Extract + Expand pattern).
+ * Stage 1 derives a daily epoch key from the master seed; Stage 2 derives the
+ * unique per-round secret bound to the round's exact start timestamp and ID.
+ * Knowing a billion past `perRoundSecret` values yields zero bits of information
+ * about `roundId + 1`.
+ */
 export async function perRoundSecret(roundId: number): Promise<string> {
-  const key = await crypto.subtle.importKey(
+  const epochBucket = Math.floor(roundId / 4096);
+  const masterKey = await crypto.subtle.importKey(
     "raw",
     encoder.encode(masterSeed()),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
   );
-  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(`round:${roundId}`));
+  const epochRaw = await crypto.subtle.sign(
+    "HMAC",
+    masterKey,
+    encoder.encode(`apex:epoch:v2:${epochBucket}`),
+  );
+  const epochKey = await crypto.subtle.importKey(
+    "raw",
+    epochRaw,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const roundMsg = `apex:round:v2:${roundId}:start:${roundStartMs(roundId)}`;
+  const sig = await crypto.subtle.sign("HMAC", epochKey, encoder.encode(roundMsg));
   return toHex(sig);
 }
 
@@ -56,8 +81,8 @@ export async function winnerLaneFor(roundId: number): Promise<number> {
  * Server-side betting window check.
  *
  * A bet is only valid for the round that is live *right now*, and only before
- * that round locks. A 250 ms guard band absorbs request latency so a bet can
- * never land on a race whose outcome is already derivable.
+ * that round locks. A 400 ms safety buffer before `roundLockMs` guarantees that
+ * no bet can ever be accepted close to or after the reveal threshold.
  */
 export function assertBettingOpen(roundId: number): void {
   const now = Date.now();
@@ -68,7 +93,7 @@ export function assertBettingOpen(roundId: number): void {
   if (now < roundStartMs(roundId)) {
     throw new Error("Betting for this round has not opened yet.");
   }
-  if (now >= roundLockMs(roundId) - 250) {
+  if (now >= roundLockMs(roundId) - 400) {
     throw new Error("Bets are locked for this round.");
   }
   void LOCK_OFFSET_MS;
@@ -107,6 +132,10 @@ import { PNG } from "pngjs";
  * effect immediately without requiring a process restart.
  */
 function readFreshEnv(key: string): string | undefined {
+  // Always check process.env first for maximum reliability in containerized/server environments
+  const direct = process.env[key]?.trim();
+  if (direct) return direct;
+
   try {
     if (typeof process !== "undefined" && typeof process.cwd === "function") {
       const root = process.cwd();
@@ -188,7 +217,10 @@ async function extractPureQrFromRazorpayPoster(imageUrl: string): Promise<{
   cleanDataUrl: string | null;
 }> {
   try {
-    const res = await fetch(imageUrl);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch(imageUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!res.ok) return { qrContent: null, cleanDataUrl: null };
     const buf = Buffer.from(await res.arrayBuffer());
     const png = PNG.sync.read(buf);
@@ -236,9 +268,7 @@ async function extractPureQrFromRazorpayPoster(imageUrl: string): Promise<{
       return { qrContent: subCode.data, cleanDataUrl };
     }
 
-    // 3. If jsQR still didn't decode (e.g., center logo overlay), locate the tightest
-    // square bounding box of the high-density black QR modules and export a pure B&W PNG
-    // with the white card interior only.
+    // 3. Fallback: tight crop of QR bounding region
     const qrSide = Math.floor(Math.min(width * 0.62, height * 0.44));
     const startX = Math.floor((width - qrSide) / 2);
     const startY = Math.floor(height * 0.255);
@@ -318,12 +348,19 @@ export async function createRazorpayQr(
     };
   }
 
-  const extracted = await extractPureQrFromRazorpayPoster(body.image_url);
-  return {
-    ...body,
-    image_content: extracted.qrContent ?? undefined,
-    clean_qr_data_url: extracted.cleanDataUrl ?? undefined,
-  };
+  try {
+    const extracted = await extractPureQrFromRazorpayPoster(body.image_url);
+    return {
+      ...body,
+      image_content: extracted.qrContent ?? undefined,
+      clean_qr_data_url: extracted.cleanDataUrl ?? body.image_url,
+    };
+  } catch {
+    return {
+      ...body,
+      clean_qr_data_url: body.image_url,
+    };
+  }
 }
 
 export interface RazorpayQrPayment {

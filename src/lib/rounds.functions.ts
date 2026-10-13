@@ -7,6 +7,7 @@ import {
   roundLockMs,
   roundStartMs,
 } from "./round-engine";
+import { perRoundSecret } from "./wallet.server";
 
 /**
  * Server authority for the race schedule and results.
@@ -17,32 +18,12 @@ import {
  * animation never depends on network latency.
  */
 
-function masterSeed(): string {
-  // read at call time: env is injected per-request on the edge runtime
-  const seed = process.env["RACE_MASTER_SEED"] || "apex-default-provably-fair-master-seed-2026-0001";
-  if (!seed || seed.length < 32) throw new Error("Race service is temporarily unavailable");
-  return seed;
-}
-
 const encoder = new TextEncoder();
 
 function toHex(buf: ArrayBuffer): string {
   return Array.from(new Uint8Array(buf))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
-}
-
-/** perRoundSecret = HMAC-SHA256(masterSeed, roundId) — never leaves the server before lock. */
-async function perRoundSecret(roundId: number): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(masterSeed()),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(`round:${roundId}`));
-  return toHex(sig);
 }
 
 /** commit = SHA-256(perRoundSecret) — published before betting opens. */
@@ -102,10 +83,10 @@ export interface RoundReveal {
 export type RevealResult = ({ ok: true } & RoundReveal) | { ok: false; reason: "early" | "expired" };
 
 /**
- * Reveals a round's secret. Refuses while bets are still open, which is what
- * makes the commitment meaningful — no client can learn the result early.
- * Refusals are returned as data (never thrown) so a client that asks a few ms
- * early doesn't surface an unhandled Response error.
+ * Reveals a round's secret. Refuses while bets are still open (plus a 150 ms
+ * post-lock isolation guard), which guarantees a 550 ms total dead-zone between
+ * the last possible bet acceptance (`lockMs - 400ms`) and the first possible
+ * secret reveal (`lockMs + 150ms`). No client can ever learn the result early.
  */
 export const revealRound = createServerFn({ method: "GET" })
   .validator((data: unknown): { roundId: number } => {
@@ -120,7 +101,7 @@ export const revealRound = createServerFn({ method: "GET" })
     const { roundId } = data;
     const now = Date.now();
 
-    if (roundId > roundIdAt(now) || now < roundLockMs(roundId)) {
+    if (roundId > roundIdAt(now) || now < roundLockMs(roundId) + 150) {
       return { ok: false, reason: "early" };
     }
     // don't serve ancient history; keeps the endpoint bounded

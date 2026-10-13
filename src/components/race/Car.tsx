@@ -94,9 +94,24 @@ function hslToRgb(hDeg: number, s: number, l: number): [number, number, number] 
 
 /**
  * Remaps the exact user-provided GT car SVG (`gt-car-raw.svg`) without changing a single
- * path coordinate or shape — only shifting the red paint palette (`rgb(r,g,b)` where r > g+12)
- * to match the car's assigned team color and unique gradient IDs per instance.
+ * path coordinate or shape — shifting the body paint palette to the team color and
+ * harmonizing the dark rubber tyres/wheels (`#1c212e`..`#323a4f`) so they blend naturally
+ * with the slate-grey asphalt road surface.
  */
+function tintNeutralToRoad(r: number, g: number, b: number): string {
+  const lum = (r + g + b) / 3;
+  // Lift pure blacks (0..45) into the road's slate-asphalt palette (#1b202c .. #363e52)
+  // while keeping bright chrome/Exhaust/glass highlights intact
+  if (lum <= 65) {
+    const t = lum / 65; // 0 .. 1
+    const nr = Math.round(28 + t * 38); // 28 .. 66
+    const ng = Math.round(33 + t * 44); // 33 .. 77
+    const nb = Math.round(46 + t * 56); // 46 .. 102
+    return `rgb(${nr},${ng},${nb})`;
+  }
+  return `rgb(${r},${g},${b})`;
+}
+
 function buildColoredCarSvg(uid: string, targetHex: string, isHyper: boolean): string {
   // Unique gradient IDs per car instance so multiple cars on screen never collide
   const withScopedGradients = rawSvg
@@ -105,12 +120,7 @@ function buildColoredCarSvg(uid: string, targetHex: string, isHyper: boolean): s
 
   const [tr, tg, tb] = parseHex(isHyper ? "#f5b82e" : targetHex);
   const [targetH, targetS] = rgbToHsl(tr, tg, tb);
-
-  // If the car is red (and not hyper), keep original red colors untouched
   const isRed = !isHyper && (targetH < 18 || targetH > 345) && targetS > 0.6;
-  if (isRed) {
-    return withScopedGradients;
-  }
 
   return withScopedGradients.replace(
     /rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/g,
@@ -119,8 +129,12 @@ function buildColoredCarSvg(uid: string, targetHex: string, isHyper: boolean): s
       const g = Number(gStr);
       const b = Number(bStr);
 
-      // Neutral greys, blacks, chrome, tyres, and glass stay untouched
+      // Neutral greys, blacks, tyres, and trim: blend dark rubber tones into the grey road palette
       if (r - Math.max(g, b) < 10) {
+        return tintNeutralToRoad(r, g, b);
+      }
+
+      if (isRed) {
         return match;
       }
 

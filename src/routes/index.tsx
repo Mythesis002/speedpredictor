@@ -5,12 +5,7 @@ import { Highway } from "@/components/race/Highway";
 import { PredictionCards } from "@/components/race/PredictionCards";
 import { BettingPanel } from "@/components/race/BettingPanel";
 import { Header } from "@/components/race/Header";
-import {
-  Results,
-  RecentRounds,
-  LiveStats,
-  type HistoryEntry,
-} from "@/components/race/History";
+import { Results, RecentRounds, LiveStats, type HistoryEntry } from "@/components/race/History";
 import { WinModal } from "@/components/race/WinModal";
 import { DepositModal } from "@/components/race/DepositModal";
 import { WithdrawModal } from "@/components/race/WithdrawModal";
@@ -21,18 +16,8 @@ import { carLabel, formatINR } from "@/lib/car-label";
 import { useRaceRound } from "@/lib/use-race-round";
 import { useAuthSession } from "@/lib/use-auth";
 import { recentResults } from "@/lib/rounds.functions";
-import {
-  getWallet,
-  liveStats,
-  placeBet as placeBetFn,
-  settleRound,
-} from "@/lib/wallet.functions";
-import {
-  playBetPlacedChime,
-  playCountdownBeep,
-  playLaunchRoar,
-  playWinChime,
-} from "@/lib/sound";
+import { getWallet, liveStats, placeBet as placeBetFn, settleRound } from "@/lib/wallet.functions";
+import { playBetPlacedChime, playCountdownBeep, playLaunchRoar, playWinChime } from "@/lib/sound";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -184,10 +169,10 @@ function Game({ isGuest }: { isGuest: boolean }) {
       const cars = lineupForRound(roundId);
       const winnerCar = cars[order[0]];
       setHistory((h) =>
-        [{ id: roundId, car: winnerCar, ago: "now" }, ...h.filter((item) => item.id !== roundId)].slice(
-          0,
-          50,
-        ),
+        [
+          { id: roundId, car: winnerCar, ago: "now" },
+          ...h.filter((item) => item.id !== roundId),
+        ].slice(0, 50),
       );
 
       const b = betRef.current;
@@ -346,18 +331,10 @@ function Game({ isGuest }: { isGuest: boolean }) {
   const secLeft = Math.max(0, Math.ceil(countdown));
   const isUrgent = !locked && countdown <= 3.0;
   const isWarning = !locked && countdown > 3.0 && countdown <= 4.5;
-  const timerColor = locked
-    ? "#ff4d6d"
-    : isUrgent
-      ? "#ff3b5c"
-      : isWarning
-        ? "#ffc32b"
-        : "#26ff9a";
+  const timerColor = locked ? "#ff4d6d" : isUrgent ? "#ff3b5c" : isWarning ? "#ffc32b" : "#26ff9a";
   const ringRadius = 11;
   const ringCirc = 2 * Math.PI * ringRadius;
-  const ringOffset = locked
-    ? ringCirc
-    : ringCirc * (1 - Math.min(1, Math.max(0, countdown / 6)));
+  const ringOffset = locked ? ringCirc : ringCirc * (1 - Math.min(1, Math.max(0, countdown / 6)));
 
   return (
     <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden overscroll-none bg-[#04060c] text-white flex flex-col [scrollbar-width:none]">
@@ -579,7 +556,6 @@ function Game({ isGuest }: { isGuest: boolean }) {
               }}
             />
           </div>
-
         </div>
 
         <PredictionCards
@@ -597,6 +573,7 @@ function Game({ isGuest }: { isGuest: boolean }) {
           winner={winner}
           amount={amount}
           confirmed={confirmed}
+          activeBet={activeBet}
         />
 
         <BettingPanel
@@ -611,6 +588,7 @@ function Game({ isGuest }: { isGuest: boolean }) {
           confirmed={confirmed}
           phaseLabel={phase}
           multiplier={selectedMultiplier}
+          activeBetAmount={activeBet?.amount ?? null}
           onConfirm={() => void placeBet()}
         />
       </div>

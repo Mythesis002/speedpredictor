@@ -120,17 +120,58 @@ export const isLocked = (phase: RacePhase) =>
 /* Deterministic RNG                                                   */
 /* ------------------------------------------------------------------ */
 
-export function xmur3(str: string): () => number {
-  let h = 1779033703 ^ str.length;
+export function cyrb128(str: string): [number, number, number, number] {
+  let h1 = 1779033703;
+  let h2 = 3144134277;
+  let h3 = 1013904242;
+  let h4 = 2773480762;
   for (let i = 0; i < str.length; i++) {
-    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
-    h = (h << 13) | (h >>> 19);
+    const k = str.charCodeAt(i);
+    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+  }
+  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+  return [(h1 ^ h2 ^ h3 ^ h4) >>> 0, (h2 ^ h1) >>> 0, (h3 ^ h1) >>> 0, (h4 ^ h1) >>> 0];
+}
+
+export function xmur3(str: string): () => number {
+  const [s0, s1, s2, s3] = cyrb128(str);
+  let h = (s0 ^ s1 ^ s2 ^ s3) >>> 0;
+  return () => {
+    h = (h + 0x9e3779b9) >>> 0;
+    let t = h;
+    t = Math.imul(t ^ (t >>> 16), 0x85ebca6b);
+    t = Math.imul(t ^ (t >>> 13), 0xc2b2ae35);
+    return (t ^ (t >>> 16)) >>> 0;
+  };
+}
+
+export function sfc32(a: number, b: number, c: number, d: number): () => number {
+  let sA = a >>> 0;
+  let sB = b >>> 0;
+  let sC = c >>> 0;
+  let sD = d >>> 0;
+  for (let i = 0; i < 15; i++) {
+    const t = (((sA + sB) | 0) + sD) | 0;
+    sD = (sD + 1) | 0;
+    sA = sB ^ (sB >>> 9);
+    sB = (sC + (sC << 3)) | 0;
+    sC = (sC << 21) | (sC >>> 11);
+    sC = (sC + t) | 0;
   }
   return () => {
-    h = Math.imul(h ^ (h >>> 16), 2246822507);
-    h = Math.imul(h ^ (h >>> 13), 3266489909);
-    h ^= h >>> 16;
-    return h >>> 0;
+    const t = (((sA + sB) | 0) + sD) | 0;
+    sD = (sD + 1) | 0;
+    sA = sB ^ (sB >>> 9);
+    sB = (sC + (sC << 3)) | 0;
+    sC = (sC << 21) | (sC >>> 11);
+    sC = (sC + t) | 0;
+    return (t >>> 0) / 4294967296;
   };
 }
 
@@ -146,7 +187,8 @@ export function mulberry32(seed: number): () => number {
 }
 
 export function rngFrom(str: string): () => number {
-  return mulberry32(xmur3(str)());
+  const [a, b, c, d] = cyrb128(`apex:v2:${str}`);
+  return sfc32(a, b, c, d);
 }
 
 /* ------------------------------------------------------------------ */
@@ -188,41 +230,53 @@ export function winWeights(kinds: CarKind[]): number[] {
   return w.map((x) => x / total);
 }
 
-const roundOdds = (p: number) => Math.round((RTP / p) * 100) / 100;
+const roundOdds = (p: number) => Math.floor((RTP / p) * 100) / 100;
 
-/** Publicly derivable grid for a round — identical on server and client. */
+/**
+ * Publicly derivable grid for a round — identical on server and client.
+ *
+ * Uses independent domain-separated PRNG streams for car class selection and
+ * unbiased Fisher–Yates lane colour shuffling so lane position, colour, and
+ * car tier have zero statistical cross-correlation.
+ */
 export function lineupForRound(roundId: number): [CarSpec, CarSpec, CarSpec] {
-  const rnd = rngFrom(`grid:${roundId}`);
-  const used = new Set<string>();
-  let hyperUsed = false;
-  const kinds: CarKind[] = [];
-  const paint: { color: string; colorName: string }[] = [];
+  const kindRng = rngFrom(`grid:kinds:${roundId}`);
+  const colorRng = rngFrom(`grid:colors:${roundId}`);
+  const hyperLaneRng = rngFrom(`grid:hyper-lane:${roundId}`);
+
+  // Determine which lane (if any) is eligible for hyper car so Lane 0 has no positional bias
+  const candidateHyperLane = Math.floor(hyperLaneRng() * 3);
+  const kinds: CarKind[] = ["normal", "normal", "normal"];
 
   for (let lane = 0; lane < 3; lane++) {
-    const roll = rnd();
-    const kind: CarKind = roll < 0.035 && !hyperUsed ? "hyper" : roll < 0.18 ? "small" : "normal";
-    if (kind === "hyper") hyperUsed = true;
-    kinds.push(kind);
-
-    let c = COLORS[Math.floor(rnd() * COLORS.length)];
-    let guard = 0;
-    while (used.has(c.name) && guard++ < 24) {
-      c = COLORS[Math.floor(rnd() * COLORS.length)];
+    const roll = kindRng();
+    if (lane === candidateHyperLane && roll < 0.085) {
+      kinds[lane] = "hyper";
+    } else if (roll < 0.22) {
+      kinds[lane] = "small";
+    } else {
+      kinds[lane] = "normal";
     }
-    used.add(c.name);
-    paint.push({ color: c.hex, colorName: c.name });
+  }
+
+  // Unbiased Fisher-Yates shuffle of the 3 colours across the 3 lanes
+  const palette = [...COLORS];
+  for (let i = palette.length - 1; i > 0; i--) {
+    const j = Math.floor(colorRng() * (i + 1));
+    const tmp = palette[i];
+    palette[i] = palette[j];
+    palette[j] = tmp;
   }
 
   const probs = winWeights(kinds);
   return kinds.map((kind, lane) => ({
     id: `r${roundId}-l${lane}`,
-    color: paint[lane].color,
-    colorName: paint[lane].colorName,
+    color: palette[lane].hex,
+    colorName: palette[lane].name,
     kind,
     multiplier: roundOdds(probs[lane]),
   })) as [CarSpec, CarSpec, CarSpec];
 }
-
 
 /* ------------------------------------------------------------------ */
 /* Outcome (secret until reveal)                                       */
@@ -240,14 +294,21 @@ export type Curve = (t: number) => number;
 /**
  * Build the full outcome from a revealed per-round secret.
  *
- * When `roundId` is supplied the finishing order is drawn against the public
- * per-lane win probabilities, so the published odds are the real odds.
+ * Security & anti-pattern guarantees:
+ * 1. Domain-separated PRNG streams (`outcome:order:` vs `outcome:telemetry:`)
+ *    ensure that animation curves never leak or bias the winner draw.
+ * 2. When `roundId` is supplied, `roundId` is bound directly into the seed
+ *    derivation alongside `reveal` so a reveal token is cryptographically bound
+ *    to its exact round and lane probability weights.
+ * 3. Memoryless 53-bit float weighted draw: each round is 100% statistically
+ *    independent of previous rounds (gambler's fallacy / streak trackers gain 0% edge).
  */
 export function outcomeFromReveal(reveal: string, roundId?: number): Outcome {
-  const rnd = rngFrom(`outcome:${reveal}`);
-  const seeds = [0, 1, 2].map(() => Math.floor(rnd() * 0xffffffff));
+  const domainKey = roundId !== undefined ? `${reveal}:r${roundId}` : reveal;
+  const orderRng = rngFrom(`outcome:order:${domainKey}`);
+  const curveRng = rngFrom(`outcome:telemetry:${domainKey}`);
 
-  // deterministic finishing order, weighted by each lane's win probability
+  // Deterministic finishing order, weighted by each lane's exact win probability
   const probs =
     roundId === undefined
       ? [1 / 3, 1 / 3, 1 / 3]
@@ -258,7 +319,10 @@ export function outcomeFromReveal(reveal: string, roundId?: number): Outcome {
   const order: number[] = [];
   while (pool.length) {
     const total = weights.reduce((a, b) => a + b, 0);
-    let r = rnd() * total;
+    // Double-precision uniform draw combining two 32-bit words (53-bit float precision)
+    const uHi = orderRng();
+    const uLo = orderRng();
+    let r = (uHi + uLo / 4294967296) * total;
     let pick = pool.length - 1;
     for (let i = 0; i < pool.length; i++) {
       r -= weights[i];
@@ -272,14 +336,15 @@ export function outcomeFromReveal(reveal: string, roundId?: number): Outcome {
     weights.splice(pick, 1);
   }
 
-
-  // final margins: P1 = 1.0, then tight, race-like gaps
+  // Final margins: P1 = 1.0, then realistic photo-finish or decisive gaps
   const margins: number[] = [0, 0, 0];
-  const g1 = 0.012 + rnd() * 0.05;
-  const g2 = g1 + 0.014 + rnd() * 0.06;
+  const g1 = 0.012 + curveRng() * 0.048;
+  const g2 = g1 + 0.014 + curveRng() * 0.058;
   margins[order[0]] = 1;
   margins[order[1]] = 1 - g1;
   margins[order[2]] = 1 - g2;
+
+  const seeds = [0, 1, 2].map(() => Math.floor(curveRng() * 0xffffffff));
 
   const curves = [0, 1, 2].map((lane) => {
     const seed = seeds[lane];

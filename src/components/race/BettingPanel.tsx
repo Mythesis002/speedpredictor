@@ -12,6 +12,8 @@ interface Props {
   phaseLabel: string;
   /** payout multiplier of the currently selected car, if any */
   multiplier: number | null;
+  /** locked stake amount for the current round, if already placed */
+  activeBetAmount?: number | null;
 }
 
 const MIN_BET = 10;
@@ -27,6 +29,7 @@ export function BettingPanel({
   onConfirm,
   confirmed,
   multiplier,
+  activeBetAmount,
 }: Props) {
   const cap = Math.max(MIN_BET, balance);
   const clamp = (n: number) => Math.max(MIN_BET, Math.min(cap, Math.round(n)));
@@ -35,24 +38,34 @@ export function BettingPanel({
 
   return (
     <div>
+      {confirmed && activeBetAmount != null && (
+        <div className="mb-1.5 flex items-center justify-between px-1 text-[9.5px] font-display tracking-[0.14em] uppercase">
+          <span className="text-[#26ff9a] font-semibold flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#26ff9a] animate-pulse" />
+            Active Bet: {formatINR(activeBetAmount)} Locked
+          </span>
+          <span className="text-white/45">Next Bet Prep: {formatINR(amount)}</span>
+        </div>
+      )}
+
       <div className="flex items-center gap-2">
         <div className="flex items-center h-11 rounded-xl bg-black/40 border border-white/10 overflow-hidden">
           <button
+            type="button"
             aria-label="Decrease bet amount"
-            disabled={locked}
             onClick={() => onChange(clamp(amount - STEP))}
-            className="h-11 w-10 grid place-items-center active:scale-95 disabled:opacity-40"
+            className="h-11 w-10 grid place-items-center active:scale-95 text-white/80 hover:text-white cursor-pointer transition-colors"
           >
             <Minus size={16} />
           </button>
-          <span className="px-3 font-display text-base tabular text-white min-w-[86px] text-center bg-white/5 h-11 grid place-items-center">
+          <span className="px-3 font-display text-base tabular text-white min-w-[86px] text-center bg-white/5 h-11 grid place-items-center select-none">
             {formatINR(amount)}
           </span>
           <button
+            type="button"
             aria-label="Increase bet amount"
-            disabled={locked}
             onClick={() => onChange(clamp(amount + STEP))}
-            className="h-11 w-10 grid place-items-center active:scale-95 disabled:opacity-40"
+            className="h-11 w-10 grid place-items-center active:scale-95 text-white/80 hover:text-white cursor-pointer transition-colors"
           >
             <Plus size={16} />
           </button>
@@ -74,7 +87,9 @@ export function BettingPanel({
         >
           <span className="relative z-10 block truncate px-1">
             {confirmed
-              ? "BET PLACED"
+              ? activeBetAmount != null
+                ? `BET PLACED · ${formatINR(activeBetAmount)}`
+                : "BET PLACED"
               : locked
                 ? "BETS LOCKED"
                 : insufficient
@@ -92,21 +107,21 @@ export function BettingPanel({
         {CHIPS.map((n) => (
           <button
             key={n}
-            disabled={locked}
+            type="button"
             onClick={() => onChange(clamp(n))}
-            className={`h-8 rounded-lg text-[11px] font-display tracking-wide border active:scale-95 disabled:opacity-40 ${
+            className={`h-8 rounded-lg text-[11px] font-display tracking-wide border active:scale-95 cursor-pointer transition-colors ${
               amount === n
                 ? "bg-white/15 border-white/40 text-white"
-                : "bg-white/5 border-white/10 text-white/80"
+                : "bg-white/5 border-white/10 text-white/80 hover:text-white"
             }`}
           >
             {n >= 1000 ? `${n / 1000}K` : n}
           </button>
         ))}
         <button
-          disabled={locked}
+          type="button"
           onClick={() => onChange(clamp(balance))}
-          className="h-8 rounded-lg text-[11px] font-display tracking-wide bg-[#ffd83a]/10 border border-[#ffd83a]/40 text-[#ffd83a] active:scale-95 disabled:opacity-40"
+          className="h-8 rounded-lg text-[11px] font-display tracking-wide bg-[#ffd83a]/10 border border-[#ffd83a]/40 text-[#ffd83a] active:scale-95 hover:bg-[#ffd83a]/20 cursor-pointer transition-colors"
         >
           MAX
         </button>

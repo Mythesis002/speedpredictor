@@ -18,7 +18,7 @@ export function BottomNav({ active, onCashOut }: Props) {
   }[] = [
     { id: "home", icon: Home, label: "Race", href: "/" },
     { id: "history", icon: BarChart3, label: "History", href: "/history" },
-    { id: "cashout", icon: Banknote, label: "Cash out", action: onCashOut },
+    { id: "cashout", icon: Banknote, label: "Withdraw", action: onCashOut },
     { id: "profile", icon: Settings, label: "Profile", href: "/profile" },
   ];
 

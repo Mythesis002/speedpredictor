@@ -7,10 +7,12 @@ interface Props {
   onSelect: (i: number) => void;
   locked: boolean;
   winner: number | null;
-  /** current stake, used to show the exact return on each card */
+  /** current draft stake, used to show the exact return on each card before betting */
   amount: number;
   /** true once the stake has actually been committed for this round */
   confirmed: boolean;
+  /** committed bet for the current round, if already placed */
+  activeBet?: { lane: number; amount: number } | null;
 }
 
 export function PredictionCards({
@@ -21,6 +23,7 @@ export function PredictionCards({
   winner,
   amount,
   confirmed,
+  activeBet,
 }: Props) {
   return (
     <div className="grid grid-cols-3 gap-2">
@@ -28,16 +31,26 @@ export function PredictionCards({
         const isSelected = selected === i;
         const isWinner = winner === i;
         const isLoser = winner !== null && winner !== i;
+        const isCommittedBet = confirmed && activeBet?.lane === i;
+
+        // If this is the committed bet on the track, its payout is strictly locked
+        // to what was actually staked in this round (e.g. ₹10 -> WIN ₹29),
+        // completely immune to whatever draft stake the user selects for the next round!
+        const cardStake = isCommittedBet && activeBet ? activeBet.amount : amount;
+        const payout = cardStake * car.multiplier;
+
         return (
           <button
             key={car.id}
-            disabled={locked}
+            disabled={locked || confirmed}
             aria-pressed={isSelected}
-            aria-label={`Select ${carLabel(car)} car, ${car.multiplier}× payout (${formatINR(amount * car.multiplier)} return)`}
+            aria-label={`Select ${carLabel(car)} car, ${car.multiplier}× payout (${formatINR(payout)} return)`}
             onClick={() => onSelect(i)}
             className={`relative rounded-2xl overflow-hidden border transition-all duration-300 active:scale-[0.97] ${
               isLoser ? "opacity-40" : ""
-            } ${locked && !isSelected ? "opacity-70" : ""}`}
+            } ${locked && !isSelected ? "opacity-70" : ""} ${
+              confirmed && !isSelected ? "opacity-45" : ""
+            }`}
             style={{
               borderColor: isSelected ? car.color : `${car.color}55`,
               background: `linear-gradient(160deg, ${car.color}26, rgba(10,12,20,0.9) 65%)`,
@@ -48,12 +61,16 @@ export function PredictionCards({
                   : `inset 0 0 24px ${car.color}18`,
             }}
           >
-            {isSelected && confirmed && (
-              <span className="absolute left-1 top-1 z-10 rounded-md bg-[#26ff9a] px-1.5 py-[1px] text-[7.5px] font-display tracking-[0.12em] text-black">
-                YOUR PICK
+            {isCommittedBet && activeBet && (
+              <span className="absolute left-1 top-1 z-10 rounded-md bg-[#26ff9a] px-1.5 py-[1px] text-[7.5px] font-display tracking-[0.12em] text-black shadow-sm font-semibold">
+                LOCKED · {formatINR(activeBet.amount)}
               </span>
             )}
-
+            {isSelected && !confirmed && (
+              <span className="absolute left-1 top-1 z-10 rounded-md bg-white/20 px-1.5 py-[1px] text-[7.5px] font-display tracking-[0.12em] text-white">
+                SELECTED
+              </span>
+            )}
 
             <div className="relative flex flex-col items-center px-1 pt-2.5 pb-2">
               <div className="h-[58px] w-full flex items-center justify-center">
@@ -81,7 +98,13 @@ export function PredictionCards({
                 {car.multiplier}×
               </div>
               <div className="mt-1 text-[10px] font-display tabular text-white/55">
-                WIN {formatINR(amount * car.multiplier)}
+                {isCommittedBet ? (
+                  <span className="text-[#26ff9a] font-semibold">WIN {formatINR(payout)}</span>
+                ) : confirmed ? (
+                  <span className="text-white/35">RIVAL CAR</span>
+                ) : (
+                  <span>WIN {formatINR(payout)}</span>
+                )}
               </div>
             </div>
 

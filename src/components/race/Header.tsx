@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Plus, Volume2, VolumeX, Wallet } from "lucide-react";
+import { Plus, Wallet } from "lucide-react";
 import { RollingNumber } from "./RollingNumber";
-import { isSoundMuted, subscribeSoundMuted, toggleSoundMuted } from "@/lib/sound";
 
 interface Props {
   balance: number;
@@ -23,12 +21,6 @@ export function Header({
   isGuest = false,
   onSignIn,
 }: Props) {
-  const [muted, setMuted] = useState(false);
-
-  useEffect(() => {
-    setMuted(isSoundMuted());
-    return subscribeSoundMuted(setMuted);
-  }, []);
 
   return (
     <div className="flex items-center gap-1.5 px-2.5 py-2">
@@ -53,17 +45,6 @@ export function Header({
           </div>
         </div>
       </div>
-
-      {/* Master Audio Mute Toggle */}
-      <button
-        type="button"
-        onClick={() => setMuted(toggleSoundMuted())}
-        aria-label={muted ? "Unmute sound effects" : "Mute sound effects"}
-        title={muted ? "Unmute sound effects" : "Mute sound effects"}
-        className="glass w-8 h-8 rounded-xl grid place-items-center text-white/75 hover:text-white active:scale-95 shrink-0"
-      >
-        {muted ? <VolumeX size={14} className="text-white/40" /> : <Volume2 size={14} className="text-[#ffc32b]" />}
-      </button>
 
       {/* Wallet or Spectator Sign-In CTA */}
       {isGuest ? (
