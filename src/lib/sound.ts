@@ -203,3 +203,80 @@ export function playWinChime(): void {
     /* best effort */
   }
 }
+
+/**
+ * Gentle sparkling shimmer with soft warm flutter when race finish confetti falls.
+ * Features a staggered pentatonic chime cluster layered with a soft bandpass-filtered
+ * airy paper flutter that smoothly decays over 1.2 seconds.
+ */
+export function playConfettiFallSound(): void {
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+    const duration = 1.2;
+
+    // 1. Sparkling shimmer cluster (high-register pentatonic overtone chimes)
+    const sparkleNotes = [1046.5, 1318.51, 1567.98, 2093.0]; // C6, E6, G6, C7
+    const delays = [0, 0.065, 0.13, 0.2];
+    const gains = [0.045, 0.04, 0.035, 0.03];
+
+    sparkleNotes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const start = now + delays[i];
+      const end = now + duration;
+
+      osc.type = i % 2 === 0 ? "triangle" : "sine";
+      osc.frequency.setValueAtTime(freq, start);
+      // Subtle downward micro-drift as confetti floats down
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.96, end);
+
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(gains[i], start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, end);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(end);
+    });
+
+    // 2. Soft warm paper flutter breath (gentle bandpass-filtered noise sweep)
+    const sampleRate = ctx.sampleRate;
+    const bufferSize = Math.floor(sampleRate * duration);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    let b0 = 0;
+    let b1 = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.94 * b0 + white * 0.06;
+      b1 = 0.92 * b1 + b0 * 0.08;
+      output[i] = b1;
+    }
+
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.Q.setValueAtTime(1.4, now);
+    filter.frequency.setValueAtTime(2100, now);
+    filter.frequency.exponentialRampToValueAtTime(1100, now + duration);
+
+    const flutterGain = ctx.createGain();
+    flutterGain.gain.setValueAtTime(0.0001, now);
+    flutterGain.gain.exponentialRampToValueAtTime(0.032, now + 0.04);
+    flutterGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    noiseSource.connect(filter);
+    filter.connect(flutterGain);
+    flutterGain.connect(ctx.destination);
+
+    noiseSource.start(now);
+    noiseSource.stop(now + duration);
+  } catch {
+    /* best effort */
+  }
+}

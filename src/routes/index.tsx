@@ -17,7 +17,13 @@ import { useRaceRound } from "@/lib/use-race-round";
 import { useAuthSession } from "@/lib/use-auth";
 import { recentResults } from "@/lib/rounds.functions";
 import { getWallet, liveStats, placeBet as placeBetFn, settleRound } from "@/lib/wallet.functions";
-import { playBetPlacedChime, playCountdownBeep, playLaunchRoar, playWinChime } from "@/lib/sound";
+import {
+  playBetPlacedChime,
+  playConfettiFallSound,
+  playCountdownBeep,
+  playLaunchRoar,
+  playWinChime,
+} from "@/lib/sound";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -233,6 +239,8 @@ function Game({ isGuest }: { isGuest: boolean }) {
         playCountdownBeep(true);
       } else if (phase === "launch") {
         playLaunchRoar();
+      } else if (phase === "finish") {
+        playConfettiFallSound();
       }
       lastPhaseSoundRef.current = phase;
     }

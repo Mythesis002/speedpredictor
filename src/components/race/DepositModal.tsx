@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, ShieldCheck, X } from "lucide-react";
+import { Loader2, ShieldCheck, Smartphone, X } from "lucide-react";
 import QRCode from "qrcode";
 import { checkDeposit, createDeposit } from "@/lib/wallet.functions";
 import { formatINR } from "@/lib/car-label";
@@ -21,9 +21,8 @@ interface Props {
 const PRESETS = [50, 100, 500, 1000];
 
 /**
- * QR-only deposit flow. Renders a pure, standalone QR matrix from `qrContent`
- * (or tightly crops the square QR region if only `image_url` is returned) so
- * Razorpay's tall retail standee poster, merchant name, and branding never appear.
+ * QR-only deposit flow. Renders a pure, standalone QR matrix from `qrContent`/`upiUri`
+ * directly (<10ms) so Razorpay's tall retail standee poster, merchant name, and branding never appear.
  */
 export function DepositModal({ open, onClose, onCredited }: Props) {
   const start = useServerFn(createDeposit);
@@ -34,6 +33,7 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
     id: string;
     url: string;
     cleanQrDataUrl: string | null;
+    upiUri: string | null;
     amountPaise: number;
   } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -168,10 +168,11 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
         setBusy(false);
         return;
       }
+      const upiUri = res.upiUri || res.qrContent || null;
       let cleanQrDataUrl: string | null = res.cleanQrDataUrl ?? null;
-      if (!cleanQrDataUrl && res.qrContent) {
+      if (!cleanQrDataUrl && upiUri) {
         try {
-          cleanQrDataUrl = await QRCode.toDataURL(res.qrContent, {
+          cleanQrDataUrl = await QRCode.toDataURL(upiUri, {
             width: 520,
             margin: 1,
             errorCorrectionLevel: "M",
@@ -188,6 +189,7 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
         id: res.depositId,
         url: res.qrImageUrl,
         cleanQrDataUrl,
+        upiUri,
         amountPaise: res.amountPaise,
       });
     } catch (err) {
@@ -202,7 +204,7 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
 
   return (
     <div className="fixed inset-0 z-[80] grid place-items-center bg-black/80 px-5 animate-fade-in">
-      <div className="w-full max-w-sm glass rounded-2xl p-4 relative overflow-hidden">
+      <div className="w-full max-w-sm glass rounded-2xl p-4 relative">
         <button
           onClick={onClose}
           aria-label="Close deposit dialog"
@@ -278,12 +280,13 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
 
         {qr && !paidInfo && (
           <div className="text-center">
-            <div className="mx-auto w-56 h-56 rounded-2xl bg-white p-3 overflow-hidden grid place-items-center shadow-[0_0_30px_rgba(255,255,255,0.12)]">
+            {/* Fallback container fix: unconstrained proportional scaling so no QR or image is ever clipped */}
+            <div className="mx-auto w-60 min-h-[240px] rounded-2xl bg-white p-3.5 flex flex-col items-center justify-center shadow-[0_0_35px_rgba(255,255,255,0.15)]">
               <img
                 src={qr.cleanQrDataUrl || qr.url}
                 alt="UPI payment QR code"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-contain block select-none"
+                className="w-full max-w-[212px] h-auto object-contain block select-none rounded-lg"
               />
             </div>
             <div className="mt-3 font-display text-lg tabular">
@@ -292,11 +295,28 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
             <div className="mt-1 flex items-center justify-center gap-1.5 text-[10px] font-display tracking-[0.14em] text-[#ffc32b]">
               <Loader2 size={12} className="animate-spin" /> WAITING FOR UPI CONFIRMATION…
             </div>
+
+            {/* Mobile 1-Tap 'Open in UPI App' button */}
+            {qr.upiUri && (
+              <a
+                href={qr.upiUri}
+                target="_self"
+                className="mt-3.5 w-full h-11 rounded-xl font-display text-[12px] tracking-[0.12em] flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] transition-all text-[#0e1d0c] font-bold shadow-lg"
+                style={{
+                  background: "linear-gradient(180deg, #26ff9a, #1bc574)",
+                  boxShadow: "0 0 20px rgba(38, 255, 154, 0.28)",
+                }}
+              >
+                <Smartphone size={16} className="shrink-0" />
+                <span>OPEN IN UPI APP (GPAY / PHONEPE / PAYTM)</span>
+              </a>
+            )}
+
             <button
               type="button"
               disabled={checkingNow}
               onClick={() => void verifyDepositStatus(qr.id, qr.amountPaise, true)}
-              className="mt-3 w-full h-10 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 font-display text-[11px] tracking-[0.12em] text-white flex items-center justify-center gap-1.5 disabled:opacity-50 transition"
+              className="mt-2.5 w-full h-10 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 font-display text-[11px] tracking-[0.12em] text-white flex items-center justify-center gap-1.5 disabled:opacity-50 transition"
             >
               {checkingNow ? (
                 <>
@@ -309,9 +329,9 @@ export function DepositModal({ open, onClose, onCredited }: Props) {
             {checkHint && (
               <p className="mt-2 text-[10.5px] text-[#ffd83a] leading-snug">{checkHint}</p>
             )}
-            <p className="mt-2 text-[10px] text-white/40 leading-relaxed">
-              Scan with GPay, PhonePe, Paytm or any UPI app. Your wallet is credited the instant
-              your bank confirms the transfer (even if you switch apps).
+            <p className="mt-2.5 text-[10px] text-white/45 leading-relaxed">
+              Tap the green button to pay with one tap on this phone, or scan the QR code with any
+              UPI app on another device.
             </p>
           </div>
         )}

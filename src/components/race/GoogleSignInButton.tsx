@@ -101,8 +101,7 @@ export function GoogleSignInButton({
 
       onSuccess?.({ name: displayName, email: userEmail });
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Google sign-in could not be completed.";
+      const msg = err instanceof Error ? err.message : "Google sign-in could not be completed.";
       console.error("Google sign-in error:", err);
       onError?.(msg);
       toast.error(msg);

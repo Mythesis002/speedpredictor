@@ -182,6 +182,7 @@ export interface CreateDepositResult {
   qrImageUrl: string;
   qrContent: string | null;
   cleanQrDataUrl: string | null;
+  upiUri: string | null;
   amountPaise: number;
 }
 
@@ -199,6 +200,7 @@ export const createDeposit = createServerFn({ method: "POST" })
       qrImageUrl: "",
       qrContent: null,
       cleanQrDataUrl: null,
+      upiUri: null,
       amountPaise: data.amountPaise,
     });
 
@@ -228,6 +230,7 @@ export const createDeposit = createServerFn({ method: "POST" })
 
       const qr = await createRazorpayQr(data.amountPaise, dep.id, context.userId);
       const cleanImageUrl = qr.clean_qr_data_url || qr.image_url;
+      const upiPayload = qr.image_content || qr.qr_string || null;
       await supabaseAdmin
         .from("deposits")
         .update({ qr_id: qr.id, qr_image_url: cleanImageUrl })
@@ -237,8 +240,9 @@ export const createDeposit = createServerFn({ method: "POST" })
         ok: true,
         depositId: dep.id,
         qrImageUrl: cleanImageUrl,
-        qrContent: qr.image_content ?? null,
+        qrContent: upiPayload,
         cleanQrDataUrl: qr.clean_qr_data_url ?? null,
+        upiUri: upiPayload,
         amountPaise: data.amountPaise,
       };
     } catch (err) {

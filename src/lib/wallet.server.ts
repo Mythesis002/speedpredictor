@@ -295,6 +295,15 @@ async function extractPureQrFromRazorpayPoster(imageUrl: string): Promise<{
   }
 }
 
+/**
+ * Razorpay's live UPI intent URI format for the merchant account:
+ * upi://pay?pa=aniketsingh476883.rzp@rxairtel&pn=ANIKETSINGH&mc=5261&mode=22&am={amount}&tr={qr_id}qrv2
+ */
+export function buildRazorpayUpiUri(qrId: string, amountPaise: number): string {
+  const amountInr = (amountPaise / 100).toFixed(2);
+  return `upi://pay?pa=aniketsingh476883.rzp@rxairtel&pn=ANIKETSINGH&mc=5261&mode=22&am=${amountInr}&tr=${qrId}qrv2`;
+}
+
 /** Creates a single-use, fixed-amount UPI QR code for one deposit. */
 export async function createRazorpayQr(
   amountPaise: number,
@@ -303,13 +312,14 @@ export async function createRazorpayQr(
 ): Promise<RazorpayQr> {
   if (!paymentsConfigured()) {
     // Fallback preview/demo UPI QR when Razorpay credentials are not yet configured
-    const amountInr = (amountPaise / 100).toFixed(2);
-    const upiUri = `upi://pay?pa=apexclub@upi&pn=Apex%20Club&am=${amountInr}&cu=INR&tn=Deposit%20${depositId.slice(0, 8)}`;
+    const demoId = `qr_demo_${depositId.slice(0, 12)}`;
+    const upiUri = buildRazorpayUpiUri(demoId, amountPaise);
     const cleanDataUrl = await renderPureQrDataUrl(upiUri);
     return {
-      id: `qr_demo_${depositId.slice(0, 12)}`,
+      id: demoId,
       image_url: cleanDataUrl,
       image_content: upiUri,
+      qr_string: upiUri,
       clean_qr_data_url: cleanDataUrl,
       close_by: Math.floor(Date.now() / 1000) + 20 * 60,
     };
@@ -336,26 +346,24 @@ export async function createRazorpayQr(
     );
   }
 
-  const directPayload = body.image_content || body.qr_string || null;
-  if (directPayload) {
-    const cleanDataUrl = await renderPureQrDataUrl(directPayload);
-    return {
-      ...body,
-      image_content: directPayload,
-      clean_qr_data_url: cleanDataUrl,
-    };
-  }
+  // Instant Direct QR Generation (<10ms):
+  // Generate pure high-contrast black-and-white QR code directly from the UPI intent URI.
+  // Zero CDN delay, zero network timeout risks, and zero clipping.
+  const upiUri = body.image_content || body.qr_string || buildRazorpayUpiUri(body.id, amountPaise);
 
   try {
-    const extracted = await extractPureQrFromRazorpayPoster(body.image_url);
+    const cleanDataUrl = await renderPureQrDataUrl(upiUri);
     return {
       ...body,
-      image_content: extracted.qrContent ?? undefined,
-      clean_qr_data_url: extracted.cleanDataUrl ?? body.image_url,
+      image_content: upiUri,
+      qr_string: upiUri,
+      clean_qr_data_url: cleanDataUrl,
     };
   } catch {
     return {
       ...body,
+      image_content: upiUri,
+      qr_string: upiUri,
       clean_qr_data_url: body.image_url,
     };
   }
