@@ -20,6 +20,7 @@ interface Props {
   braking?: boolean;
   glow?: boolean;
   reflection?: boolean;
+  backfire?: boolean;
 }
 
 function parseHex(hex: string): [number, number, number] {
@@ -153,6 +154,7 @@ export const Car = memo(function Car({
   throttle = 0,
   braking = false,
   glow = false,
+  backfire = false,
 }: Props) {
   const isHyper = spec.kind === "hyper";
   const isSmall = spec.kind === "small";
@@ -255,6 +257,38 @@ export const Car = memo(function Car({
                 ? "radial-gradient(circle, #fffbe6 0%, #ff9d2e 55%, transparent 75%)"
                 : "radial-gradient(circle, #ffffff 0%, #5ce1ff 55%, transparent 75%)",
               animation: `exhaust ${0.64 - t * 0.3}s ease-out infinite ${(0.64 - t * 0.3) / 2}s`,
+            }}
+          />
+        </>
+      )}
+
+      {/* High-intensity gear shift anti-lag backfire flame pops */}
+      {backfire && (
+        <>
+          <span
+            className="pointer-events-none absolute rounded-full animate-pulse-glow"
+            style={{
+              left: "17.4%",
+              bottom: "16.4%",
+              width: 14,
+              height: 12,
+              background:
+                "radial-gradient(circle at 45% 50%, #ffffff 0%, #00f0ff 30%, #ff4b72 75%, transparent 100%)",
+              filter: "drop-shadow(0 0 8px #00f0ff) drop-shadow(0 0 16px #ff3b65)",
+              transform: "scale(1.2)",
+            }}
+          />
+          <span
+            className="pointer-events-none absolute rounded-full animate-pulse-glow"
+            style={{
+              right: "17.4%",
+              bottom: "16.4%",
+              width: 14,
+              height: 12,
+              background:
+                "radial-gradient(circle at 45% 50%, #ffffff 0%, #00f0ff 30%, #ff4b72 75%, transparent 100%)",
+              filter: "drop-shadow(0 0 8px #00f0ff) drop-shadow(0 0 16px #ff3b65)",
+              transform: "scale(1.2)",
             }}
           />
         </>

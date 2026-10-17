@@ -337,23 +337,76 @@ export function outcomeFromReveal(reveal: string, roundId?: number): Outcome {
   margins[order[2]] = 1 - g2;
 
   const seeds = [0, 1, 2].map(() => Math.floor(curveRng() * 0xffffffff));
+  const archetype = Math.floor(curveRng() * 3);
+  const duelSwapPhase = 0.34 + curveRng() * 0.12; // 0.34 .. 0.46
+  const slingshotPhase = 0.76 + curveRng() * 0.09; // 0.76 .. 0.85
 
   const curves = [0, 1, 2].map((lane) => {
     const seed = seeds[lane];
     const margin = margins[lane];
-    const bite = 1.2 + (seed % 100) / 110;
-    const swing = 0.05 + ((seed >>> 3) % 40) / 520;
-    const ph = ((seed >>> 7) % 100) / 100;
-    const kick = ((seed >>> 11) % 50) / 700;
+    const rank = order.indexOf(lane); // 0 = P1 (Podium winner), 1 = P2, 2 = P3
+
+    // Natural GT engine torque bite and micro turbulence
+    const bite = 1.15 + (seed % 100) / 120;
+    const microJitter = 0.012 + ((seed >>> 4) % 30) / 1600;
+    const microFreq = 7 + (seed % 5);
+
     return (t: number) => {
       const tc = Math.max(0, Math.min(1, t));
       const base = Math.pow(tc, 1 / bite);
-      const surge = Math.sin((tc + ph) * Math.PI * 1.7) * swing * (1 - tc) * (1 - tc * 0.3);
-      const late = Math.pow(tc, 5) * kick * (1 - tc);
-      const ease = tc < 0.06 ? tc / 0.06 : 1;
-      const v = (base + surge + late) * ease;
-      // blend onto the exact margin as t -> 1 so the podium always matches `order`
-      const w = Math.pow(tc, 3);
+      const micro = Math.sin(tc * microFreq * Math.PI) * microJitter * tc * (1 - tc);
+
+      // Multi-lead-change slingshot dynamics:
+      // Produces 2-3 genuine, thrilling lead trades in mid-race before locking into the photo finish
+      let battleDelta = 0;
+      if (archetype === 0) {
+        // Archetype 0: P2 launches like a rocket -> P3 attacks at half-distance -> P1 late slingshot overtake
+        if (rank === 0) {
+          const draftPocket = -0.042 * Math.sin(Math.min(1, tc / 0.55) * Math.PI) * (1 - tc);
+          const slingshot =
+            tc > slingshotPhase
+              ? Math.sin(((tc - slingshotPhase) / (1 - slingshotPhase)) * (Math.PI / 2)) * 0.054
+              : 0;
+          battleDelta = draftPocket + slingshot;
+        } else if (rank === 1) {
+          const earlyLead = 0.042 * Math.sin(Math.min(1, tc / 0.45) * Math.PI) * (1 - tc * 0.7);
+          battleDelta = earlyLead;
+        } else {
+          const midSurge =
+            tc > 0.22 && tc < 0.68
+              ? Math.sin(((tc - 0.22) / 0.46) * Math.PI) * 0.046 * (1 - tc * 0.5)
+              : 0;
+          battleDelta = midSurge - 0.018 * tc;
+        }
+      } else if (archetype === 1) {
+        // Archetype 1: P3 early flyer -> P2 catches at half-distance -> P1 final sector sweep
+        if (rank === 0) {
+          const midClimb =
+            tc > 0.48 ? Math.pow((tc - 0.48) / 0.52, 1.8) * 0.062 : -0.032 * (1 - tc);
+          battleDelta = midClimb;
+        } else if (rank === 1) {
+          const midLead =
+            tc > duelSwapPhase && tc < 0.84
+              ? Math.sin(((tc - duelSwapPhase) / (0.84 - duelSwapPhase)) * Math.PI) * 0.044
+              : 0;
+          battleDelta = midLead;
+        } else {
+          const rocketStart = tc < 0.48 ? Math.sin((tc / 0.48) * Math.PI) * 0.048 : -0.026 * tc;
+          battleDelta = rocketStart;
+        }
+      } else {
+        // Archetype 2: 3-way side-by-side dogfight with counter-harmonic draft waves
+        const wave1 = Math.sin((tc + rank * 0.33) * Math.PI * 2.8) * 0.038 * (1 - tc);
+        const wave2 = Math.cos((tc + (2 - rank) * 0.42) * Math.PI * 3.6) * 0.024 * (1 - tc * 0.8);
+        const lateKick = rank === 0 && tc > 0.78 ? Math.pow((tc - 0.78) / 0.22, 2) * 0.046 : 0;
+        battleDelta = wave1 + wave2 + lateKick;
+      }
+
+      const ease = tc < 0.05 ? tc / 0.05 : 1;
+      const v = (base + battleDelta + micro) * ease;
+
+      // Convergence weight (w = tc^3.6) guarantees clean, seamless convergence onto the exact podium margins
+      const w = Math.pow(tc, 3.6);
       return Math.max(0, v * (1 - w) + margin * w);
     };
   }) as [Curve, Curve, Curve];

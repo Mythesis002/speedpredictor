@@ -2,6 +2,7 @@ import { Car, type CarSpec } from "./Car";
 import { useHydrated } from "@/lib/use-hydrated";
 import { useEffect, useMemo, useRef } from "react";
 import { PHASE_MS, type RacePhase } from "@/lib/round-engine";
+import { playShiftBackfire } from "@/lib/sound";
 import {
   DIVIDER_U,
   EDGE_PCT,
@@ -33,6 +34,7 @@ const DASHES = 16;
 const DASH_PERIOD = 0.9;
 const DASH_LEN = 0.34;
 const DASH_SPAN = DASHES * DASH_PERIOD;
+const KERB_COUNT = 14;
 
 /* ---- car depth model ---- */
 const Z_CAR_NEAR = 1.46; // trailing car, closest to the lens
@@ -59,15 +61,29 @@ export function Highway({
   const laneRefs = useRef<Array<HTMLDivElement | null>>([null, null, null]);
   const bodyRefs = useRef<Array<HTMLDivElement | null>>([null, null, null]);
   const posRefs = useRef<Array<HTMLDivElement | null>>([null, null, null]);
+  const flameRefs = useRef<Array<HTMLDivElement | null>>([null, null, null]);
+  const slipRefs = useRef<Array<HTMLDivElement | null>>([null, null, null]);
   const dashRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const seamRefs = useRef<Array<HTMLSpanElement | null>>([]);
+  const kerbLeftRefs = useRef<Array<HTMLSpanElement | null>>([]);
+  const kerbRightRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const roadGrainRef = useRef<HTMLDivElement | null>(null);
+
+  // Broadcast Telemetry HUD refs (direct DOM updates at 120Hz)
+  const hudSpeedRef = useRef<HTMLSpanElement | null>(null);
+  const hudGearRef = useRef<HTMLSpanElement | null>(null);
+  const hudRpmDotsRef = useRef<Array<HTMLSpanElement | null>>([]);
+  const hudDeltaRef = useRef<HTMLSpanElement | null>(null);
+  const hudStatusRef = useRef<HTMLSpanElement | null>(null);
 
   const zCar = useRef<[number, number, number]>([Z_CAR_NEAR, Z_CAR_NEAR, Z_CAR_NEAR]);
   const zVel = useRef<[number, number, number]>([0, 0, 0]);
   const lastP = useRef<[number, number, number]>([0, 0, 0]);
   const speedS = useRef<[number, number, number]>([0, 0, 0]);
   const shownPos = useRef<[number, number, number]>([0, 0, 0]);
+  const currentGear = useRef<[number, number, number]>([1, 1, 1]);
+  const flameUntil = useRef<[number, number, number]>([0, 0, 0]);
+  const pitchKick = useRef<[number, number, number]>([0, 0, 0]);
   const flow = useRef(0); // accumulated road scroll, in world z units
   const grainOffset = useRef(0); // continuous pixel scroll for surface texture
   const flowSpeed = useRef(0);
@@ -180,26 +196,69 @@ export function Highway({
           el.style.setProperty("--wheel-play", rolling ? "running" : "paused");
         }
 
-        /* suspension: subtle body roll & micro-vibration anchored at the tyre-road contact line */
+        /* gear progression & shift dynamics */
+        const curP = p[i];
+        let targetGear = 1;
+        if (curP >= 0.84) targetGear = 7;
+        else if (curP >= 0.66) targetGear = 6;
+        else if (curP >= 0.48) targetGear = 5;
+        else if (curP >= 0.32) targetGear = 4;
+        else if (curP >= 0.18) targetGear = 3;
+        else if (curP >= 0.08) targetGear = 2;
+
+        if (live && targetGear > currentGear.current[i]) {
+          currentGear.current[i] = targetGear;
+          flameUntil.current[i] = ts + 150;
+          pitchKick.current[i] = 1.0;
+          playShiftBackfire();
+        }
+        pitchKick.current[i] = Math.max(0, pitchKick.current[i] - dt * 7.5);
+
+        // Update backfire flame visibility
+        const flameEl = flameRefs.current[i];
+        if (flameEl) {
+          flameEl.style.opacity = ts < flameUntil.current[i] ? "1" : "0";
+        }
+
+        // Update aerodynamic slipstream wake ribbons
+        const slipEl = slipRefs.current[i];
+        if (slipEl) {
+          const aeroAlpha = live
+            ? Math.min(0.85, Math.max(0, (speedS.current[i] - 0.04) * 4.8))
+            : 0;
+          slipEl.style.opacity = aeroAlpha.toFixed(3);
+        }
+
+        /* suspension: subtle body roll, gear-shift pitch jolt & micro-vibration */
         const bodyEl = bodyRefs.current[i];
         if (bodyEl) {
-          const squat = ph === "launch" ? 0.8 : ph === "finish" ? -0.4 : 0;
+          const squat = ph === "launch" ? 1.4 : ph === "finish" ? -0.4 : 0;
+          const shiftJolt = -pitchKick.current[i] * 2.2;
           const jitter = live ? Math.sin(ts * 0.06 + i * 2.1) * 0.35 * throttleI : 0;
           const roll = -swayVel * 14; // subtle lean into the direction of the weave
           bodyEl.style.transform =
-            `translate3d(${jitter.toFixed(2)}px, ${squat.toFixed(2)}px, 0)` +
+            `translate3d(${jitter.toFixed(2)}px, ${(squat + shiftJolt).toFixed(2)}px, 0)` +
             ` rotate(${roll.toFixed(2)}deg)`;
         }
 
         const rank = [0, 1, 2].sort((a, b) => p[b] - p[a]).indexOf(i) + 1;
         const badge = posRefs.current[i];
         if (badge) {
-          if (shownPos.current[i] !== rank) {
-            shownPos.current[i] = rank;
-            badge.textContent = `P${rank}`;
-            badge.style.color = rank === 1 ? "#ffd66b" : rank === 2 ? "#d7e2f5" : "#8b97ad";
+          if (ph === "race" || ph === "finish") {
+            badge.style.opacity = "1";
+            if (rank === 1) {
+              badge.textContent = `P1 · LEADER`;
+              badge.style.color = "#ffd66b";
+            } else {
+              const leadLane = [0, 1, 2].sort((a, b) => p[b] - p[a])[0];
+              const gapP = Math.max(0, p[leadLane] - p[i]);
+              const gapSec = (gapP * 8.6).toFixed(2);
+              badge.textContent = `P${rank} · +${gapSec}s`;
+              badge.style.color = rank === 2 ? "#d7e2f5" : "#8b97ad";
+            }
+          } else {
+            badge.style.opacity = "0";
           }
-          badge.style.opacity = ph === "race" || ph === "finish" ? "1" : "0";
         }
       }
 
@@ -266,6 +325,112 @@ export function Highway({
             ` ${(xNear - wNear / 2).toFixed(2)}px ${yFront.toFixed(2)}px)`;
           // fade in as it emerges from the vanishing point
           el.style.opacity = Math.min(1, (Z_FAR - z) / (Z_FAR * 0.45)).toFixed(3);
+        }
+      }
+
+      /* ---- FIA alternating red/white kerb rumble strips ---- */
+      const KERB_SPAN = DASH_SPAN;
+      const KERB_SEG_LEN = DASH_SPAN / KERB_COUNT;
+      for (let i = 0; i < KERB_COUNT; i++) {
+        const z =
+          Z_NEAR + ((((i * KERB_SEG_LEN - flow.current) % KERB_SPAN) + KERB_SPAN) % KERB_SPAN);
+        const zBack = Math.min(z + KERB_SEG_LEN * 0.5, Z_FAR);
+        const isFar = z > Z_FAR;
+
+        // Left kerb (-1.04 to -0.96)
+        const leftEl = kerbLeftRefs.current[i];
+        if (leftEl) {
+          if (isFar) {
+            leftEl.style.opacity = "0";
+          } else {
+            const yNear = yAt(z, h);
+            const yFar = yAt(zBack, h);
+            const xInnerNear = xAt(-0.95, z, w);
+            const xOuterNear = xAt(-1.03, z, w);
+            const xInnerFar = xAt(-0.95, zBack, w);
+            const xOuterFar = xAt(-1.03, zBack, w);
+            leftEl.style.clipPath =
+              `polygon(${xOuterFar.toFixed(2)}px ${yFar.toFixed(2)}px,` +
+              ` ${xInnerFar.toFixed(2)}px ${yFar.toFixed(2)}px,` +
+              ` ${xInnerNear.toFixed(2)}px ${yNear.toFixed(2)}px,` +
+              ` ${xOuterNear.toFixed(2)}px ${yNear.toFixed(2)}px)`;
+            leftEl.style.opacity = Math.min(0.85, (Z_FAR - z) / (Z_FAR * 0.4)).toFixed(3);
+          }
+        }
+
+        // Right kerb (+0.96 to +1.04)
+        const rightEl = kerbRightRefs.current[i];
+        if (rightEl) {
+          if (isFar) {
+            rightEl.style.opacity = "0";
+          } else {
+            const yNear = yAt(z, h);
+            const yFar = yAt(zBack, h);
+            const xInnerNear = xAt(0.95, z, w);
+            const xOuterNear = xAt(1.03, z, w);
+            const xInnerFar = xAt(0.95, zBack, w);
+            const xOuterFar = xAt(1.03, zBack, w);
+            rightEl.style.clipPath =
+              `polygon(${xInnerFar.toFixed(2)}px ${yFar.toFixed(2)}px,` +
+              ` ${xOuterFar.toFixed(2)}px ${yFar.toFixed(2)}px,` +
+              ` ${xOuterNear.toFixed(2)}px ${yNear.toFixed(2)}px,` +
+              ` ${xInnerNear.toFixed(2)}px ${yNear.toFixed(2)}px)`;
+            rightEl.style.opacity = Math.min(0.85, (Z_FAR - z) / (Z_FAR * 0.4)).toFixed(3);
+          }
+        }
+      }
+
+      /* ---- Live Broadcast Telemetry HUD ---- */
+      const leadP = Math.max(p[0], p[1], p[2]);
+      const leadGear = live ? Math.max(...currentGear.current) : 1;
+      const speedKmh = live
+        ? Math.min(335, Math.round(95 + leadP * 230 + fastest * 30))
+        : ph === "waiting"
+          ? 0
+          : 42;
+
+      if (hudSpeedRef.current) {
+        hudSpeedRef.current.textContent = `${speedKmh}`;
+      }
+      if (hudGearRef.current) {
+        hudGearRef.current.textContent = `${leadGear}`;
+      }
+      if (hudDeltaRef.current) {
+        if (live || ph === "finish") {
+          const sorted = [0, 1, 2].sort((a, b) => p[b] - p[a]);
+          const gapSec = ((p[sorted[0]] - p[sorted[1]]) * 8.6).toFixed(2);
+          hudDeltaRef.current.textContent = `GAP +${gapSec}s`;
+          hudDeltaRef.current.style.color = Number(gapSec) < 0.08 ? "#ffd66b" : "#35e6ff";
+        } else {
+          hudDeltaRef.current.textContent = ph === "waiting" ? "STAGED" : "ARMED";
+          hudDeltaRef.current.style.color = "#ffc32b";
+        }
+      }
+      if (hudStatusRef.current) {
+        if (ph === "waiting") hudStatusRef.current.textContent = "GRID STAGED";
+        else if (ph === "prep" || ph === "lock")
+          hudStatusRef.current.textContent = "LAUNCH CONTROL";
+        else if (ph === "launch") hudStatusRef.current.textContent = "DRS OPEN";
+        else if (ph === "race")
+          hudStatusRef.current.textContent = leadP > 0.8 ? "FINAL SECTOR" : "RACING";
+        else hudStatusRef.current.textContent = "PHOTO FINISH";
+      }
+
+      // RPM LED dots (6 LEDs: 3 green, 2 amber, 1 red shift light)
+      const gearProgress = Math.min(1, Math.max(0, (leadP * 6.5) % 1));
+      const litDots = Math.floor(gearProgress * 7);
+      for (let dot = 0; dot < 6; dot++) {
+        const dotEl = hudRpmDotsRef.current[dot];
+        if (dotEl) {
+          const isLit = live && dot < litDots;
+          dotEl.style.opacity = isLit ? "1" : "0.15";
+          dotEl.style.boxShadow = isLit
+            ? dot >= 5
+              ? "0 0 6px #ff2d3f"
+              : dot >= 3
+                ? "0 0 5px #ffd66b"
+                : "0 0 5px #26ff9a"
+            : "none";
         }
       }
 
@@ -564,6 +729,44 @@ export function Highway({
               ))}
             </div>
           ))}
+
+          {/* FIA Red & White Track Kerbs (Left & Right Track Limit Rumble Strips) */}
+          <div className="absolute inset-0 pointer-events-none">
+            {Array.from({ length: KERB_COUNT }).map((_, i) => (
+              <span
+                key={i}
+                ref={(el) => {
+                  kerbLeftRefs.current[i] = el;
+                }}
+                className="absolute inset-0 block gpu pointer-events-none"
+                style={{
+                  background:
+                    i % 2 === 0
+                      ? "linear-gradient(90deg, #d81b30, #ff3b53)"
+                      : "linear-gradient(90deg, #dce4f2, #ffffff)",
+                  opacity: 0,
+                  filter: "drop-shadow(0 0 4px rgba(255,45,63,0.35))",
+                }}
+              />
+            ))}
+            {Array.from({ length: KERB_COUNT }).map((_, i) => (
+              <span
+                key={i}
+                ref={(el) => {
+                  kerbRightRefs.current[i] = el;
+                }}
+                className="absolute inset-0 block gpu pointer-events-none"
+                style={{
+                  background:
+                    i % 2 === 0
+                      ? "linear-gradient(90deg, #ff3b53, #d81b30)"
+                      : "linear-gradient(90deg, #ffffff, #dce4f2)",
+                  opacity: 0,
+                  filter: "drop-shadow(0 0 4px rgba(255,45,63,0.35))",
+                }}
+              />
+            ))}
+          </div>
         </div>
 
         {/* ---------- Hero cars ---------- */}
@@ -648,6 +851,54 @@ export function Highway({
                     }}
                   />
 
+                  {/* Aerodynamic slipstream draft wake streamers */}
+                  <div
+                    ref={(el) => {
+                      slipRefs.current[i] = el;
+                    }}
+                    className="pointer-events-none absolute bottom-[18%] inset-x-0 h-20 opacity-0 z-10"
+                  >
+                    <span
+                      className="absolute left-[8%] top-0 w-[2px] h-full"
+                      style={{
+                        background: `linear-gradient(180deg, ${car.color}ee 0%, ${car.color}33 60%, transparent 100%)`,
+                        filter: `drop-shadow(0 0 4px ${car.color})`,
+                      }}
+                    />
+                    <span
+                      className="absolute right-[8%] top-0 w-[2px] h-full"
+                      style={{
+                        background: `linear-gradient(180deg, ${car.color}ee 0%, ${car.color}33 60%, transparent 100%)`,
+                        filter: `drop-shadow(0 0 4px ${car.color})`,
+                      }}
+                    />
+                  </div>
+
+                  {/* High-intensity twin exhaust backfire flame pops */}
+                  <div
+                    ref={(el) => {
+                      flameRefs.current[i] = el;
+                    }}
+                    className="pointer-events-none absolute inset-x-0 bottom-[14%] flex justify-between px-[17.2%] opacity-0 transition-opacity duration-75 z-20"
+                  >
+                    <span
+                      className="w-4 h-3.5 rounded-full blur-[0.4px] animate-pulse-glow"
+                      style={{
+                        background:
+                          "radial-gradient(circle at 45% 50%, #ffffff 0%, #00f0ff 35%, #ff3b65 80%, transparent 100%)",
+                        boxShadow: "0 0 12px #00f0ff, 0 0 22px #ff3b65",
+                      }}
+                    />
+                    <span
+                      className="w-4 h-3.5 rounded-full blur-[0.4px] animate-pulse-glow"
+                      style={{
+                        background:
+                          "radial-gradient(circle at 45% 50%, #ffffff 0%, #00f0ff 35%, #ff3b65 80%, transparent 100%)",
+                        boxShadow: "0 0 12px #00f0ff, 0 0 22px #ff3b65",
+                      }}
+                    />
+                  </div>
+
                   <Car
                     spec={car}
                     size={BASE_CAR}
@@ -659,14 +910,15 @@ export function Highway({
 
                 {myLane === i && !isWinner && (
                   <div
-                    className="absolute -top-7 left-1/2 -translate-x-1/2 rounded-full px-1.5 py-[1px] font-display text-[7.5px] tracking-[0.2em] whitespace-nowrap"
+                    className="absolute -top-7 left-1/2 -translate-x-1/2 rounded-full px-2 py-[1.5px] font-display text-[7.5px] tracking-[0.2em] whitespace-nowrap animate-pulse-glow"
                     style={{
-                      background: "rgba(4,6,12,0.78)",
+                      background: "rgba(4,6,14,0.85)",
                       color: car.color,
-                      boxShadow: `0 0 0 1px ${car.color}88, 0 4px 10px rgba(0,0,0,0.6)`,
+                      border: `1px solid ${car.color}`,
+                      boxShadow: `0 0 12px ${car.color}aa, 0 4px 12px rgba(0,0,0,0.8)`,
                     }}
                   >
-                    YOUR BET
+                    YOUR CAR
                   </div>
                 )}
                 {isWinner && (
@@ -778,6 +1030,75 @@ export function Highway({
           })}
         </div>
       )}
+
+      {/* ---------- Motorsport Broadcast Telemetry HUD Console ---------- */}
+      <div className="pointer-events-none absolute bottom-2 inset-x-2.5 z-40">
+        <div className="flex items-center justify-between rounded-xl bg-black/80 backdrop-blur-md border border-white/15 px-3 py-1.5 shadow-[0_4px_24px_rgba(0,0,0,0.85)] font-display">
+          {/* Status badge */}
+          <div className="flex items-center gap-1.5 min-w-[95px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#26ff9a] animate-pulse" />
+            <span
+              ref={hudStatusRef}
+              className="text-[9px] tracking-[0.16em] text-white/70 uppercase"
+            >
+              GRID STAGED
+            </span>
+          </div>
+
+          {/* Central Speedometer & Gear Tach */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-baseline gap-1">
+              <span
+                ref={hudSpeedRef}
+                className="text-[17px] font-bold tabular text-white leading-none text-neon"
+              >
+                0
+              </span>
+              <span className="text-[8.5px] tracking-[0.14em] text-white/45">KM/H</span>
+            </div>
+
+            <span className="w-[1px] h-3.5 bg-white/15" />
+
+            {/* Gear indicator */}
+            <div className="flex items-center gap-1">
+              <span className="text-[8px] text-white/40">G</span>
+              <span
+                ref={hudGearRef}
+                className="text-[13px] font-bold tabular text-[#ffd66b] leading-none"
+              >
+                1
+              </span>
+            </div>
+
+            {/* 6 RPM shift LED dots */}
+            <div className="flex items-center gap-0.5 ml-0.5">
+              {[0, 1, 2, 3, 4, 5].map((d) => (
+                <span
+                  key={d}
+                  ref={(el) => {
+                    hudRpmDotsRef.current[d] = el;
+                  }}
+                  className="w-1 h-2 rounded-[0.5px] transition-opacity duration-75"
+                  style={{
+                    background: d >= 5 ? "#ff2d3f" : d >= 3 ? "#ffd66b" : "#26ff9a",
+                    opacity: 0.15,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Battle Interval Delta */}
+          <div className="text-right min-w-[70px]">
+            <span
+              ref={hudDeltaRef}
+              className="text-[9.5px] font-bold tabular text-[#35e6ff] tracking-[0.1em]"
+            >
+              STAGED
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* vignette */}
       <div

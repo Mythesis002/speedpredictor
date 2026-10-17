@@ -152,6 +152,58 @@ export function playLaunchRoar(): void {
   }
 }
 
+/** Crisp twin-exhaust anti-lag backfire pop on high-RPM upshifts. */
+export function playShiftBackfire(): void {
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+
+    // 1. Snappy acoustic pop transient
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(140, now);
+    osc.frequency.exponentialRampToValueAtTime(38, now + 0.07);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.075, now + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.08);
+
+    // 2. Filtered exhaust noise crackle
+    const sampleRate = ctx.sampleRate;
+    const count = Math.floor(sampleRate * 0.065);
+    const buf = ctx.createBuffer(1, count, sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < count; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (count * 0.28));
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(950, now);
+    filter.Q.setValueAtTime(1.8, now);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.045, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.065);
+
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(now);
+    noise.stop(now + 0.07);
+  } catch {
+    /* best effort */
+  }
+}
+
 /** Tactile confirmation click when placing a bet. */
 export function playBetPlacedChime(): void {
   const ctx = getCtx();
