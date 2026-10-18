@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for upgrading Apex's race physics, overtake slingshot curves, gear-shift backfire dynamics, track kerb & slipstream visual cues, and live motorsport broadcast HUD.",
-  "updatedAt":  "2026-10-12T06:57:45.596440443Z",
-  "requestFeedback":  true,
-  "userFacing":  true
+  "summary": "Implementation plan for upgrading Apex's race physics, overtake slingshot curves, gear-shift backfire dynamics, track kerb & slipstream visual cues, and live motorsport broadcast HUD.",
+  "updatedAt": "2026-10-12T06:57:45.596440443Z",
+  "requestFeedback": true,
+  "userFacing": true
 }

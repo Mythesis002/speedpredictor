@@ -34,26 +34,26 @@ Deliver a high-adrenaline, studio-grade racing simulation experience inside the 
      - Camera pulls into a subtle high-speed tunnel-vision vignette and FOV zoom focused toward the battle at the front.
      - Live interval badges above each car update in real time (`LEADER` in `#ffd66b` gold, `+0.04s`, `+0.11s` in tabular monospace) until the winner crosses the finish gantry.
 - **Visual Identity & Theme**:
-  - *Aesthetic Direction*: FIA GT Night Broadcast meets high-precision dark telemetry (`#04060c` obsidian canvas, crisp tabular numerals, zero decorative clutter).
-  - *Color Palette & Mood*: Deep asphalt (`#12151e`–`#282f40`), alternating crimson/white track kerbs (`#ff2d3f` / `#f0f6ff`), electric cyan speed cues (`--neon-cyan`), and gold leader accents (`#ffd66b`).
-  - *Typography & Hierarchy*: `Orbitron` (`--font-display`) with `tabular-nums` for speed, gear, and interval deltas; `Inter` (`--font-body`) for clean labels.
-  - *Component Styling & Layout*: Preserves the 394px shared mobile shell and pinhole perspective geometry (`src/lib/track-geometry.ts`) so every kerb, dash, and car tire lands accurately on the projected tarmac plane.
+  - _Aesthetic Direction_: FIA GT Night Broadcast meets high-precision dark telemetry (`#04060c` obsidian canvas, crisp tabular numerals, zero decorative clutter).
+  - _Color Palette & Mood_: Deep asphalt (`#12151e`–`#282f40`), alternating crimson/white track kerbs (`#ff2d3f` / `#f0f6ff`), electric cyan speed cues (`--neon-cyan`), and gold leader accents (`#ffd66b`).
+  - _Typography & Hierarchy_: `Orbitron` (`--font-display`) with `tabular-nums` for speed, gear, and interval deltas; `Inter` (`--font-body`) for clean labels.
+  - _Component Styling & Layout_: Preserves the 394px shared mobile shell and pinhole perspective geometry (`src/lib/track-geometry.ts`) so every kerb, dash, and car tire lands accurately on the projected tarmac plane.
 
 ---
 
 ## 3. Key Product Decisions & Trade-Offs
 
 - **Decision 1: Counter-Phased Slingshot Curve Formulation**
-  - *Chosen Approach*: Upgrade `outcomeFromReveal` in `src/lib/round-engine.ts` so the 3 lanes use orthogonal multi-harmonic overtake waves (`sin(2πt)` + `sin(3πt)`) weighted by role (`P1` late slingshot or mid-pack duel, `P2` early/mid leader that gets caught at `t ≈ 0.82–0.92`, `P3` early challenger) that smoothly blend ($w = t^4$) onto the exact deterministic podium margins at $t = 1.0$.
-  - *Why*: Eliminates "procession races" where one car leads from start to finish, creating 2–3 genuine lead swaps every round while remaining 100% deterministic, isomorphic, and provably fair.
-  - *Alternatives Considered*: Random frame-by-frame client noise (rejected because every client device must see the exact same race choreography).
+  - _Chosen Approach_: Upgrade `outcomeFromReveal` in `src/lib/round-engine.ts` so the 3 lanes use orthogonal multi-harmonic overtake waves (`sin(2πt)` + `sin(3πt)`) weighted by role (`P1` late slingshot or mid-pack duel, `P2` early/mid leader that gets caught at `t ≈ 0.82–0.92`, `P3` early challenger) that smoothly blend ($w = t^4$) onto the exact deterministic podium margins at $t = 1.0$.
+  - _Why_: Eliminates "procession races" where one car leads from start to finish, creating 2–3 genuine lead swaps every round while remaining 100% deterministic, isomorphic, and provably fair.
+  - _Alternatives Considered_: Random frame-by-frame client noise (rejected because every client device must see the exact same race choreography).
 - **Decision 2: Compositor-Driven 120Hz Physics & DOM Ref Mutators**
-  - *Chosen Approach*: Drive all new telemetry readouts (speedo `KM/H`, `GEAR`, per-car `+0.00s` gap intervals, kerb projection, and gear-shift backfire triggers) inside the existing `requestAnimationFrame` loop in `Highway.tsx` via direct DOM refs (`textContent` and `transform: translate3d(...)`).
-  - *Why*: Guarantees zero React re-renders during the 60/120fps race loop and keeps mobile battery/GPU performance smooth.
+  - _Chosen Approach_: Drive all new telemetry readouts (speedo `KM/H`, `GEAR`, per-car `+0.00s` gap intervals, kerb projection, and gear-shift backfire triggers) inside the existing `requestAnimationFrame` loop in `Highway.tsx` via direct DOM refs (`textContent` and `transform: translate3d(...)`).
+  - _Why_: Guarantees zero React re-renders during the 60/120fps race loop and keeps mobile battery/GPU performance smooth.
 
 ---
 
-## 4. Technical Architecture & Data Strategy *(Technical Reference)*
+## 4. Technical Architecture & Data Strategy _(Technical Reference)_
 
 - **Architecture & Component Diagram**:
 

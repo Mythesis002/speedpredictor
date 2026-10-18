@@ -52,7 +52,7 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
         context: {
           supabase,
           userId,
-          claims: (claims ?? { sub: userId, role: "authenticated" }) as any,
+          claims: (claims ?? { sub: userId, role: "authenticated" }) as Record<string, unknown>,
         },
       });
     }

@@ -80,7 +80,13 @@ function getConfiguredOwnerPhones(): Set<string> {
   );
 }
 
-async function isAuthorizedOwner(context: { supabase: any; userId: string }): Promise<boolean> {
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
+
+async function isAuthorizedOwner(context: {
+  supabase: SupabaseClient<Database>;
+  userId: string;
+}): Promise<boolean> {
   const { data, error } = await context.supabase.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
@@ -104,7 +110,7 @@ async function isAuthorizedOwner(context: { supabase: any; userId: string }): Pr
 }
 
 /** Every admin function verifies the caller's role through their own RLS session. */
-async function assertAdmin(context: { supabase: any; userId: string }) {
+async function assertAdmin(context: { supabase: SupabaseClient<Database>; userId: string }) {
   const allowed = await isAuthorizedOwner(context);
   if (!allowed) throw new Error("Forbidden");
 }

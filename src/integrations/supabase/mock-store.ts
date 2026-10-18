@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Session, User } from "@supabase/supabase-js";
 
 export interface MockProfileRow {

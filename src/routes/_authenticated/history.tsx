@@ -32,7 +32,7 @@ function HistoryPage() {
   const walletQ = useQuery({ queryKey: ["my-wallet-nav"], queryFn: () => fetchWallet({}) });
   const [filter, setFilter] = useState<Filter>("all");
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const bets = q.data ?? [];
+  const bets = useMemo(() => q.data ?? [], [q.data]);
 
   const summary = useMemo(() => {
     const settled = bets.filter((b) => b.status !== "pending");

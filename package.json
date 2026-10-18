@@ -10,7 +10,8 @@
     "start": "PORT=3000 HOST=0.0.0.0 node dist/server/index.mjs",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "postinstall": "node scripts/patch-tanstack.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

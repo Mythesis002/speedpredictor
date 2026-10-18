@@ -21,8 +21,10 @@ export interface WalletState {
   phone: string;
   activeBet: { roundId: number; lane: number; amountPaise: number; multiplier: number } | null;
 }
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
-async function computeWalletBalances(supabaseAdmin: any, userId: string) {
+async function computeWalletBalances(supabaseAdmin: SupabaseClient<Database>, userId: string) {
   const [{ data: profile, error }, { data: pendingWithdrawals }] = await Promise.all([
     supabaseAdmin
       .from("profiles")
@@ -321,7 +323,7 @@ export const requestWithdrawal = createServerFn({ method: "POST" })
     if (!Number.isInteger(amountPaise) || amountPaise < 10000)
       throw new Error("Minimum payout is ₹100.");
     if (amountPaise > MAX_DEPOSIT_PAISE) throw new Error("Maximum single payout is ₹2,00,000.");
-    if (!/^[\w.\-]{2,64}@[a-zA-Z]{2,32}$/.test(upiId))
+    if (!/^[\w.-]{2,64}@[a-zA-Z]{2,32}$/.test(upiId))
       throw new Error("Enter a valid UPI ID (for example, name@upi).");
     return { amountPaise, upiId };
   })
