@@ -27,6 +27,8 @@ interface Props {
   myLane?: number | null;
   /** seconds elapsed inside the current phase, for VFX timing */
   phaseElapsedRef?: { current: number };
+  /** freeze highway flow and movement when internet connection drops */
+  paused?: boolean;
 }
 
 /* ---- dash geometry (world units along z) ---- */
@@ -49,6 +51,7 @@ export function Highway({
   hyperMode,
   countdown,
   myLane = null,
+  paused = false,
 }: Props) {
   const hydrated = useHydrated();
   const racing = phase === "launch" || phase === "race";
@@ -69,13 +72,6 @@ export function Highway({
   const kerbRightRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const roadGrainRef = useRef<HTMLDivElement | null>(null);
 
-  // Broadcast Telemetry HUD refs (direct DOM updates at 120Hz)
-  const hudSpeedRef = useRef<HTMLSpanElement | null>(null);
-  const hudGearRef = useRef<HTMLSpanElement | null>(null);
-  const hudRpmDotsRef = useRef<Array<HTMLSpanElement | null>>([]);
-  const hudDeltaRef = useRef<HTMLSpanElement | null>(null);
-  const hudStatusRef = useRef<HTMLSpanElement | null>(null);
-
   const zCar = useRef<[number, number, number]>([Z_CAR_NEAR, Z_CAR_NEAR, Z_CAR_NEAR]);
   const zVel = useRef<[number, number, number]>([0, 0, 0]);
   const lastP = useRef<[number, number, number]>([0, 0, 0]);
@@ -95,6 +91,8 @@ export function Highway({
   const racingRef = useRef(racing);
   racingRef.current = racing;
   const prevPhase = useRef(phase);
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
 
   /* ---------------- one rAF loop drives the whole scene ---------------- */
   useEffect(() => {
@@ -105,6 +103,13 @@ export function Highway({
     const STEP = 1 / 120; // fixed physics step → identical motion on 60/120Hz
 
     const loop = (ts: number) => {
+      if (pausedRef.current) {
+        flowSpeed.current = 0;
+        prev = ts;
+        raf = requestAnimationFrame(loop);
+        return;
+      }
+
       let dt = (ts - prev) / 1000;
       prev = ts;
       if (!Number.isFinite(dt) || dt <= 0) dt = 0.016;
@@ -377,60 +382,6 @@ export function Highway({
               ` ${xInnerNear.toFixed(2)}px ${yNear.toFixed(2)}px)`;
             rightEl.style.opacity = Math.min(0.85, (Z_FAR - z) / (Z_FAR * 0.4)).toFixed(3);
           }
-        }
-      }
-
-      /* ---- Live Broadcast Telemetry HUD ---- */
-      const leadP = Math.max(p[0], p[1], p[2]);
-      const leadGear = live ? Math.max(...currentGear.current) : 1;
-      const speedKmh = live
-        ? Math.min(335, Math.round(95 + leadP * 230 + fastest * 30))
-        : ph === "waiting"
-          ? 0
-          : 42;
-
-      if (hudSpeedRef.current) {
-        hudSpeedRef.current.textContent = `${speedKmh}`;
-      }
-      if (hudGearRef.current) {
-        hudGearRef.current.textContent = `${leadGear}`;
-      }
-      if (hudDeltaRef.current) {
-        if (live || ph === "finish") {
-          const sorted = [0, 1, 2].sort((a, b) => p[b] - p[a]);
-          const gapSec = ((p[sorted[0]] - p[sorted[1]]) * 8.6).toFixed(2);
-          hudDeltaRef.current.textContent = `GAP +${gapSec}s`;
-          hudDeltaRef.current.style.color = Number(gapSec) < 0.08 ? "#ffd66b" : "#35e6ff";
-        } else {
-          hudDeltaRef.current.textContent = ph === "waiting" ? "STAGED" : "ARMED";
-          hudDeltaRef.current.style.color = "#ffc32b";
-        }
-      }
-      if (hudStatusRef.current) {
-        if (ph === "waiting") hudStatusRef.current.textContent = "GRID STAGED";
-        else if (ph === "prep" || ph === "lock")
-          hudStatusRef.current.textContent = "LAUNCH CONTROL";
-        else if (ph === "launch") hudStatusRef.current.textContent = "DRS OPEN";
-        else if (ph === "race")
-          hudStatusRef.current.textContent = leadP > 0.8 ? "FINAL SECTOR" : "RACING";
-        else hudStatusRef.current.textContent = "PHOTO FINISH";
-      }
-
-      // RPM LED dots (6 LEDs: 3 green, 2 amber, 1 red shift light)
-      const gearProgress = Math.min(1, Math.max(0, (leadP * 6.5) % 1));
-      const litDots = Math.floor(gearProgress * 7);
-      for (let dot = 0; dot < 6; dot++) {
-        const dotEl = hudRpmDotsRef.current[dot];
-        if (dotEl) {
-          const isLit = live && dot < litDots;
-          dotEl.style.opacity = isLit ? "1" : "0.15";
-          dotEl.style.boxShadow = isLit
-            ? dot >= 5
-              ? "0 0 6px #ff2d3f"
-              : dot >= 3
-                ? "0 0 5px #ffd66b"
-                : "0 0 5px #26ff9a"
-            : "none";
         }
       }
 
@@ -1031,74 +982,15 @@ export function Highway({
         </div>
       )}
 
-      {/* ---------- Motorsport Broadcast Telemetry HUD Console ---------- */}
-      <div className="pointer-events-none absolute bottom-2 inset-x-2.5 z-40">
-        <div className="flex items-center justify-between rounded-xl bg-black/80 backdrop-blur-md border border-white/15 px-3 py-1.5 shadow-[0_4px_24px_rgba(0,0,0,0.85)] font-display">
-          {/* Status badge */}
-          <div className="flex items-center gap-1.5 min-w-[95px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#26ff9a] animate-pulse" />
-            <span
-              ref={hudStatusRef}
-              className="text-[9px] tracking-[0.16em] text-white/70 uppercase"
-            >
-              GRID STAGED
-            </span>
-          </div>
-
-          {/* Central Speedometer & Gear Tach */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-baseline gap-1">
-              <span
-                ref={hudSpeedRef}
-                className="text-[17px] font-bold tabular text-white leading-none text-neon"
-              >
-                0
-              </span>
-              <span className="text-[8.5px] tracking-[0.14em] text-white/45">KM/H</span>
-            </div>
-
-            <span className="w-[1px] h-3.5 bg-white/15" />
-
-            {/* Gear indicator */}
-            <div className="flex items-center gap-1">
-              <span className="text-[8px] text-white/40">G</span>
-              <span
-                ref={hudGearRef}
-                className="text-[13px] font-bold tabular text-[#ffd66b] leading-none"
-              >
-                1
-              </span>
-            </div>
-
-            {/* 6 RPM shift LED dots */}
-            <div className="flex items-center gap-0.5 ml-0.5">
-              {[0, 1, 2, 3, 4, 5].map((d) => (
-                <span
-                  key={d}
-                  ref={(el) => {
-                    hudRpmDotsRef.current[d] = el;
-                  }}
-                  className="w-1 h-2 rounded-[0.5px] transition-opacity duration-75"
-                  style={{
-                    background: d >= 5 ? "#ff2d3f" : d >= 3 ? "#ffd66b" : "#26ff9a",
-                    opacity: 0.15,
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Battle Interval Delta */}
-          <div className="text-right min-w-[70px]">
-            <span
-              ref={hudDeltaRef}
-              className="text-[9.5px] font-bold tabular text-[#35e6ff] tracking-[0.1em]"
-            >
-              STAGED
-            </span>
+      {/* Paused state overlay */}
+      {paused && (
+        <div className="pointer-events-none absolute inset-0 z-40 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center p-3 text-center animate-fade-in">
+          <div className="px-3 py-1.5 rounded-md bg-[#ff3b5c]/20 border border-[#ff3b5c]/50 font-display text-[9px] tracking-[0.2em] text-[#ff6b84] uppercase flex items-center gap-2 shadow-[0_0_24px_rgba(255,59,92,0.35)]">
+            <span className="w-2 h-2 rounded-full bg-[#ff4d6d] animate-ping" />
+            RACE PAUSED · INTERNET ERROR
           </div>
         </div>
-      </div>
+      )}
 
       {/* vignette */}
       <div

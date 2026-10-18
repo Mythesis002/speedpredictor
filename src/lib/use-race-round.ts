@@ -52,7 +52,12 @@ export interface RaceRound {
  */
 export function useRaceRound(
   onSettle?: (roundId: number, order: [number, number, number]) => void,
+  options?: { paused?: boolean },
 ) {
+  const paused = options?.paused ?? false;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+
   const fetchClock = useServerFn(getRoundClock);
   const fetchReveal = useServerFn(revealRound);
 
@@ -154,6 +159,12 @@ export function useRaceRound(
     let lastTick = -1;
 
     const loop = () => {
+      if (pausedRef.current) {
+        // Network outage / high latency — freeze animation and hold state
+        raf = requestAnimationFrame(loop);
+        return;
+      }
+
       const now = Date.now() + offsetRef.current;
       const tl = timelineAt(now);
 
@@ -197,6 +208,15 @@ export function useRaceRound(
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, []);
+
+  // When connection recovers, immediately resync clock with the server
+  const prevPausedRef = useRef(paused);
+  useEffect(() => {
+    if (prevPausedRef.current && !paused) {
+      void sync();
+    }
+    prevPausedRef.current = paused;
+  }, [paused, sync]);
 
   // refresh commitments whenever a new round opens, so the grid on screen is
   // always backed by a commitment the client saw before betting.

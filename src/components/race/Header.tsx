@@ -10,6 +10,7 @@ interface Props {
   onOpenCashOut?: () => void;
   isGuest?: boolean;
   onSignIn?: () => void;
+  networkStatus?: "online" | "slow" | "offline";
 }
 
 export function Header({
@@ -20,6 +21,7 @@ export function Header({
   onOpenCashOut,
   isGuest = false,
   onSignIn,
+  networkStatus = "online",
 }: Props) {
   return (
     <div className="flex items-center gap-1.5 px-2.5 py-2">
@@ -36,7 +38,15 @@ export function Header({
       {/* Round ID */}
       <div className="flex-1 min-w-0 mx-0.5">
         <div className="glass rounded-xl px-2 py-1 text-center">
-          <div className="text-[7.5px] tracking-[0.2em] text-white/45 font-display">ROUND ID</div>
+          <div className="text-[7.5px] tracking-[0.2em] font-display flex items-center justify-center gap-1">
+            {networkStatus === "offline" ? (
+              <span className="text-[#ff4d6d] font-bold animate-pulse">● OFFLINE</span>
+            ) : networkStatus === "slow" ? (
+              <span className="text-[#ffb830] font-bold animate-pulse">● SLOW NET</span>
+            ) : (
+              <span className="text-white/45">ROUND ID</span>
+            )}
+          </div>
           <div className="font-display text-[11px] tabular text-white truncate">#{roundId}</div>
         </div>
       </div>

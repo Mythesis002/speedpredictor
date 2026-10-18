@@ -11,10 +11,12 @@ import { DepositModal } from "@/components/race/DepositModal";
 import { WithdrawModal } from "@/components/race/WithdrawModal";
 import { BottomNav } from "@/components/race/BottomNav";
 import { AuthModal } from "@/components/race/AuthModal";
+import { InternetErrorModal, InternetRestoredToast } from "@/components/race/InternetErrorModal";
 import { lineupForRound } from "@/lib/round-engine";
 import { carLabel, formatINR } from "@/lib/car-label";
 import { useRaceRound } from "@/lib/use-race-round";
 import { useAuthSession } from "@/lib/use-auth";
+import { useNetworkMonitor } from "@/lib/use-network-monitor";
 import { recentResults } from "@/lib/rounds.functions";
 import { getWallet, liveStats, placeBet as placeBetFn, settleRound } from "@/lib/wallet.functions";
 import {
@@ -93,6 +95,9 @@ function Game({ isGuest }: { isGuest: boolean }) {
   const loadWallet = useServerFn(getWallet);
   const submitBet = useServerFn(placeBetFn);
   const settle = useServerFn(settleRound);
+
+  const network = useNetworkMonitor();
+  const isPaused = network.isPaused;
 
   const [balance, setBalance] = useState(0);
   const [heldBalance, setHeldBalance] = useState(0);
@@ -214,14 +219,20 @@ function Game({ isGuest }: { isGuest: boolean }) {
     [settle, refreshWallet, isGuest],
   );
 
-  const { roundId, phase, countdown, locked, cars, progressRef, winner, fairness } =
-    useRaceRound(onSettle);
+  const { roundId, phase, countdown, locked, cars, progressRef, winner, fairness } = useRaceRound(
+    onSettle,
+    { paused: isPaused },
+  );
 
   /* Web Audio cues: F1 3-2-1 countdown beeps, lock tone, and engine launch roar */
   const lastBeepSecRef = useRef<number | null>(null);
   const lastPhaseSoundRef = useRef<string>(phase);
 
   useEffect(() => {
+    if (isPaused) {
+      lastBeepSecRef.current = null;
+      return;
+    }
     if (phase === "waiting") {
       const sec = Math.ceil(countdown);
       if ((sec === 3 || sec === 2 || sec === 1) && lastBeepSecRef.current !== sec) {
@@ -231,9 +242,10 @@ function Game({ isGuest }: { isGuest: boolean }) {
     } else {
       lastBeepSecRef.current = null;
     }
-  }, [phase, countdown]);
+  }, [phase, countdown, isPaused]);
 
   useEffect(() => {
+    if (isPaused) return;
     if (lastPhaseSoundRef.current !== phase) {
       if (phase === "lock") {
         playCountdownBeep(true);
@@ -244,7 +256,7 @@ function Game({ isGuest }: { isGuest: boolean }) {
       }
       lastPhaseSoundRef.current = phase;
     }
-  }, [phase]);
+  }, [phase, isPaused]);
 
   /* real results, straight from the database — shared by every device */
   const loadResults = useServerFn(recentResults);
@@ -312,6 +324,11 @@ function Game({ isGuest }: { isGuest: boolean }) {
     if (!requirePlayer("Sign in to place your bet and claim your ₹28 welcome bonus.")) {
       return;
     }
+    if (isPaused) {
+      setBetError("Internet connection interrupted. Reconnect to win more.");
+      buzz(40);
+      return;
+    }
     if (selected === null || locked || confirmed || placing) return;
     if (amount < MIN_BET || amount > balance) return;
     setPlacing(true);
@@ -352,6 +369,7 @@ function Game({ isGuest }: { isGuest: boolean }) {
           heldBalance={heldBalance}
           roundId={roundId}
           isGuest={isGuest}
+          networkStatus={network.status}
           onSignIn={() =>
             requirePlayer("Create an account to claim your ₹28 welcome bonus and play live.")
           }
@@ -410,6 +428,7 @@ function Game({ isGuest }: { isGuest: boolean }) {
           hyperMode={hyperMode}
           countdown={countdown}
           myLane={activeBet?.lane ?? null}
+          paused={isPaused}
         />
         <div
           className={`absolute left-1.5 top-1.5 z-30 transition-opacity duration-500 ${raceLive ? "opacity-25" : "opacity-100"}`}
@@ -505,9 +524,9 @@ function Game({ isGuest }: { isGuest: boolean }) {
                 </svg>
                 <span
                   className={`font-display text-[9px] tabular ${isUrgent ? "animate-ping" : ""}`}
-                  style={{ color: timerColor, animationDuration: "0.9s" }}
+                  style={{ color: isPaused ? "#ff6b84" : timerColor, animationDuration: "0.9s" }}
                 >
-                  {locked ? "×" : `${secLeft}s`}
+                  {isPaused ? "!" : locked ? "×" : `${secLeft}s`}
                 </span>
               </div>
 
@@ -515,54 +534,46 @@ function Game({ isGuest }: { isGuest: boolean }) {
                 <div className="text-[9px] text-white/45 font-display tracking-[0.14em] truncate">
                   ROUND #{String(roundId).slice(-5)}
                 </div>
-                <div
-                  className={`font-display text-[10.5px] tracking-[0.1em] tabular truncate ${
-                    isUrgent ? "animate-pulse" : ""
-                  }`}
-                  style={{ color: locked ? "rgba(255,255,255,0.65)" : timerColor }}
-                >
-                  {locked
-                    ? "BETS LOCKED · RACING"
-                    : isUrgent
-                      ? `CLOSING · ${countdown.toFixed(1)}s LEFT`
-                      : `BETTING OPEN · ${countdown.toFixed(1)}s`}
-                </div>
+                {isPaused ? (
+                  <div className="font-display text-[10.5px] tracking-[0.1em] text-[#ff8a9c] animate-pulse truncate">
+                    INTERNET ERROR · RECONNECT TO WIN MORE
+                  </div>
+                ) : (
+                  <div
+                    className={`font-display text-[10.5px] tracking-[0.1em] tabular truncate ${
+                      isUrgent ? "animate-pulse" : ""
+                    }`}
+                    style={{ color: locked ? "rgba(255,255,255,0.65)" : timerColor }}
+                  >
+                    {locked
+                      ? "BETS LOCKED · RACING"
+                      : isUrgent
+                        ? `CLOSING · ${countdown.toFixed(1)}s LEFT`
+                        : `BETTING OPEN · ${countdown.toFixed(1)}s`}
+                  </div>
+                )}
               </div>
             </div>
 
-            <span
-              className={`shrink-0 whitespace-nowrap px-2 py-0.5 rounded-md text-[9.5px] font-display tracking-[0.15em] border ${
-                locked
-                  ? "bg-[#ff4d6d]/15 border-[#ff4d6d]/40 text-[#ff6b84]"
-                  : isUrgent
-                    ? "bg-[#ff3b5c]/20 border-[#ff3b5c]/60 text-[#ff6b84] animate-pulse"
-                    : isWarning
-                      ? "bg-[#ffc32b]/20 border-[#ffc32b]/50 text-[#ffd83a]"
-                      : "bg-[#26ff9a]/15 border-[#26ff9a]/40 text-[#26ff9a]"
-              }`}
-            >
-              {locked ? "LOCKED" : `${secLeft}s`}
-            </span>
-          </div>
-
-          {/* 6-second segmented urgency bar + smooth fill */}
-          <div className="relative h-2 rounded-full bg-white/8 overflow-hidden p-[1px]">
-            <div
-              className={`h-full rounded-full transition-[width] duration-75 ease-linear ${
-                isUrgent ? "animate-pulse" : ""
-              }`}
-              style={{
-                width: locked ? "100%" : `${Math.min(100, (countdown / 6) * 100)}%`,
-                background: locked
-                  ? "rgba(255,77,109,0.22)"
-                  : isUrgent
-                    ? "linear-gradient(90deg,#ff1e42,#ff6b3b)"
-                    : isWarning
-                      ? "linear-gradient(90deg,#ff9900,#ffd83a)"
-                      : "linear-gradient(90deg,#26ff9a,#35e6ff)",
-                boxShadow: isUrgent ? "0 0 12px #ff3b5c" : undefined,
-              }}
-            />
+            {isPaused ? (
+              <span className="shrink-0 whitespace-nowrap px-2 py-0.5 rounded-md text-[9.5px] font-display tracking-[0.15em] border bg-[#ff3b5c]/20 border-[#ff3b5c]/60 text-[#ff6b84] animate-pulse">
+                PAUSED
+              </span>
+            ) : (
+              <span
+                className={`shrink-0 whitespace-nowrap px-2 py-0.5 rounded-md text-[9.5px] font-display tracking-[0.15em] border ${
+                  locked
+                    ? "bg-[#ff4d6d]/15 border-[#ff4d6d]/40 text-[#ff6b84]"
+                    : isUrgent
+                      ? "bg-[#ff3b5c]/20 border-[#ff3b5c]/60 text-[#ff6b84] animate-pulse"
+                      : isWarning
+                        ? "bg-[#ffc32b]/20 border-[#ffc32b]/50 text-[#ffd83a]"
+                        : "bg-[#26ff9a]/15 border-[#26ff9a]/40 text-[#26ff9a]"
+                }`}
+              >
+                {locked ? "LOCKED" : `${secLeft}s`}
+              </span>
+            )}
           </div>
         </div>
 
@@ -570,6 +581,11 @@ function Game({ isGuest }: { isGuest: boolean }) {
           cars={cars}
           selected={selectedLane}
           onSelect={(i) => {
+            if (isPaused) {
+              setBetError("Internet connection interrupted. Reconnect to win more.");
+              buzz(40);
+              return;
+            }
             if (!requirePlayer("Sign in to select a car and claim your ₹28 welcome bonus.")) {
               return;
             }
@@ -577,7 +593,7 @@ function Game({ isGuest }: { isGuest: boolean }) {
             setSelected(i);
             buzz(10);
           }}
-          locked={locked}
+          locked={locked || isPaused}
           winner={winner}
           amount={amount}
           confirmed={confirmed}
@@ -587,14 +603,15 @@ function Game({ isGuest }: { isGuest: boolean }) {
         <BettingPanel
           amount={amount}
           balance={isGuest ? 28 : balance}
-          locked={locked || placing}
+          locked={locked || placing || isPaused}
           onChange={(n) => {
+            if (isPaused) return;
             if (!requirePlayer("Sign in to set your stake and bet on live races.")) return;
             setAmount(n);
           }}
           selectedLabel={selectedLabel}
           confirmed={confirmed}
-          phaseLabel={phase}
+          phaseLabel={isPaused ? "paused" : phase}
           multiplier={selectedMultiplier}
           activeBetAmount={activeBet?.amount ?? null}
           onConfirm={() => void placeBet()}
@@ -614,6 +631,18 @@ function Game({ isGuest }: { isGuest: boolean }) {
           }
         }}
       />
+
+      {/* Network outage & high latency modal */}
+      <InternetErrorModal
+        status={network.status}
+        latencyMs={network.latencyMs}
+        effectiveType={network.effectiveType}
+        retrying={network.retrying}
+        onRetry={network.checkNow}
+      />
+
+      {/* Network recovery confirmation toast */}
+      {network.justRestored && <InternetRestoredToast latencyMs={network.latencyMs} />}
     </div>
   );
 }
