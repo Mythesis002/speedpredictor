@@ -175,7 +175,7 @@ export function Results({ entries }: { entries: HistoryEntry[] }) {
   const uniqueEntries = entries.filter(
     (e, idx, arr) => arr.findIndex((item) => item.id === e.id) === idx,
   );
-  const last = uniqueEntries.slice(0, 10);
+  const last = uniqueEntries.slice(0, 25);
   return (
     <div className="glass rounded-xl p-2.5">
       {last.length === 0 ? (
