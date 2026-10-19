@@ -447,13 +447,19 @@ function ProfilePage() {
               </p>
             </section>
 
-            <section className="glass rounded-2xl p-4 space-y-2">
-              <Link
-                to="/how-it-works"
-                className="block text-[12px] text-white/70 underline min-h-[24px]"
-              >
-                How it works, Terms & Privacy
-              </Link>
+            <section className="glass rounded-2xl p-4 space-y-2.5">
+              <div className="flex items-center justify-between text-[12px]">
+                <Link
+                  to="/how-it-works"
+                  className="text-white/70 hover:text-white underline min-h-[24px]"
+                >
+                  Game Rules & How it works
+                </Link>
+                <span className="text-white/30">·</span>
+                <Link to="/terms" className="text-white/70 hover:text-white underline min-h-[24px]">
+                  Terms & Conditions
+                </Link>
+              </div>
               <button
                 onClick={() => void signOut(false)}
                 className="w-full h-11 rounded-xl bg-white/10 text-sm"

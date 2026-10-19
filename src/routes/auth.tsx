@@ -235,8 +235,8 @@ function AuthPage() {
                 />
                 <span>
                   I am 18 or older and agree to the{" "}
-                  <RouterLink to="/how-it-works" className="underline">
-                    Terms & Privacy
+                  <RouterLink to="/terms" className="underline text-white/90 hover:text-white">
+                    Terms & Conditions
                   </RouterLink>
                   .
                 </span>

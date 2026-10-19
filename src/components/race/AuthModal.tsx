@@ -224,8 +224,12 @@ export function AuthModal({ open, onClose, promptText }: Props) {
               />
               <span>
                 I am 18 or older and agree to the{" "}
-                <RouterLink to="/how-it-works" onClick={onClose} className="underline">
-                  Terms & Privacy
+                <RouterLink
+                  to="/terms"
+                  onClick={onClose}
+                  className="underline text-white/90 hover:text-white"
+                >
+                  Terms & Conditions
                 </RouterLink>
                 .
               </span>

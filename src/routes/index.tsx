@@ -27,23 +27,42 @@ import {
   playWinChime,
 } from "@/lib/sound";
 
+import { SeoAeoGuide } from "@/components/race/SeoAeoGuide";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Apex — Live Neon Car Racing Predictions" },
+      { title: "Apex 2 (Apex2Bet) — Best Car Game & Color Prediction Online Money Game" },
       {
         name: "description",
         content:
-          "Watch three neon cars battle down a futuristic highway every round and predict the winning colour. Provably fair rounds, live odds, instant payouts from ₹10.",
+          "Apex 2: Top live neon car racing color prediction game. Predict Red, Purple or Blue in 21s races. Win up to 6× real money with instant UPI payouts from ₹10. Best online earning game for students.",
       },
-      { property: "og:title", content: "Apex — Live Neon Car Racing" },
+      {
+        name: "keywords",
+        content:
+          "apex2, apex 2, apex2bet, apex, car game, online money game, betting app, best betting game, color game, best online earning for student, real money car game, colour prediction game, instant upi withdrawal game, apex2.online, apex2.live",
+      },
+      { property: "og:site_name", content: "Apex 2 (Apex2Bet)" },
+      {
+        property: "og:title",
+        content: "Apex 2 — #1 Car Game & Online Money Game | Color Prediction Betting App",
+      },
       {
         property: "og:description",
         content:
-          "Pick a colour, watch the live three-lane race and win up to 6×. Server-timed, provably fair racing predictions with UPI deposits.",
+          "Pick a colour, watch the live three-lane race and win up to 6× real money. Server-timed, provably fair racing predictions with instant UPI deposits and cashouts.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://apex2bet.lovable.app" },
+      { property: "og:image", content: "https://apex2bet.lovable.app/apex-logo.svg" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Apex 2 — Best Car Game & Color Prediction Betting App" },
+      {
+        name: "twitter:description",
+        content:
+          "Live 3-car neon racing color prediction game. Win real money with 95% RTP, instant UPI payouts from ₹10. Best online earning game for students.",
+      },
     ],
   }),
   component: SpeedPredict,
@@ -618,8 +637,9 @@ function Game({ isGuest }: { isGuest: boolean }) {
         />
       </div>
 
-      <div className="mt-1.5 mx-2 pb-2">
+      <div className="mt-1.5 mx-2 pb-2 space-y-2">
         <Results entries={history} />
+        <SeoAeoGuide />
       </div>
 
       {/* Shared Bottom Navigation */}
