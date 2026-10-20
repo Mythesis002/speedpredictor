@@ -18,14 +18,16 @@ export interface NetworkState {
   checkNow: () => Promise<boolean>;
 }
 
-const SLOW_LATENCY_THRESHOLD_MS = 2200;
-const PING_INTERVAL_MS = 4000;
-const PING_TIMEOUT_MS = 3000;
+// Only trigger slow status if latency is extreme (> 7.5s) or downlink drops to ~10-20 kb/s (0.03 Mbps)
+const SLOW_LATENCY_THRESHOLD_MS = 7500;
+const PING_TIMEOUT_MS = 7000;
+const PING_INTERVAL_ONLINE_MS = 12000;
+const PING_INTERVAL_RETRY_MS = 3000;
 
 interface NetworkInformation extends EventTarget {
   effectiveType?: "slow-2g" | "2g" | "3g" | "4g";
   rtt?: number;
-  downlink?: number;
+  downlink?: number; // Mb/s
   saveData?: boolean;
 }
 
@@ -46,12 +48,13 @@ export function useNetworkMonitor(onRecovered?: () => void): NetworkState {
   const [justRestored, setJustRestored] = useState(false);
 
   const failsRef = useRef(0);
+  const consecutiveSlowRef = useRef(0);
   const statusRef = useRef(status);
   statusRef.current = status;
   const onRecoveredRef = useRef(onRecovered);
   onRecoveredRef.current = onRecovered;
 
-  // Single ping execution with timeout
+  // Single ping execution with generous 7s timeout to prevent false timeouts on mobile
   const runPing = useCallback(async (): Promise<{ ok: boolean; latency: number | null }> => {
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       return { ok: false, latency: null };
@@ -62,7 +65,6 @@ export function useNetworkMonitor(onRecovered?: () => void): NetworkState {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), PING_TIMEOUT_MS);
 
-      // Call the server heartbeat
       const res = await pingServer({ signal: controller.signal });
       clearTimeout(timeoutId);
 
@@ -81,14 +83,28 @@ export function useNetworkMonitor(onRecovered?: () => void): NetworkState {
     async (isManualRetry = false): Promise<boolean> => {
       if (isManualRetry) setRetrying(true);
 
-      // Check browser Network Information API if available
+      // Check browser Network Information API
       let netInfoType: string | null = null;
+      let downlinkMbps: number | null = null;
       if (typeof navigator !== "undefined" && "connection" in navigator) {
         const netInfo = (navigator as unknown as { connection?: NetworkInformation }).connection;
         if (netInfo?.effectiveType) {
           netInfoType = netInfo.effectiveType;
           setEffectiveType(netInfo.effectiveType);
         }
+        if (typeof netInfo?.downlink === "number") {
+          downlinkMbps = netInfo.downlink;
+        }
+      }
+
+      // Hard offline: navigator is explicitly offline
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        failsRef.current = 3;
+        setConsecutiveFails(3);
+        setLatencyMs(null);
+        setStatus("offline");
+        if (isManualRetry) setRetrying(false);
+        return false;
       }
 
       const { ok, latency } = await runPing();
@@ -98,25 +114,44 @@ export function useNetworkMonitor(onRecovered?: () => void): NetworkState {
       if (!ok) {
         failsRef.current += 1;
         setConsecutiveFails(failsRef.current);
-        setLatencyMs(null);
-        setStatus("offline");
-        return false;
+
+        // Require 3 consecutive failed pings before declaring offline (no false alarms on single packet loss)
+        if (failsRef.current >= 3 || isManualRetry) {
+          setLatencyMs(null);
+          setStatus("offline");
+          return false;
+        }
+
+        // On transient 1st or 2nd fail, maintain current status and check again shortly
+        return statusRef.current === "online";
       }
 
-      // Successful ping
+      // Ping succeeded!
       failsRef.current = 0;
       setConsecutiveFails(0);
       setLatencyMs(latency);
 
       const wasOfflineOrSlow = statusRef.current === "offline" || statusRef.current === "slow";
 
-      // Detect slow network: very high latency or slow-2g cellular
-      if ((latency !== null && latency > SLOW_LATENCY_THRESHOLD_MS) || netInfoType === "slow-2g") {
-        setStatus("slow");
-        return false;
+      // Detect genuinely critical slow network (~10kb/s or severe latency > 7500ms):
+      // Downlink <= 0.03 Mbps is ~24-30 kb/s or slower (matching user specification of ~10kb/s)
+      const isExtremeLatency = latency !== null && latency >= SLOW_LATENCY_THRESHOLD_MS;
+      const isExtremeBandwidth =
+        (downlinkMbps !== null && downlinkMbps <= 0.03) ||
+        (netInfoType === "slow-2g" && latency !== null && latency > 4000);
+
+      if (isExtremeLatency || isExtremeBandwidth) {
+        consecutiveSlowRef.current += 1;
+        // Require 2 consecutive extremely slow checks before interrupting the user
+        if (consecutiveSlowRef.current >= 2 || isManualRetry) {
+          setStatus("slow");
+          return false;
+        }
+      } else {
+        consecutiveSlowRef.current = 0;
       }
 
-      // Connection is healthy
+      // Connection is healthy and usable
       setStatus("online");
 
       if (wasOfflineOrSlow) {
@@ -134,6 +169,19 @@ export function useNetworkMonitor(onRecovered?: () => void): NetworkState {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    let timerId: ReturnType<typeof setTimeout>;
+
+    const scheduleNext = () => {
+      const delay =
+        statusRef.current === "online" && failsRef.current === 0
+          ? PING_INTERVAL_ONLINE_MS
+          : PING_INTERVAL_RETRY_MS;
+      timerId = setTimeout(async () => {
+        await evaluateConnection();
+        scheduleNext();
+      }, delay);
+    };
+
     const handleOffline = () => {
       failsRef.current = 3;
       setConsecutiveFails(3);
@@ -142,32 +190,27 @@ export function useNetworkMonitor(onRecovered?: () => void): NetworkState {
     };
 
     const handleOnline = () => {
-      void evaluateConnection();
+      void evaluateConnection(true);
     };
 
     window.addEventListener("offline", handleOffline);
     window.addEventListener("online", handleOnline);
 
-    // Watch for network type changes (e.g. WiFi -> slow 2G)
     const conn = (navigator as unknown as { connection?: NetworkInformation })?.connection;
     const handleConnChange = () => {
       void evaluateConnection();
     };
     conn?.addEventListener?.("change", handleConnChange);
 
-    // Heartbeat interval
-    const intervalId = setInterval(() => {
-      void evaluateConnection();
-    }, PING_INTERVAL_MS);
-
     // Initial check on mount
     void evaluateConnection();
+    scheduleNext();
 
     return () => {
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
       conn?.removeEventListener?.("change", handleConnChange);
-      clearInterval(intervalId);
+      clearTimeout(timerId);
     };
   }, [evaluateConnection]);
 

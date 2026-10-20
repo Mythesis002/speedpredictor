@@ -1,4 +1,17 @@
 import { Car, type CarSpec } from "./Car";
+import {
+  BASE_CAR,
+  CAR_SPREAD,
+  DASHES,
+  DASH_LEN,
+  DASH_PERIOD,
+  DASH_SPAN,
+  KERB_COUNT,
+  KERB_SEG_LEN,
+  SEAM_COUNT,
+  SEAM_PERIOD,
+  Z_CAR_NEAR,
+} from "./highway-constants";
 import { useHydrated } from "@/lib/use-hydrated";
 import { useEffect, useMemo, useRef } from "react";
 import { PHASE_MS, type RacePhase } from "@/lib/round-engine";
@@ -31,18 +44,6 @@ interface Props {
   paused?: boolean;
 }
 
-/* ---- dash geometry (world units along z) ---- */
-const DASHES = 16;
-const DASH_PERIOD = 0.9;
-const DASH_LEN = 0.34;
-const DASH_SPAN = DASHES * DASH_PERIOD;
-const KERB_COUNT = 14;
-
-/* ---- car depth model ---- */
-const Z_CAR_NEAR = 1.46; // trailing car, closest to the lens
-const CAR_SPREAD = 2.05; // how much depth the leader gains
-const BASE_CAR = 150; // px width the <Car/> svg is authored at
-
 export function Highway({
   cars,
   phase,
@@ -60,7 +61,6 @@ export function Highway({
   const stageRef = useRef<HTMLDivElement | null>(null);
   const cameraRef = useRef<HTMLDivElement | null>(null);
   const flashRef = useRef<HTMLDivElement | null>(null);
-  const warpRef = useRef<HTMLDivElement | null>(null);
   const laneRefs = useRef<Array<HTMLDivElement | null>>([null, null, null]);
   const bodyRefs = useRef<Array<HTMLDivElement | null>>([null, null, null]);
   const posRefs = useRef<Array<HTMLDivElement | null>>([null, null, null]);
@@ -100,7 +100,7 @@ export function Highway({
     let raf = 0;
     let prev = performance.now();
     let acc = 0;
-    const STEP = 1 / 120; // fixed physics step → identical motion on 60/120Hz
+    const STEP = 1 / 120; // fixed physics step -> identical motion on 60/120Hz
 
     const loop = (ts: number) => {
       if (pausedRef.current) {
@@ -124,7 +124,7 @@ export function Highway({
       const p = progressRef.current;
       const trailer = Math.min(p[0], p[1], p[2]);
 
-      /* phase impulses → cinematic camera */
+      /* phase impulses -> cinematic camera */
       if (prevPhase.current !== ph) {
         if (ph === "launch") {
           camShake.current = 1;
@@ -278,8 +278,6 @@ export function Highway({
       }
 
       // Project lateral tarmac expansion joints / concrete slab seams across the road width
-      const SEAM_COUNT = 8;
-      const SEAM_PERIOD = DASH_SPAN / SEAM_COUNT;
       for (let i = 0; i < SEAM_COUNT; i++) {
         const seamEl = seamRefs.current[i];
         if (!seamEl) continue;
@@ -317,8 +315,6 @@ export function Highway({
           const zBack = Math.min(z + DASH_LEN, Z_FAR);
           const yFront = yAt(z, h);
           const yBack = yAt(zBack, h);
-          // a dash is a trapezoid: narrower + converged at its far end,
-          // wider at the end nearest the camera — never a straight stick.
           const wNear = Math.max(0.8, 0.016 * w * scaleAt(z));
           const wFar = Math.max(0.4, 0.016 * w * scaleAt(zBack));
           const xNear = xAt(DIVIDER_U[d], z, w);
@@ -328,17 +324,14 @@ export function Highway({
             ` ${(xFar + wFar / 2).toFixed(2)}px ${yBack.toFixed(2)}px,` +
             ` ${(xNear + wNear / 2).toFixed(2)}px ${yFront.toFixed(2)}px,` +
             ` ${(xNear - wNear / 2).toFixed(2)}px ${yFront.toFixed(2)}px)`;
-          // fade in as it emerges from the vanishing point
           el.style.opacity = Math.min(1, (Z_FAR - z) / (Z_FAR * 0.45)).toFixed(3);
         }
       }
 
       /* ---- FIA alternating red/white kerb rumble strips ---- */
-      const KERB_SPAN = DASH_SPAN;
-      const KERB_SEG_LEN = DASH_SPAN / KERB_COUNT;
       for (let i = 0; i < KERB_COUNT; i++) {
         const z =
-          Z_NEAR + ((((i * KERB_SEG_LEN - flow.current) % KERB_SPAN) + KERB_SPAN) % KERB_SPAN);
+          Z_NEAR + ((((i * KERB_SEG_LEN - flow.current) % DASH_SPAN) + DASH_SPAN) % DASH_SPAN);
         const zBack = Math.min(z + KERB_SEG_LEN * 0.5, Z_FAR);
         const isFar = z > Z_FAR;
 
@@ -396,14 +389,6 @@ export function Highway({
         cam.style.transform = `translate3d(${sx.toFixed(2)}px, ${sy.toFixed(2)}px, 0) scale(${punch.toFixed(4)}) rotate(${rot.toFixed(3)}deg)`;
       }
 
-      /* ---- speed streaks track the real car speed ---- */
-      const warp = warpRef.current;
-      if (warp) {
-        const intensity = Math.min(1, fastest * 3.2);
-        warp.style.opacity = intensity.toFixed(3);
-        warp.style.setProperty("--warp-speed", `${(0.62 - intensity * 0.4).toFixed(3)}s`);
-      }
-
       /* ---- launch flash decay ---- */
       const fl = flashRef.current;
       if (fl) {
@@ -416,18 +401,6 @@ export function Highway({
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [hydrated, progressRef]);
-
-  const sparks = useMemo(
-    () =>
-      hydrated
-        ? Array.from({ length: 16 }, (_, i) => ({
-            left: (i * 6.3 + 3) % 96,
-            delay: ((i * 53) % 40) / 100,
-            size: 1 + ((i * 17) % 3),
-          }))
-        : [],
-    [hydrated],
-  );
 
   const throttle =
     phase === "launch" ? 1 : phase === "race" ? 0.85 : phase === "finish" ? 0.06 : 0.02;
@@ -517,7 +490,7 @@ export function Highway({
           ))}
         </div>
 
-        {/* ---------- Road: solid textured asphalt perspective plane ---------- */}
+        {/* ---------- Road: solid authentic textured asphalt perspective plane ---------- */}
         <div className="absolute inset-0 overflow-hidden">
           {/* Outer concrete roadbed / gravel verge */}
           <div
@@ -558,35 +531,6 @@ export function Highway({
             }}
           />
 
-          {/* SVG procedural coarse stone & bitumen aggregate texture */}
-          <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
-            <defs>
-              <filter id="asphalt-aggregate" x="0%" y="0%" width="100%" height="100%">
-                <feTurbulence
-                  type="fractalNoise"
-                  baseFrequency="0.65 0.95"
-                  numOctaves="3"
-                  seed="19"
-                  result="noise"
-                />
-                <feColorMatrix
-                  type="matrix"
-                  values="0.35 0 0 0 0.14
-                          0.35 0 0 0 0.16
-                          0.40 0 0 0 0.21
-                          0    0 0 0.52 0"
-                />
-              </filter>
-            </defs>
-          </svg>
-          <div
-            className="absolute inset-0 pointer-events-none mix-blend-overlay"
-            style={{
-              filter: "url(#asphalt-aggregate)",
-              clipPath: roadClip,
-            }}
-          />
-
           {/* Scrolling micro-aggregate & mineral speckle matrix */}
           <div
             ref={roadGrainRef}
@@ -602,13 +546,13 @@ export function Highway({
 
           {/* Scrolling lateral tarmac expansion seams / paving joints */}
           <div className="absolute inset-0 pointer-events-none">
-            {Array.from({ length: 8 }).map((_, i) => (
+            {Array.from({ length: SEAM_COUNT }).map((_, i) => (
               <span
                 key={i}
                 ref={(el) => {
                   seamRefs.current[i] = el;
                 }}
-                className="absolute inset-0 block gpu"
+                className="absolute inset-0 block"
                 style={{
                   background:
                     "linear-gradient(180deg, rgba(8,10,16,0.85) 0%, rgba(160,175,205,0.18) 100%)",
@@ -670,7 +614,7 @@ export function Highway({
                   ref={(el) => {
                     dashRefs.current[d * DASHES + i] = el;
                   }}
-                  className="absolute inset-0 block gpu"
+                  className="absolute inset-0 block"
                   style={{
                     background: "rgba(255,255,255,0.92)",
                     filter: "drop-shadow(0 0 5px rgba(255,255,255,0.35))",
@@ -689,7 +633,7 @@ export function Highway({
                 ref={(el) => {
                   kerbLeftRefs.current[i] = el;
                 }}
-                className="absolute inset-0 block gpu pointer-events-none"
+                className="absolute inset-0 block pointer-events-none"
                 style={{
                   background:
                     i % 2 === 0
@@ -706,7 +650,7 @@ export function Highway({
                 ref={(el) => {
                   kerbRightRefs.current[i] = el;
                 }}
-                className="absolute inset-0 block gpu pointer-events-none"
+                className="absolute inset-0 block pointer-events-none"
                 style={{
                   background:
                     i % 2 === 0
@@ -798,208 +742,105 @@ export function Highway({
                       width: "76%",
                       height: "4.6%",
                       background:
-                        "radial-gradient(ellipse at 50% 35%, rgba(2,3,6,0.78) 0%, rgba(2,3,6,0.42) 58%, rgba(2,3,6,0) 100%)",
+                        "radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0) 100%)",
                     }}
                   />
 
-                  {/* Aerodynamic slipstream draft wake streamers */}
-                  <div
-                    ref={(el) => {
-                      slipRefs.current[i] = el;
-                    }}
-                    className="pointer-events-none absolute bottom-[18%] inset-x-0 h-20 opacity-0 z-10"
-                  >
-                    <span
-                      className="absolute left-[8%] top-0 w-[2px] h-full"
-                      style={{
-                        background: `linear-gradient(180deg, ${car.color}ee 0%, ${car.color}33 60%, transparent 100%)`,
-                        filter: `drop-shadow(0 0 4px ${car.color})`,
-                      }}
-                    />
-                    <span
-                      className="absolute right-[8%] top-0 w-[2px] h-full"
-                      style={{
-                        background: `linear-gradient(180deg, ${car.color}ee 0%, ${car.color}33 60%, transparent 100%)`,
-                        filter: `drop-shadow(0 0 4px ${car.color})`,
-                      }}
-                    />
-                  </div>
-
-                  {/* High-intensity twin exhaust backfire flame pops */}
-                  <div
-                    ref={(el) => {
-                      flameRefs.current[i] = el;
-                    }}
-                    className="pointer-events-none absolute inset-x-0 bottom-[14%] flex justify-between px-[17.2%] opacity-0 transition-opacity duration-75 z-20"
-                  >
-                    <span
-                      className="w-4 h-3.5 rounded-full blur-[0.4px] animate-pulse-glow"
-                      style={{
-                        background:
-                          "radial-gradient(circle at 45% 50%, #ffffff 0%, #00f0ff 35%, #ff3b65 80%, transparent 100%)",
-                        boxShadow: "0 0 12px #00f0ff, 0 0 22px #ff3b65",
-                      }}
-                    />
-                    <span
-                      className="w-4 h-3.5 rounded-full blur-[0.4px] animate-pulse-glow"
-                      style={{
-                        background:
-                          "radial-gradient(circle at 45% 50%, #ffffff 0%, #00f0ff 35%, #ff3b65 80%, transparent 100%)",
-                        boxShadow: "0 0 12px #00f0ff, 0 0 22px #ff3b65",
-                      }}
-                    />
-                  </div>
-
+                  {/* Hero Car SVG: pure vector body with localized taillight LED accents */}
                   <Car
                     spec={car}
                     size={BASE_CAR}
                     throttle={throttle}
-                    braking={phase === "prep" || phase === "lock" || phase === "finish"}
-                    glow={isWinner || (car.kind === "hyper" && hyperMode)}
+                    braking={staging || phase === "finish"}
+                    glow={isWinner || myLane === i}
                   />
-                </div>
 
-                {myLane === i && !isWinner && (
+                  {/* Aerodynamic slipstream wake ribbons peeling off the rear flanks at speed */}
                   <div
-                    className="absolute -top-7 left-1/2 -translate-x-1/2 rounded-full px-2 py-[1.5px] font-display text-[7.5px] tracking-[0.2em] whitespace-nowrap animate-pulse-glow"
-                    style={{
-                      background: "rgba(4,6,14,0.85)",
-                      color: car.color,
-                      border: `1px solid ${car.color}`,
-                      boxShadow: `0 0 12px ${car.color}aa, 0 4px 12px rgba(0,0,0,0.8)`,
+                    ref={(el) => {
+                      slipRefs.current[i] = el;
                     }}
+                    className="pointer-events-none absolute inset-x-[-12%] top-[18%] bottom-[16%] opacity-0 transition-opacity duration-150"
                   >
-                    YOUR CAR
+                    {/* Left slipstream ribbon */}
+                    <span
+                      className="absolute left-0 top-0 bottom-0 w-[18%]"
+                      style={{
+                        background: `linear-gradient(180deg, transparent 0%, ${car.color}44 45%, transparent 100%)`,
+                        filter: "blur(2px)",
+                        transform: "skewY(-12deg)",
+                      }}
+                    />
+                    {/* Right slipstream ribbon */}
+                    <span
+                      className="absolute right-0 top-0 bottom-0 w-[18%]"
+                      style={{
+                        background: `linear-gradient(180deg, transparent 0%, ${car.color}44 45%, transparent 100%)`,
+                        filter: "blur(2px)",
+                        transform: "skewY(12deg)",
+                      }}
+                    />
                   </div>
-                )}
-                {isWinner && (
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 font-display text-[10px] tracking-[0.3em] text-[#ffd66b] text-neon whitespace-nowrap">
-                    WINNER
+
+                  {/* Exhaust backfire flame tongues on upshift */}
+                  <div
+                    ref={(el) => {
+                      flameRefs.current[i] = el;
+                    }}
+                    className="pointer-events-none absolute inset-x-0 bottom-0 opacity-0 transition-opacity duration-75"
+                  >
+                    {/* Left exhaust burst */}
+                    <span
+                      className="absolute rounded-full"
+                      style={{
+                        left: "17%",
+                        bottom: "16%",
+                        width: 14,
+                        height: 14,
+                        background:
+                          "radial-gradient(circle, #ffffff 0%, #35e6ff 45%, #0066ff 75%, transparent 100%)",
+                        boxShadow: "0 0 12px #35e6ff",
+                        animation: "backfire-pop 0.14s ease-out infinite",
+                      }}
+                    />
+                    {/* Right exhaust burst */}
+                    <span
+                      className="absolute rounded-full"
+                      style={{
+                        right: "17%",
+                        bottom: "16%",
+                        width: 14,
+                        height: 14,
+                        background:
+                          "radial-gradient(circle, #ffffff 0%, #35e6ff 45%, #0066ff 75%, transparent 100%)",
+                        boxShadow: "0 0 12px #35e6ff",
+                        animation: "backfire-pop 0.14s ease-out infinite 0.02s",
+                      }}
+                    />
                   </div>
-                )}
+                </div>
               </div>
             </div>
           );
         })}
 
-        {/* speed warp streaks — intensity written from the loop */}
+        {/* ---------- Launch impulse flash ---------- */}
         <div
-          ref={warpRef}
-          className="pointer-events-none absolute inset-0 z-[25]"
-          style={{ opacity: 0, ["--warp-speed" as string]: "0.6s" }}
-        >
-          {sparks.map((s, i) => (
-            <span
-              key={i}
-              className="absolute rounded-full gpu"
-              style={{
-                left: `${s.left}%`,
-                bottom: 0,
-                width: s.size,
-                height: 52,
-                background:
-                  "linear-gradient(180deg, transparent, oklch(0.92 0.16 195 / 0.75), transparent)",
-                animation: `streak var(--warp-speed) linear ${s.delay}s infinite`,
-              }}
-            />
-          ))}
-        </div>
+          ref={flashRef}
+          className="pointer-events-none absolute inset-0 bg-white opacity-0 transition-opacity duration-150 mix-blend-screen"
+        />
+
+        {/* Hyper-mode gold halo */}
+        {hyperMode && (
+          <div
+            className="pointer-events-none absolute inset-0 animate-pulse"
+            style={{
+              background:
+                "radial-gradient(ellipse at 50% 60%, rgba(255,214,107,0.18) 0%, transparent 65%)",
+            }}
+          />
+        )}
       </div>
-
-      {/* ---------- Start lights ---------- */}
-      {staging && (
-        <div className="absolute left-1/2 -translate-x-1/2 top-3 z-40 animate-scale-in">
-          <div className="glass rounded-2xl px-3 py-2 flex gap-2">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <span
-                key={i}
-                className="h-4 w-4 rounded-full transition-all duration-200"
-                style={{
-                  background: i < litCount ? "#ff2d3f" : "rgba(255,255,255,0.08)",
-                  boxShadow: i < litCount ? "0 0 14px #ff2d3f, inset 0 0 6px #ffb3b3" : "none",
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ---------- Lights-out flash + GO ---------- */}
-      <div
-        ref={flashRef}
-        className="pointer-events-none absolute inset-0 z-[60] bg-white"
-        style={{ opacity: 0 }}
-      />
-      {phase === "launch" && (
-        <div className="pointer-events-none absolute inset-0 z-[55] grid place-items-center">
-          <div className="font-display text-5xl tracking-[0.2em] text-white animate-go-burst">
-            GO!
-          </div>
-        </div>
-      )}
-
-      {/* ---------- Countdown pill ---------- */}
-      {phase === "waiting" && (
-        <div className="absolute left-1/2 -translate-x-1/2 top-2 z-30">
-          <div className="glass rounded-2xl px-5 py-2 text-center min-w-[140px]">
-            <div className="text-[9px] tracking-[0.25em] text-white/55 font-display">
-              NEXT RACE IN
-            </div>
-            <div className="font-display text-2xl tabular text-[#ffc32b] leading-tight">
-              {countdown.toFixed(1)}s
-            </div>
-          </div>
-        </div>
-      )}
-      {phase === "race" && (
-        <div className="absolute left-1/2 -translate-x-1/2 top-2 z-30">
-          <div className="glass rounded-2xl px-5 py-2 font-display text-sm tracking-[0.35em] text-[#35e6ff] text-neon animate-pulse-glow">
-            RACING
-          </div>
-        </div>
-      )}
-
-      {/* finish confetti */}
-      {phase === "finish" && (
-        <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
-          {Array.from({ length: 24 }).map((_, i) => {
-            const hue = [195, 90, 330, 25, 145][i % 5];
-            return (
-              <span
-                key={i}
-                className="absolute block gpu"
-                style={{
-                  left: `${(i * 4.3) % 100}%`,
-                  top: "-5%",
-                  width: 5,
-                  height: 9,
-                  background: `oklch(0.8 0.2 ${hue})`,
-                  animation: `confetti-fall ${1.6 + ((i * 13) % 14) / 10}s ${((i * 7) % 4) / 10}s linear forwards`,
-                }}
-              />
-            );
-          })}
-        </div>
-      )}
-
-      {/* Paused state overlay */}
-      {paused && (
-        <div className="pointer-events-none absolute inset-0 z-40 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center p-3 text-center animate-fade-in">
-          <div className="px-3 py-1.5 rounded-md bg-[#ff3b5c]/20 border border-[#ff3b5c]/50 font-display text-[9px] tracking-[0.2em] text-[#ff6b84] uppercase flex items-center gap-2 shadow-[0_0_24px_rgba(255,59,92,0.35)]">
-            <span className="w-2 h-2 rounded-full bg-[#ff4d6d] animate-ping" />
-            RACE PAUSED · INTERNET ERROR
-          </div>
-        </div>
-      )}
-
-      {/* vignette */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background: "radial-gradient(120% 80% at 50% 60%, transparent 40%, #000 100%)",
-          opacity: 0.7,
-        }}
-      />
     </div>
   );
 }

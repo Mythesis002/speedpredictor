@@ -101,7 +101,7 @@ export function InternetErrorModal({ status, latencyMs, effectiveType, retrying,
 
           <div className="pt-1 border-t border-white/5 flex items-center gap-1.5 text-[9.5px] text-white/45 font-display tracking-[0.06em]">
             <Loader2 className="w-3 h-3 animate-spin text-[#35e6ff] shrink-0" />
-            <span>Auto-testing connection every 4 seconds...</span>
+            <span>Auto-reconnecting in background...</span>
           </div>
         </div>
 

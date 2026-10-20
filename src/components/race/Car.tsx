@@ -184,6 +184,7 @@ export const Car = memo(function Car({
       style={{
         width: w,
         height: h,
+        contain: "layout paint",
       }}
     >
       {/* Crisp, unblurred SVG body — no container-level drop-shadow or halo */}
