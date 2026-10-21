@@ -519,3 +519,40 @@
   text-overflow: ellipsis;
   vertical-align: top;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Eradicate Lovable badge / watermark entirely                                */
+/* -------------------------------------------------------------------------- */
+#lovable-badge,
+#lovable-badge-cta,
+#lovable-badge-close,
+aside#lovable-badge,
+aside[id*="lovable" i],
+div[id*="lovable-badge" i],
+[id*="lovable-badge" i],
+[class*="lovable-badge" i],
+[aria-label*="Edit with Lovable" i],
+[aria-label*="Lovable" i],
+a[href*="lovable.dev" i][target="_blank"],
+iframe[src*="lovable.dev" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  position: fixed !important;
+  top: -99999px !important;
+  left: -99999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  max-width: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  overflow: hidden !important;
+  z-index: -999999 !important;
+  clip-path: inset(100%) !important;
+  transform: scale(0) !important;
+}
+

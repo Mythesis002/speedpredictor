@@ -330,6 +330,84 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              #lovable-badge,
+              #lovable-badge-cta,
+              #lovable-badge-close,
+              aside#lovable-badge,
+              aside[id*="lovable" i],
+              div[id*="lovable-badge" i],
+              [id*="lovable-badge" i],
+              [class*="lovable-badge" i],
+              [aria-label*="Edit with Lovable" i],
+              [aria-label*="Lovable" i],
+              a[href*="lovable.dev" i][target="_blank"],
+              iframe[src*="lovable.dev" i] {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+                position: fixed !important;
+                top: -99999px !important;
+                left: -99999px !important;
+                width: 0 !important;
+                height: 0 !important;
+                max-width: 0 !important;
+                max-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+                outline: 0 !important;
+                overflow: hidden !important;
+                z-index: -999999 !important;
+                clip-path: inset(100%) !important;
+                transform: scale(0) !important;
+              }
+            `,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                function purgeLovable() {
+                  try {
+                    var selectors = [
+                      '#lovable-badge',
+                      '#lovable-badge-cta',
+                      '#lovable-badge-close',
+                      'aside#lovable-badge',
+                      'aside[id*="lovable" i]',
+                      '[id*="lovable-badge" i]',
+                      '[class*="lovable-badge" i]',
+                      '[aria-label*="Edit with Lovable" i]',
+                      '[aria-label*="Lovable" i]',
+                      'a[href*="lovable.dev"][target="_blank"]'
+                    ];
+                    var nodes = document.querySelectorAll(selectors.join(','));
+                    for (var i = 0; i < nodes.length; i++) {
+                      nodes[i].remove();
+                    }
+                  } catch (e) {}
+                }
+                if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+                  purgeLovable();
+                  if (typeof MutationObserver !== 'undefined') {
+                    var obs = new MutationObserver(function() {
+                      purgeLovable();
+                    });
+                    if (document.documentElement) {
+                      obs.observe(document.documentElement, { childList: true, subtree: true });
+                    }
+                  }
+                  setInterval(purgeLovable, 1000);
+                }
+              })();
+            `,
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -347,6 +425,18 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    const purge = () => {
+      const els = document.querySelectorAll(
+        '#lovable-badge, #lovable-badge-cta, #lovable-badge-close, aside[id*="lovable" i], [id*="lovable-badge" i], [class*="lovable-badge" i], [aria-label*="Edit with Lovable" i], [aria-label*="Lovable" i], a[href*="lovable.dev"][target="_blank"]',
+      );
+      els.forEach((el) => el.remove());
+    };
+    purge();
+    const interval = setInterval(purge, 1500);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
