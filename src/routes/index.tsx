@@ -27,7 +27,7 @@ import {
   playWinChime,
 } from "@/lib/sound";
 
-import { SeoAeoGuide } from "@/components/race/SeoAeoGuide";
+import { SpecialOfferModal } from "@/components/race/SpecialOfferModal";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -125,6 +125,8 @@ function Game({ isGuest }: { isGuest: boolean }) {
   const betRef = useRef<Bet | null>(null);
   betRef.current = bet;
   const [depositOpen, setDepositOpen] = useState(false);
+  const [depositInitialAmount, setDepositInitialAmount] = useState(50);
+  const [specialOfferOpen, setSpecialOfferOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authPrompt, setAuthPrompt] = useState<string>(
@@ -412,14 +414,31 @@ function Game({ isGuest }: { isGuest: boolean }) {
         colorName={win?.colorName}
         color={win?.color}
         onClose={() => setWin(null)}
+        onBetNextRound={() => {
+          setWin(null);
+          if (winner !== null) {
+            setSelected(winner);
+          }
+        }}
       />
 
       <DepositModal
         open={depositOpen}
+        initialAmount={depositInitialAmount}
         onClose={() => setDepositOpen(false)}
         onCredited={(paise) => {
           setBalance(paise / 100);
           void refreshWallet();
+        }}
+      />
+
+      <SpecialOfferModal
+        open={specialOfferOpen}
+        onClose={() => setSpecialOfferOpen(false)}
+        onClaim={(amt) => {
+          setSpecialOfferOpen(false);
+          setDepositInitialAmount(amt);
+          setDepositOpen(true);
         }}
       />
 
@@ -611,6 +630,9 @@ function Game({ isGuest }: { isGuest: boolean }) {
             if (locked || confirmed) return;
             setSelected(i);
             buzz(10);
+            if (!isGuest && balance < MIN_BET) {
+              setSpecialOfferOpen(true);
+            }
           }}
           locked={locked || isPaused}
           winner={winner}
@@ -634,12 +656,70 @@ function Game({ isGuest }: { isGuest: boolean }) {
           multiplier={selectedMultiplier}
           activeBetAmount={activeBet?.amount ?? null}
           onConfirm={() => void placeBet()}
+          onOpenDeposit={(amt = 50) => {
+            if (requirePlayer("Sign in to add funds to your Apex wallet via UPI.")) {
+              setDepositInitialAmount(amt);
+              setDepositOpen(true);
+            }
+          }}
+          onShowOffer={() => {
+            if (requirePlayer("Sign in to claim your exclusive ₹20 bonus offer.")) {
+              setSpecialOfferOpen(true);
+            }
+          }}
         />
       </div>
 
-      <div className="mt-1.5 mx-2 pb-2 space-y-2">
+      <div className="mt-2 mx-2 pb-24 space-y-2.5">
         <Results entries={history} />
-        <SeoAeoGuide />
+
+        {/* High-trust casino footer - preserved in DOM for SEO crawlers and search engines, visually hidden */}
+        <div className="sr-only">
+          <div className="grid grid-cols-3 gap-1.5 text-[9.5px] font-display text-white/75">
+            <div className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/5 border border-white/5">
+              <span className="text-[#26ff9a] text-sm">🛡️</span>
+              <span className="font-semibold text-white tracking-wider">PROVABLY FAIR</span>
+              <span className="text-[8px] text-white/45">SHA-256 AUDITED</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/5 border border-white/5">
+              <span className="text-[#ffd83a] text-sm">⚡</span>
+              <span className="font-semibold text-white tracking-wider">INSTANT UPI</span>
+              <span className="text-[8px] text-white/45">24×7 DIRECT CASHOUT</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/5 border border-white/5">
+              <span className="text-[#35e6ff] text-sm">🔒</span>
+              <span className="font-semibold text-white tracking-wider">BANK GRADE</span>
+              <span className="text-[8px] text-white/45">256-BIT ENCRYPTION</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-3 text-[10px] font-display tracking-wider text-white/60 pt-0.5">
+            <a
+              href="/how-it-works"
+              className="hover:text-[#ffd83a] transition-colors underline decoration-white/20"
+            >
+              GAME RULES
+            </a>
+            <span>•</span>
+            <a
+              href="/how-it-works"
+              className="hover:text-[#26ff9a] transition-colors underline decoration-white/20"
+            >
+              FAIRNESS AUDIT
+            </a>
+            <span>•</span>
+            <a
+              href="/terms"
+              className="hover:text-white transition-colors underline decoration-white/20"
+            >
+              TERMS & CONDITIONS
+            </a>
+          </div>
+
+          <div className="text-[8.5px] text-white/35 font-sans">
+            Apex 2 · 18+ Responsible Gaming Only · Micro-Stake Fair Gaming Experience
+          </div>
+        </div>
       </div>
 
       {/* Shared Bottom Navigation */}

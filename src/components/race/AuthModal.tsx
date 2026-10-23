@@ -152,10 +152,10 @@ export function AuthModal({ open, onClose, promptText }: Props) {
         </div>
 
         {mode === "signup" && (
-          <div className="mb-3 flex items-center gap-2 rounded-xl px-3 py-2 bg-[#26ff9a]/10 border border-[#26ff9a]/30">
-            <Gift size={15} className="text-[#26ff9a] shrink-0" />
-            <span className="text-[11px] text-[#26ff9a] font-display tracking-[0.1em]">
-              ₹28 WELCOME BONUS ON SIGN UP
+          <div className="mb-3 flex items-center justify-center gap-2 rounded-xl py-2 px-3 bg-[#26ff9a]/10 border border-[#26ff9a]/30">
+            <Gift size={14} className="text-[#26ff9a] shrink-0" />
+            <span className="text-[11px] text-[#26ff9a] font-display font-bold tracking-[0.1em]">
+              GET ₹28 WELCOME BONUS
             </span>
           </div>
         )}
@@ -168,10 +168,10 @@ export function AuthModal({ open, onClose, promptText }: Props) {
               onClose();
             }}
           />
-          <div className="flex items-center gap-2 py-1">
+          <div className="flex items-center gap-2 py-0.5">
             <div className="h-px flex-1 bg-white/10"></div>
-            <span className="text-[9px] font-display tracking-[0.18em] text-white/35">
-              OR WITH MOBILE NUMBER
+            <span className="text-[8.5px] font-display tracking-[0.18em] text-white/35">
+              OR PHONE
             </span>
             <div className="h-px flex-1 bg-white/10"></div>
           </div>
@@ -179,9 +179,7 @@ export function AuthModal({ open, onClose, promptText }: Props) {
 
         <form onSubmit={submit} className="space-y-2.5">
           <label className="block">
-            <span className="text-[10px] font-display tracking-[0.2em] text-white/45">
-              PHONE NUMBER
-            </span>
+            <span className="text-[10px] font-display tracking-[0.2em] text-white/45">PHONE</span>
             <div className="mt-1 flex items-center h-11 rounded-xl bg-black/40 border border-white/10 px-3 gap-2">
               <Phone size={15} className="text-white/35" />
               <span className="text-white/45 font-display text-sm">+91</span>
@@ -191,7 +189,7 @@ export function AuthModal({ open, onClose, promptText }: Props) {
                 maxLength={10}
                 value={digits}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                placeholder="10-digit mobile number"
+                placeholder="Mobile number"
                 className="flex-1 bg-transparent outline-none font-display tabular text-base placeholder:text-white/20 text-white"
               />
             </div>
@@ -208,28 +206,28 @@ export function AuthModal({ open, onClose, promptText }: Props) {
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
+                placeholder="6+ characters"
                 className="flex-1 bg-transparent outline-none text-base placeholder:text-white/20 text-white"
               />
             </div>
           </label>
 
           {mode === "signup" && (
-            <label className="flex items-start gap-2 text-[11px] text-white/65 min-h-[36px] cursor-pointer pt-0.5">
+            <label className="flex items-center gap-2 text-[11px] text-white/65 min-h-[32px] cursor-pointer pt-0.5">
               <input
                 type="checkbox"
                 checked={adult}
                 onChange={(e) => setAdult(e.target.checked)}
-                className="mt-0.5 w-4 h-4 accent-[#ffc32b]"
+                className="w-4 h-4 accent-[#ffc32b]"
               />
               <span>
-                I am 18 or older and agree to the{" "}
+                18+ and agree to{" "}
                 <RouterLink
                   to="/terms"
                   onClick={onClose}
                   className="underline text-white/90 hover:text-white"
                 >
-                  Terms & Conditions
+                  Terms
                 </RouterLink>
                 .
               </span>
@@ -243,7 +241,7 @@ export function AuthModal({ open, onClose, promptText }: Props) {
           <button
             type="submit"
             disabled={!valid || busy}
-            className="w-full h-11 rounded-xl font-display text-[12px] tracking-[0.14em] disabled:opacity-50 active:scale-[0.98] transition grid place-items-center"
+            className="w-full h-11 rounded-xl font-display text-[12px] tracking-[0.14em] disabled:opacity-50 active:scale-[0.98] transition grid place-items-center cursor-pointer font-bold"
             style={{
               background: "linear-gradient(180deg,#ffd83a,#f0a415)",
               color: "#231a00",
@@ -253,7 +251,7 @@ export function AuthModal({ open, onClose, promptText }: Props) {
             {busy ? (
               <Loader2 size={16} className="animate-spin" />
             ) : mode === "signup" ? (
-              "CREATE ACCOUNT & CLAIM ₹28"
+              "CLAIM ₹28 BONUS"
             ) : (
               "SIGN IN"
             )}

@@ -52,7 +52,6 @@ export function WithdrawModal({ open, onClose, balancePaise, heldPaise = 0, onRe
   const [amount, setAmount] = useState("100");
   const [upi, setUpi] = useState("");
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const [showProtocolInfo, setShowProtocolInfo] = useState(false);
 
   const list = useQuery({
     queryKey: ["my-withdrawals"],
@@ -192,15 +191,15 @@ export function WithdrawModal({ open, onClose, balancePaise, heldPaise = 0, onRe
 
           {/* Progress towards ₹100 eligibility */}
           {belowMinimum ? (
-            <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
+            <div className="mt-3 pt-2.5 border-t border-white/5 space-y-1.5">
               <div className="flex items-center justify-between text-[10px] font-display tabular tracking-wider text-white/60">
                 <span className="text-[#ffe28a] flex items-center gap-1.5">
                   <Sparkles size={11} className="text-[#ffc32b]" />
-                  {rupees(MIN_WITHDRAW_PAISE - availablePaise)} needed to unlock payout
+                  {rupees(MIN_WITHDRAW_PAISE - availablePaise)} needed for ₹100
                 </span>
                 <span>{progressPct}%</span>
               </div>
-              <div className="h-2 rounded-full bg-black/60 border border-white/5 overflow-hidden p-[1px]">
+              <div className="h-1.5 rounded-full bg-black/60 border border-white/5 overflow-hidden p-[1px]">
                 <div
                   className="h-full rounded-full transition-all duration-500 ease-out"
                   style={{
@@ -210,26 +209,23 @@ export function WithdrawModal({ open, onClose, balancePaise, heldPaise = 0, onRe
                   }}
                 />
               </div>
-              <p className="text-[10.5px] text-white/50 leading-relaxed">
-                Win rounds on the track to grow your balance to the ₹100 milestone.
-              </p>
             </div>
           ) : null}
 
           {/* Reserved Escrow & Total Breakdown */}
           {computedHeldPaise > 0 && (
-            <div className="mt-3 pt-2.5 border-t border-white/5 space-y-1.5 text-[11px]">
+            <div className="mt-2.5 pt-2 border-t border-white/5 space-y-1 text-[11px]">
               <div className="flex items-center justify-between text-[#ffc32b]/90">
                 <span className="flex items-center gap-1.5">
                   <Clock size={12} />
-                  <span>In 24h Escrow Verification</span>
+                  <span>In Escrow</span>
                 </span>
                 <span className="font-display tabular font-medium">
                   {rupees(computedHeldPaise)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-white/50 text-[10.5px]">
-                <span>Total Portfolio (Wallet + Escrow)</span>
+                <span>Total Portfolio</span>
                 <span className="font-display tabular text-white/70">
                   {rupees(totalWalletPaise)}
                 </span>
@@ -238,74 +234,25 @@ export function WithdrawModal({ open, onClose, balancePaise, heldPaise = 0, onRe
           )}
         </div>
 
-        {/* 2. TRUST: 24-Hour Settlement Protocol Banner */}
-        <div className="mt-3 rounded-xl bg-white/[0.02] border border-white/10 p-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-start gap-2.5">
-              <ShieldCheck size={16} className="text-[#26ff9a] shrink-0 mt-0.5" />
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-display font-medium text-white tracking-wide">
-                    24-Hour Escrow Protection
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowProtocolInfo(!showProtocolInfo)}
-                    className="text-[10px] text-white/40 hover:text-white flex items-center gap-0.5 transition cursor-pointer"
-                  >
-                    <Info size={11} />
-                    <span>{showProtocolInfo ? "Hide" : "How it works"}</span>
-                  </button>
-                </div>
-                <p className="text-[10.5px] text-white/60 leading-relaxed mt-0.5">
-                  Requested amounts are held securely in escrow before debit. If any issue arises,
-                  funds return 100% to your balance.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Expandable Protocol Steps */}
-          {showProtocolInfo && (
-            <div className="mt-3 pt-2.5 border-t border-white/5 grid grid-cols-3 gap-2 text-center animate-fade-in">
-              <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-                <div className="text-[9px] font-display text-[#26ff9a] uppercase tracking-wider">
-                  1. Request
-                </div>
-                <div className="text-[10px] text-white/60 mt-0.5 leading-tight">
-                  Locked in zero-fee escrow
-                </div>
-              </div>
-              <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-                <div className="text-[9px] font-display text-[#ffc32b] uppercase tracking-wider">
-                  2. 24h Audit
-                </div>
-                <div className="text-[10px] text-white/60 mt-0.5 leading-tight">
-                  Game fairness verification
-                </div>
-              </div>
-              <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-                <div className="text-[9px] font-display text-[#26ff9a] uppercase tracking-wider">
-                  3. Payout
-                </div>
-                <div className="text-[10px] text-white/60 mt-0.5 leading-tight">
-                  Direct transfer to UPI
-                </div>
-              </div>
-            </div>
-          )}
+        {/* 2. TRUST: Minimal Escrow Badge */}
+        <div className="mt-2.5 py-2 px-3 rounded-xl bg-white/[0.02] border border-white/10 flex items-center justify-between text-[10.5px] font-display">
+          <span className="flex items-center gap-1.5 text-white/80">
+            <ShieldCheck size={14} className="text-[#26ff9a]" />
+            <span>24H ESCROW PROTECTION</span>
+          </span>
+          <span className="text-[#26ff9a] font-semibold">0% FEE</span>
         </div>
 
         {/* 3. ACTION: Amount & UPI Destination Form */}
-        <div className="mt-4 space-y-3.5">
+        <div className="mt-3.5 space-y-3">
           {/* Amount Input & Preset Chips */}
           <div>
             <div className="flex items-center justify-between text-[10px] font-display uppercase tracking-[0.14em] text-white/50">
-              <label htmlFor="payout-amount">Withdrawal Amount</label>
+              <label htmlFor="payout-amount">Amount</label>
               <span>Min ₹100</span>
             </div>
 
-            <div className="mt-1.5 relative flex items-center">
+            <div className="mt-1 relative flex items-center">
               <span className="absolute left-3.5 text-white/40 font-display text-base select-none">
                 ₹
               </span>
@@ -316,12 +263,12 @@ export function WithdrawModal({ open, onClose, balancePaise, heldPaise = 0, onRe
                 value={amount}
                 onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ""))}
                 placeholder="100"
-                className="w-full rounded-xl bg-white/[0.04] border border-white/10 pl-8 pr-3 py-2.5 text-white font-display text-base tabular outline-none focus:border-[#26ff9a]/60 focus:bg-white/[0.07] transition disabled:opacity-40"
+                className="w-full rounded-xl bg-white/[0.04] border border-white/10 pl-8 pr-3 py-2 text-white font-display text-base tabular outline-none focus:border-[#26ff9a]/60 focus:bg-white/[0.07] transition disabled:opacity-40"
               />
             </div>
 
             {/* Quick Preset Selector Chips */}
-            <div className="mt-2 grid grid-cols-4 gap-1.5">
+            <div className="mt-1.5 grid grid-cols-4 gap-1.5">
               {PRESET_AMOUNTS.map((val) => {
                 const isSelected = amount === String(val);
                 const disabled = belowMinimum || val * 100 > availablePaise;
@@ -358,51 +305,48 @@ export function WithdrawModal({ open, onClose, balancePaise, heldPaise = 0, onRe
 
             {/* Contextual Amount Validation Messages */}
             {exceedsBalance && !belowMinimum && (
-              <div className="mt-1.5 flex items-center gap-1 text-[10.5px] text-[#ff6b6b]">
-                <AlertCircle size={12} />
-                <span>Exceeds available balance of {rupees(availablePaise)}</span>
+              <div className="mt-1 flex items-center gap-1 text-[10px] text-[#ff6b6b]">
+                <AlertCircle size={11} />
+                <span>Exceeds balance ({rupees(availablePaise)})</span>
               </div>
             )}
             {belowRequiredAmount && amount && !belowMinimum && !exceedsBalance && (
-              <div className="mt-1.5 flex items-center gap-1 text-[10.5px] text-[#ffe28a]">
-                <AlertCircle size={12} />
-                <span>Minimum withdrawal amount is ₹100</span>
+              <div className="mt-1 flex items-center gap-1 text-[10px] text-[#ffe28a]">
+                <AlertCircle size={11} />
+                <span>Minimum is ₹100</span>
               </div>
             )}
           </div>
 
-          {/* Receiving UPI ID Input with Instant Validation */}
+          {/* Receiving UPI ID Input */}
           <div>
             <div className="flex items-center justify-between text-[10px] font-display uppercase tracking-[0.14em] text-white/50">
-              <label htmlFor="upi-vpa">Receiving UPI ID (VPA)</label>
+              <label htmlFor="upi-vpa">UPI ID</label>
               {validUpi && (
-                <span className="text-[#26ff9a] flex items-center gap-1 font-sans capitalize text-[10.5px]">
-                  <CheckCircle2 size={11} /> Format verified
+                <span className="text-[#26ff9a] flex items-center gap-1 font-sans capitalize text-[10px]">
+                  <CheckCircle2 size={11} /> Verified
                 </span>
               )}
             </div>
 
-            <div className="mt-1.5 relative flex items-center">
+            <div className="mt-1 relative flex items-center">
               <input
                 id="upi-vpa"
                 disabled={belowMinimum}
                 value={upi}
                 onChange={(e) => setUpi(e.target.value.toLowerCase().trim())}
-                placeholder="username@bank (e.g. 9876543210@paytm)"
-                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2.5 text-white font-sans text-[13px] outline-none focus:border-[#26ff9a]/60 focus:bg-white/[0.07] transition disabled:opacity-40"
+                placeholder="username@upi (e.g. 9876543210@paytm)"
+                className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-white font-sans text-[13px] outline-none focus:border-[#26ff9a]/60 focus:bg-white/[0.07] transition disabled:opacity-40"
               />
             </div>
-            <p className="mt-1 text-[10px] text-white/40">
-              Ensure this UPI handle is active and linked to your bank account.
-            </p>
           </div>
 
-          {/* Definitive Action Button */}
+          {/* Action Button */}
           <div className="pt-1">
             <button
               disabled={submit.isPending || !canSubmit}
               onClick={() => submit.mutate()}
-              className="w-full h-12 rounded-xl font-display text-[12.5px] tracking-[0.12em] font-medium transition-all active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer relative overflow-hidden"
+              className="w-full h-11 rounded-xl font-display text-[12.5px] tracking-[0.12em] font-bold transition-all active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer relative overflow-hidden"
               style={{
                 background: belowMinimum
                   ? "rgba(255,255,255,0.08)"
@@ -414,33 +358,29 @@ export function WithdrawModal({ open, onClose, balancePaise, heldPaise = 0, onRe
               {submit.isPending ? (
                 <>
                   <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                  <span>Queuing in 24h Escrow…</span>
+                  <span>Processing…</span>
                 </>
               ) : belowMinimum ? (
                 <>
                   <Lock size={14} />
-                  <span>{rupees(MIN_WITHDRAW_PAISE - availablePaise)} More Needed to Unlock</span>
+                  <span>{rupees(MIN_WITHDRAW_PAISE - availablePaise)} Needed to Unlock</span>
                 </>
               ) : !validUpi ? (
                 <>
-                  <span>Enter Valid UPI ID to Continue</span>
+                  <span>Enter Valid UPI ID</span>
                   <ArrowRight size={14} />
                 </>
               ) : exceedsBalance ? (
-                <span>Amount Exceeds Balance</span>
+                <span>Exceeds Balance</span>
               ) : belowRequiredAmount ? (
-                <span>Minimum Amount is ₹100</span>
+                <span>Min Amount is ₹100</span>
               ) : (
                 <>
                   <Lock size={14} />
-                  <span>Authorize {rupees(amountPaise)} Payout</span>
+                  <span>WITHDRAW {rupees(amountPaise)}</span>
                 </>
               )}
             </button>
-
-            <div className="mt-2 text-center text-[10px] text-white/35">
-              Encrypted 24-hour settlement gateway · 100% balance return guarantee
-            </div>
           </div>
         </div>
 

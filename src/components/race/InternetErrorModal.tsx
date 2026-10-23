@@ -61,15 +61,13 @@ export function InternetErrorModal({ status, latencyMs, effectiveType, retrying,
         </div>
 
         {/* Primary Headline */}
-        <h2 className="text-base font-display font-bold tracking-[0.08em] text-white uppercase mb-2">
-          Internet Error — Reconnect to Win More
+        <h2 className="text-base font-display font-bold tracking-[0.08em] text-white uppercase mb-1">
+          Connection Interrupted
         </h2>
 
         {/* Explanatory Body */}
-        <p className="text-[11.5px] leading-relaxed text-white/70 mb-4 font-sans">
-          {isOffline
-            ? "Your internet connection is disconnected. Live race progress and bets have been safely paused to protect your wallet and ensure provably fair results."
-            : `Your network is experiencing severe latency (${latencyMs ? `${latencyMs}ms` : "high delay"}). The race has been paused to prevent lag-induced losses.`}
+        <p className="text-[11px] text-white/70 mb-3 font-sans">
+          Race paused to protect your balance.
         </p>
 
         {/* Live Diagnostics Card */}

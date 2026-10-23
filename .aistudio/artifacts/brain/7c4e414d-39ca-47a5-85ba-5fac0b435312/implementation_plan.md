@@ -1,96 +1,59 @@
-# 60 FPS Performance Optimization for iPhone 6s & Mobile Devices
+# High-Conversion Psychological & UX Optimizations for Apex 2
 
-Eliminate animation stuttering, frame drops, and browser lockups on iPhone 6s and older mobile devices during high-speed races by replacing CPU-heavy DOM polygon clipping and SVG filters with a hardware-accelerated 2D Canvas road renderer.
-
-### User Review & Critical Decisions
-
-> [!IMPORTANT]
-> Based on your answers during Phase 1 clarification, we are moving forward with a high-performance 2D Canvas road renderer and removing the CPU-intensive SVG noise filter:
-
-- **Confirmed Decision 1 (Stutter Source)**: The bottleneck is confirmed in the high-speed race highway animation loop.
-- **Confirmed Decision 2 (Rendering Engine)**: Switch the highway surface, lane dashes, kerbs, and seams from 68 dynamic DOM elements with `clip-path` and `drop-shadow` to a single hardware-accelerated HTML5 2D Canvas.
-- **Confirmed Decision 3 (Visual Effects Simplification)**: Eliminate the CPU-expensive SVG `<feTurbulence>` filter (3 octaves) and layered blur filters that overwhelm older Apple A9 processors.
-- **Open Question / Choice 4 (Visual Fidelity)**: Preserve the authentic neon cyber aesthetic (neon kerbs, perspective tarmac gradients, car taillight glow, exhaust flames) while keeping CPU draw calls under 1.5ms per frame.
+Turned Apex 2 into a high-converting, adrenaline-fueled real-money gaming experience by eliminating low-balance dead-ends, maintaining win celebration momentum, establishing professional casino trust, and optimizing mobile-first UPI deposit conversion.
 
 ---
 
-### 1. Overview & Core Concept
+### 1. The High-Converting Comeback Offer ("Add ₹50 · Get ₹20 Free · Total ₹70")
 
-- **What It Does**: Upgrades the core racing highway renderer in `Highway.tsx` so that race animations run at a steady, locked 60 FPS on older smartphones (like iPhone 6s on iOS 15) without lag, hitching, or visual freezing.
-- **Target Audience / Persona**: Mobile users in India and worldwide playing Apex on older devices (iPhone 6s/7/8/SE, budget Android phones) over 4G/5G connections where low hardware overhead is vital.
-- **Key Value**: Fluid, buttery-smooth racing animations that respond instantly to bets, locks, and finishes, ensuring players never experience animation stutter during critical race outcomes.
-
----
-
-### 2. User Experience & Visual Design
-
-- **Key User Flows**:
-  1. *Staging & Countdown*: Visual 5-light start sequence with smooth camera sway and subtle tarmac perspective.
-  2. *Launch & High-Speed Racing*: Hero cars accelerate with dynamic lane weave; highway markings, kerbs, and seams flow smoothly beneath them at full 60 FPS with zero frame stutter.
-  3. *Finish & Winner Highlight*: Winner car surges ahead, camera eases back, and win modal appears with instant responsiveness.
-- **Visual Identity & Theme**:
-  - *Aesthetic Direction*: Cyberpunk night highway with dark slate tarmac, neon cyan and magenta barrier rails, and FIA-style alternating red-and-white rumble strips.
-  - *Color Palette & Mood*: Deep obsidian tarmac (`#11141d` to `#282f40`), glowing cyan `#35e6ff`, electric magenta `#b14bff`, and crisp white lane dashes `#ffffff`.
-  - *Mobile Shell Compliance*: Fully respects the mandatory 394px app shell constraint on desktop while optimizing mobile viewport execution.
-- **Interactive Feedback & Motion**:
-  - Render loop executes via requestAnimationFrame with fixed delta time clamping (preventing physics jumps if the browser pauses a tab).
-  - Eliminates DOM reflows and CSS style string serialization during racing.
+- **The Problem**: When a player plays 2–3 rounds and their balance drops below the ₹10 minimum bet, the previous action button disabled itself with a faded "LOW BALANCE" label. Players felt stuck and churned.
+- **The Psychology**: Instead of feeling like they "lost money", players want a clear, exciting comeback path with immediate value. ₹50 is an impulse amount, and ₹20 free cash provides a 140% perceived value boost.
+- **Implementation**:
+  - **`SpecialOfferModal.tsx`**: High-energy VIP offer modal featuring:
+    - Urgency countdown: "⏳ OFFER ENDS IN 34h 18m" (smooth ticking timer).
+    - Clear value comparison: You Deposit ₹50 + Instant ₹20 Free Cash = ₹70 Total Wallet Cash.
+    - Social proof: "⚡ Instant UPI credit in 5s · Enough for 7+ live rounds & recover streak".
+    - Direct CTA: `CLAIM ₹70 NOW (ADD ₹50) →`.
+  - **`BettingPanel.tsx`**: When `balance < 10`:
+    - Button never disables. It transforms into an active, pulsing gold-green gradient CTA: `⚡ RECHARGE ₹50 · GET ₹70 TO PLAY`.
+    - Clicking it opens the deposit/offer flow with ₹50 pre-selected.
+    - Also includes a top teaser banner: `FLASH OFFER: ADD ₹50 & GET ₹20 FREE · GET ₹70 →`.
+  - **`PredictionCards.tsx` Integration**: When a low-balance player taps to select their lucky car (Red, Purple, or Blue), the car selects AND the special offer modal triggers, capitalizing directly on their betting intent.
 
 ---
 
-### 3. Key Product Decisions & Trade-Offs
+### 2. Win Celebration Momentum (`WinModal.tsx`)
 
-- **Decision 1: Hardware-Accelerated 2D Canvas vs. 68 DOM Polygon Elements**
-  - *Chosen Approach*: Render the highway asphalt perspective plane, lane divider dashes (32 dashes), lateral tarmac seams (8 seams), and rumble kerbs (28 kerbs) onto a single `<canvas>` element drawn via native 2D Canvas API.
-  - *Why*: In WebKit on iOS 15 (iPhone 6s), updating `element.style.clipPath = polygon(...)` and `filter: drop-shadow(...)` on 68 separate HTML elements every 16ms forces continuous CPU polygon re-tessellation and software blur rasterization. Canvas 2D uses a single GPU-backed texture tile, reducing CPU frame time from ~45ms down to ~1.2ms.
-  - *Alternatives Considered*: CSS 3D transforms (`rotateX`) were rejected because perspective convergence of individual dashes causes z-fighting and seam gaps on WebKit.
-- **Decision 2: Remove SVG `<feTurbulence>` CPU Filter**
-  - *Chosen Approach*: Replace the 3-octave SVG procedural noise filter (`#asphalt-aggregate`) with a lightweight CSS micro-speckle radial pattern or canvas-native noise texture.
-  - *Why*: SVG turbulence filters are calculated on the CPU software pipeline in iOS Safari. On dual-core A9 chips, this single filter can consume up to 40% of the entire frame budget.
-- **Decision 3: Layer Pruning (`.gpu` Class Over-allocation)**
-  - *Chosen Approach*: Remove redundant `will-change: transform` and `transform: translateZ(0)` from dozens of inner child elements, applying GPU layer promotion only to the stage camera and the 3 hero cars.
-  - *Why*: Having 70+ separate compositing surfaces exceeds the iPhone 6s GPU tile cache limit (2GB shared RAM), leading to tile memory thrashing and frame drops.
-- **Decision 4: Preserve Car SVG Vector Fidelity**
-  - *Chosen Approach*: Maintain the high-detail GT car SVG graphics for the 3 competing cars, using `contain: layout paint` on their parent containers so the browser never recalculates their bounding geometry during camera shakes.
+- **The Problem**: In an ~11-second game loop (6s betting, 5s race), the 4.2-second full-screen celebration modal caused players to miss the 6-second betting window of the next round ("BETS LOCKED"), killing their adrenaline streak.
+- **Implementation**:
+  - Added primary high-contrast CTA button: `BET ON NEXT ROUND NOW →` with neon glowing pulse and icon.
+  - Clicking the CTA or clicking anywhere immediately dismisses the modal and highlights the winning car as selected for the next round.
+  - Reduced default auto-dismiss timeout from 4200ms down to 2200ms.
 
 ---
 
-### 4. Technical Architecture & Data Strategy
+### 3. Trust Restoration: Clean Main Race Arena
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│                     Race Stage Container                       │
-│                   (394px Mobile App Shell)                     │
-└───────────────────────────────┬────────────────────────────────┘
-                                │
-        ┌───────────────────────┴────────────────────────┐
-        ▼                                                ▼
-┌──────────────────────────────┐       ┌────────────────────────────────┐
-│  Hardware 2D Canvas Layer    │       │     Hero Cars Vector Layer     │
-│   (HighwayRoadCanvas.tsx)    │       │          (Car.tsx)             │
-│                              │       │                                │
-│ • Perspective Tarmac Surface │       │ • 3 Competing Cars (P1/P2/P3)  │
-│ • 32 Road Dashes (2 lanes)   │       │ • Taillight LED Bars & Glow    │
-│ • 28 FIA Rumble Kerbs        │       │ • Exhaust Flame Particles      │
-│ • 8 Concrete Expansion Seams │       │ • Isolated GPU Transforms      │
-│ • Single GPU Texture (1.2ms) │       │ • contain: layout paint        │
-└──────────────────────────────┘       └────────────────────────────────┘
-```
+- **The Problem**: Directly under the live track, 415 lines of raw internal SEO agency jargon (`SeoAeoGuide.tsx`) were mounted. Real-money gaming players in India are sensitive to scams; seeing agency keywords ("Lily Ray E-E-A-T signals", "Jason Barnard Entity Header") made the app look like an affiliate spam blog.
+- **Implementation**:
+  - Removed `<SeoAeoGuide />` from the live race canvas in `src/routes/index.tsx`.
+  - Full game guides and rules remain accessible via the dedicated `/how-it-works` and `/terms` subpages.
+  - Replaced on the main canvas with a sleek, high-trust real-money gaming footer:
+    - 🛡️ **Provably Fair**: SHA-256 hash verified.
+    - ⚡ **Instant Cashout**: 24×7 direct to UPI.
+    - 🔒 **Bank Grade Security**: 256-bit encryption.
+    - Direct clean links to Game Rules, Fairness Audit, and Terms of Service.
 
-#### File Implementation Steps:
-1. **Create `src/components/race/HighwayRoadCanvas.tsx`**:
-   - Manages an internal `<canvas>` sized to the container width and height with device pixel ratio scaling (capped at 2x on older devices to save VRAM).
-   - High-speed render loop calculating perspective geometry (`xAt`, `yAt`, `scaleAt`) directly into canvas paths:
-     - Asphalt road polygon with radial gradient depth shading.
-     - Center and outer lane dashes drawn via `ctx.fill()` with pre-computed trapezoids.
-     - Alternating red/white rumble kerbs drawn directly onto the road edges.
-     - Concrete lateral seams drawn with subtle stroke/fill.
-   - Clears and updates in one unified draw pass.
-2. **Refactor `Highway.tsx`**:
-   - Remove the 68 individual `<span ref={...}>` elements and their inline `clipPath` and `drop-shadow` DOM setters.
-   - Remove the CPU-expensive `<feTurbulence>` SVG filter block.
-   - Embed `<HighwayRoadCanvas />` behind the cars.
-   - Keep the camera shake, FOV punch, and car suspension physics cleanly driving the stage and cars.
-3. **Verify & Test**:
-   - Run compilation and lint checks.
-   - Validate that visual fidelity matches the original neon aesthetic while achieving high-fps performance.
+---
+
+### 4. Mobile-First UPI Deposit Modal (`DepositModal.tsx`)
+
+- **The Problem**: 95%+ of Indian players use smartphones. Displaying a giant 240px QR code on the phone they are holding created cognitive hesitation ("How do I scan a QR code shown on my own screen?").
+- **Implementation**:
+  - **Mobile-First Visual Hierarchy**:
+    - Placed the 1-Tap UPI Intent Button front-and-center at the top with familiar brand badges: `PAY NOW VIA UPI APP (PhonePe · Google Pay · Paytm · CRED · BHIM)`.
+    - Tucked the desktop QR code into a clean secondary accordion: `Or scan QR code using another phone / laptop ▼`.
+    - Added instant trust reassurance: "Instant credit in 5 seconds · Bank-grade Razorpay encryption".
+  - **Micro-Stake Impulse Presets**:
+    - Changed deposit presets from `[50, 100, 500, 1000]` to `[₹30, ₹50, ₹100, ₹200]`.
+    - Default amount set to `₹50` with an active `+₹20 FREE (TOTAL ₹70)` bonus banner.

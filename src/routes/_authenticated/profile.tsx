@@ -204,9 +204,8 @@ function ProfilePage() {
                         ACTION REQUIRED
                       </span>
                     </div>
-                    <p className="text-[11px] text-white/70 mt-1 leading-relaxed">
-                      Link your real 10-digit mobile number to enable instant UPI withdrawals and
-                      account recovery.
+                    <p className="text-[10.5px] text-white/60 mt-0.5">
+                      Required for instant UPI withdrawals.
                     </p>
                   </div>
                 </div>
@@ -441,10 +440,7 @@ function ProfilePage() {
                   ))}
                 </div>
               </div>
-              <p className="text-[10px] text-white/40">
-                Only bet what you can afford to lose. If playing stops being enjoyable, pause your
-                account and reach out to a local support service.
-              </p>
+              <p className="text-[9.5px] text-white/35">Play responsibly · 18+ only</p>
             </section>
 
             <section className="glass rounded-2xl p-4 space-y-2.5">
