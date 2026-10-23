@@ -54,6 +54,33 @@ export default {
           }
         }
       }
+
+      const url = new URL(request.url);
+      if (url.pathname === "/api/health" || url.pathname === "/healthz") {
+        return new Response(JSON.stringify({ ok: true, serverTime: Date.now() }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "cache-control": "no-store, no-cache, must-revalidate",
+          },
+        });
+      }
+
+      // Safeguard for legacy or stale checkNetworkHealth server function calls
+      if (
+        request.url.includes("checkNetworkHealth") ||
+        (request.url.includes("_serverFn") &&
+          request.url.includes("eyJmaWxlIjoiL3NyYy9saWIvbmV0d29yay5mdW5jdGlvbnMudHM"))
+      ) {
+        return new Response(JSON.stringify({ ok: true, serverTime: Date.now() }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "cache-control": "no-store, no-cache, must-revalidate",
+          },
+        });
+      }
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       if (request.url.includes("_serverFn")) {

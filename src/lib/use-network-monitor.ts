@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { checkNetworkHealth } from "./network.functions";
 
 export type NetworkStatus = "online" | "slow" | "offline";
 
@@ -32,8 +30,6 @@ interface NetworkInformation extends EventTarget {
 }
 
 export function useNetworkMonitor(onRecovered?: () => void): NetworkState {
-  const pingServer = useServerFn(checkNetworkHealth);
-
   const [status, setStatus] = useState<NetworkStatus>(() => {
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       return "offline";
@@ -54,7 +50,7 @@ export function useNetworkMonitor(onRecovered?: () => void): NetworkState {
   const onRecoveredRef = useRef(onRecovered);
   onRecoveredRef.current = onRecovered;
 
-  // Single ping execution with generous 7s timeout to prevent false timeouts on mobile
+  // Direct fast ping execution with generous 7s timeout to measure real network latency safely
   const runPing = useCallback(async (): Promise<{ ok: boolean; latency: number | null }> => {
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       return { ok: false, latency: null };
@@ -65,18 +61,31 @@ export function useNetworkMonitor(onRecovered?: () => void): NetworkState {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), PING_TIMEOUT_MS);
 
-      const res = await pingServer({ signal: controller.signal });
+      // Primary: lightweight /api/health endpoint
+      const response = await fetch(`/api/health?t=${Date.now()}`, {
+        method: "GET",
+        cache: "no-store",
+        signal: controller.signal,
+      }).catch(async () => {
+        // Fallback: static asset HEAD request
+        return await fetch(`/favicon.svg?t=${Date.now()}`, {
+          method: "HEAD",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+      });
+
       clearTimeout(timeoutId);
 
       const rtt = Math.round(performance.now() - t0);
-      if (res?.ok) {
+      if (response && response.ok) {
         return { ok: true, latency: rtt };
       }
       return { ok: false, latency: rtt };
     } catch {
       return { ok: false, latency: null };
     }
-  }, [pingServer]);
+  }, []);
 
   // Main evaluation logic
   const evaluateConnection = useCallback(

@@ -673,8 +673,8 @@ function Game({ isGuest }: { isGuest: boolean }) {
       <div className="mt-2 mx-2 pb-24 space-y-2.5">
         <Results entries={history} />
 
-        {/* High-trust casino footer - preserved in DOM for SEO crawlers and search engines, visually hidden */}
-        <div className="sr-only">
+        {/* High-trust, professional casino footer (no agency SEO jargon) */}
+        <div className="rounded-2xl glass p-3 border border-white/10 space-y-2.5 text-center shadow-lg">
           <div className="grid grid-cols-3 gap-1.5 text-[9.5px] font-display text-white/75">
             <div className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/5 border border-white/5">
               <span className="text-[#26ff9a] text-sm">🛡️</span>
