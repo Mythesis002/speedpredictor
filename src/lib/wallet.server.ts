@@ -419,3 +419,99 @@ export async function verifyRazorpaySignature(
   }
   return diff === 0;
 }
+
+export function getRazorpayKeyId(): string | null {
+  return readFreshEnv("RAZORPAY_KEY_ID") ?? null;
+}
+
+/**
+ * Creates a Razorpay Order for standard Checkout.js flow.
+ */
+export async function createRazorpayOrder(
+  amountPaise: number,
+  depositId: string,
+  userId: string,
+): Promise<string | null> {
+  if (!paymentsConfigured()) return null;
+  try {
+    const res = await fetch("https://api.razorpay.com/v1/orders", {
+      method: "POST",
+      headers: {
+        Authorization: razorpayAuth(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        amount: amountPaise,
+        currency: "INR",
+        receipt: depositId.replace(/-/g, "").slice(0, 32),
+        notes: {
+          deposit_id: depositId,
+          user_id: userId,
+        },
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      console.warn("Razorpay order creation fallback:", res.status, err);
+      return null;
+    }
+    const data = (await res.json()) as { id?: string };
+    return data?.id ?? null;
+  } catch (err) {
+    console.warn("Razorpay order creation error:", err);
+    return null;
+  }
+}
+
+/** Fetches full payment details from Razorpay API. */
+export async function fetchPaymentDetails(paymentId: string): Promise<{
+  id: string;
+  status: string;
+  amount: number;
+  order_id?: string;
+} | null> {
+  if (!paymentsConfigured()) return null;
+  try {
+    const res = await fetch(`https://api.razorpay.com/v1/payments/${paymentId}`, {
+      headers: { Authorization: razorpayAuth() },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as {
+      id: string;
+      status: string;
+      amount: number;
+      order_id?: string;
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Verifies Razorpay Checkout signature using HMAC-SHA256 with RAZORPAY_KEY_SECRET. */
+export async function verifyRazorpayPaymentSignature(
+  orderId: string,
+  paymentId: string,
+  signature: string,
+): Promise<boolean> {
+  const secret = readFreshEnv("RAZORPAY_KEY_SECRET");
+  if (!secret || !orderId || !paymentId || !signature) return false;
+  try {
+    const payload = `${orderId}|${paymentId}`;
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const expected = toHex(await crypto.subtle.sign("HMAC", key, encoder.encode(payload)));
+    if (expected.length !== signature.length) return false;
+    let diff = 0;
+    for (let i = 0; i < expected.length; i++) {
+      diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+    }
+    return diff === 0;
+  } catch {
+    return false;
+  }
+}

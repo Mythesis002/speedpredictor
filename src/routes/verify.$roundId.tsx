@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, CheckCircle2, Loader2, XCircle } from "lucide-react";
-import { revealRound } from "@/lib/rounds.functions";
+import { revealRound, type RevealResult } from "@/lib/rounds.functions";
 import { lineupForRound, outcomeFromReveal, winWeights, RTP } from "@/lib/round-engine";
 
 export const Route = createFileRoute("/verify/$roundId")({
@@ -38,7 +38,14 @@ function VerifyPage() {
     queryKey: ["verify", id],
     enabled: Number.isInteger(id),
     queryFn: async () => {
-      const r = await reveal({ data: { roundId: id } });
+      let r: RevealResult;
+      try {
+        r = await reveal({ data: { roundId: id } });
+      } catch {
+        const apiRes = await fetch(`/api/rounds/reveal?roundId=${id}`);
+        if (!apiRes.ok) return { ok: false as const, reason: "early" as const };
+        r = await apiRes.json();
+      }
       if (!r.ok) return { ok: false as const, reason: r.reason };
       const hash = await sha256Hex(r.reveal);
       const order = outcomeFromReveal(r.reveal, id).order;

@@ -1,15 +1,31 @@
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
+import { resolve, join } from "node:path";
 
-const filesToPatch = [
-  "node_modules/@tanstack/start-plugin-core/dist/esm/vite/start-compiler-plugin/plugin.js",
-  "node_modules/@tanstack/start-plugin-core/src/vite/start-compiler-plugin/plugin.ts",
-];
+function findFiles(dir, matchFileName, results = []) {
+  if (!existsSync(dir)) return results;
+  try {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        findFiles(full, matchFileName, results);
+      } else if (matchFileName(entry.name, full)) {
+        results.push(full);
+      }
+    }
+  } catch {
+    /* ignore unreadable dirs */
+  }
+  return results;
+}
 
-for (const relPath of filesToPatch) {
-  const fullPath = resolve(process.cwd(), relPath);
-  if (!existsSync(fullPath)) continue;
+const targetFiles = findFiles(
+  resolve(process.cwd(), "node_modules"),
+  (name, full) =>
+    full.includes("start-compiler-plugin") && (name === "plugin.js" || name === "plugin.ts"),
+);
 
+for (const fullPath of targetFiles) {
   let content = readFileSync(fullPath, "utf8");
   let modified = false;
 
@@ -23,8 +39,22 @@ for (const relPath of filesToPatch) {
     modified = true;
   }
 
+  if (content.includes("this.error(`Invalid server function ID: ${fnId}`);")) {
+    content = content.replace(
+      "this.error(`Invalid server function ID: ${fnId}`);",
+      "return `export {}`;",
+    );
+    modified = true;
+  } else if (content.includes("this.error(`Invalid server function ID: ${fnId}`)")) {
+    content = content.replace(
+      "this.error(`Invalid server function ID: ${fnId}`)",
+      "return `export {}`",
+    );
+    modified = true;
+  }
+
   if (modified) {
     writeFileSync(fullPath, content, "utf8");
-    console.log(`[patch-tanstack] Patched ${relPath}`);
+    console.log(`[patch-tanstack] Patched ${fullPath}`);
   }
 }

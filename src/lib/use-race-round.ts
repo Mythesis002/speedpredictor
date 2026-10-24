@@ -88,7 +88,14 @@ export function useRaceRound(
   const sync = useCallback(async () => {
     try {
       const t0 = Date.now();
-      const clock = await fetchClock({});
+      let clock: RoundClock;
+      try {
+        clock = await fetchClock({});
+      } catch {
+        const res = await fetch("/api/rounds/clock");
+        if (!res.ok) throw new Error("Clock request failed");
+        clock = await res.json();
+      }
       const rtt = Date.now() - t0;
       offsetRef.current = clock.serverNow + rtt / 2 - Date.now();
       setOnline(true);
@@ -123,7 +130,15 @@ export function useRaceRound(
       let reveal: string;
       let ok: boolean | null = null;
       try {
-        const res = await fetchReveal({ data: { roundId: id } });
+        let res: RevealResult;
+        try {
+          res = await fetchReveal({ data: { roundId: id } });
+        } catch {
+          const apiRes = await fetch(`/api/rounds/reveal?roundId=${id}`);
+          if (!apiRes.ok) throw new Error("Reveal API request failed");
+          res = await apiRes.json();
+        }
+
         if (!res.ok) {
           // asked a touch early — allow a retry on the next frame
           if (res.reason === "early") requested.current.delete(id);

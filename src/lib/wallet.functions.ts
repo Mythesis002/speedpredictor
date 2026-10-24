@@ -7,10 +7,14 @@ import {
   MIN_DEPOSIT_PAISE,
   assertBettingOpen,
   closeRazorpayQr,
+  createRazorpayOrder,
   createRazorpayQr,
+  fetchPaymentDetails,
   fetchQrPayments,
+  getRazorpayKeyId,
   isRoundSettleable,
   laneMultiplier,
+  verifyRazorpayPaymentSignature,
   winnerLaneFor,
 } from "./wallet.server";
 
@@ -186,6 +190,9 @@ export interface CreateDepositResult {
   cleanQrDataUrl: string | null;
   upiUri: string | null;
   amountPaise: number;
+  razorpayKeyId?: string | null;
+  razorpayOrderId?: string | null;
+  userPhone?: string | null;
 }
 
 export const createDeposit = createServerFn({ method: "POST" })
@@ -204,6 +211,9 @@ export const createDeposit = createServerFn({ method: "POST" })
       cleanQrDataUrl: null,
       upiUri: null,
       amountPaise: data.amountPaise,
+      razorpayKeyId: null,
+      razorpayOrderId: null,
+      userPhone: null,
     });
 
     if (!Number.isInteger(data.amountPaise) || data.amountPaise < MIN_DEPOSIT_PAISE) {
@@ -216,7 +226,7 @@ export const createDeposit = createServerFn({ method: "POST" })
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-      const { isBanned } = await computeWalletBalances(supabaseAdmin, context.userId);
+      const { isBanned, phone } = await computeWalletBalances(supabaseAdmin, context.userId);
       if (isBanned) {
         return emptyResult("Deposits are unavailable while this account is suspended.");
       }
@@ -230,7 +240,11 @@ export const createDeposit = createServerFn({ method: "POST" })
         return emptyResult(error?.message || "Could not start your deposit. Please try again.");
       }
 
-      const qr = await createRazorpayQr(data.amountPaise, dep.id, context.userId);
+      const [qr, orderId] = await Promise.all([
+        createRazorpayQr(data.amountPaise, dep.id, context.userId),
+        createRazorpayOrder(data.amountPaise, dep.id, context.userId).catch(() => null),
+      ]);
+
       const cleanImageUrl = qr.clean_qr_data_url || qr.image_url;
       const upiPayload = qr.image_content || qr.qr_string || null;
       await supabaseAdmin
@@ -246,6 +260,9 @@ export const createDeposit = createServerFn({ method: "POST" })
         cleanQrDataUrl: qr.clean_qr_data_url ?? null,
         upiUri: upiPayload,
         amountPaise: data.amountPaise,
+        razorpayKeyId: getRazorpayKeyId(),
+        razorpayOrderId: orderId,
+        userPhone: phone || null,
       };
     } catch (err) {
       const message =
@@ -254,6 +271,103 @@ export const createDeposit = createServerFn({ method: "POST" })
           : "Payment service is temporarily unavailable. Please try again.";
       return emptyResult(message);
     }
+  });
+
+/**
+ * Instantly verifies and credits a completed Razorpay Checkout payment.
+ */
+export const verifyAndCreditDeposit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (data: {
+      depositId: string;
+      razorpayPaymentId: string;
+      razorpayOrderId?: string;
+      razorpaySignature?: string;
+    }) => {
+      const { depositId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = data ?? {};
+      if (!depositId || typeof depositId !== "string") {
+        throw new Error("Invalid deposit ID.");
+      }
+      if (!razorpayPaymentId || typeof razorpayPaymentId !== "string") {
+        throw new Error("Invalid payment ID.");
+      }
+      return {
+        depositId,
+        razorpayPaymentId,
+        razorpayOrderId: razorpayOrderId || undefined,
+        razorpaySignature: razorpaySignature || undefined,
+      };
+    },
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: dep, error } = await supabaseAdmin
+      .from("deposits")
+      .select("id, user_id, amount_paise, qr_id, status")
+      .eq("id", data.depositId)
+      .maybeSingle();
+
+    if (error || !dep || dep.user_id !== context.userId) {
+      throw new Error("Deposit record not found.");
+    }
+
+    const expectedPaise = Number(dep.amount_paise);
+
+    if (dep.status !== "paid") {
+      let isVerified = false;
+
+      // 1. Signature verification
+      if (data.razorpayOrderId && data.razorpaySignature) {
+        isVerified = await verifyRazorpayPaymentSignature(
+          data.razorpayOrderId,
+          data.razorpayPaymentId,
+          data.razorpaySignature,
+        );
+      }
+
+      // 2. Direct Razorpay payment API verification
+      if (!isVerified) {
+        const payment = await fetchPaymentDetails(data.razorpayPaymentId);
+        if (
+          payment &&
+          (payment.status === "captured" || payment.status === "authorized") &&
+          Number(payment.amount) >= expectedPaise
+        ) {
+          isVerified = true;
+        }
+      }
+
+      if (!isVerified) {
+        throw new Error(
+          "Payment verification failed. If your account was debited, it will credit shortly.",
+        );
+      }
+
+      // Credit deposit atomically in DB
+      await supabaseAdmin.rpc("credit_deposit", {
+        p_deposit_id: dep.id,
+        p_payment_id: data.razorpayPaymentId,
+        p_amount_paise: expectedPaise,
+      });
+
+      if (dep.qr_id) {
+        await closeRazorpayQr(dep.qr_id);
+      }
+    }
+
+    const { balancePaise, heldPaise, availablePaise } = await computeWalletBalances(
+      supabaseAdmin,
+      context.userId,
+    );
+
+    return {
+      status: "paid",
+      amountPaise: expectedPaise,
+      balancePaise,
+      heldPaise,
+      availablePaise,
+    };
   });
 
 /** Polls Razorpay for the deposit and credits it exactly once. */

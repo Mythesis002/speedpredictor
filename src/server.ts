@@ -81,6 +81,51 @@ export default {
         });
       }
 
+      // Robust direct API and server function fallback for round reveal
+      if (
+        url.pathname === "/api/rounds/reveal" ||
+        (request.url.includes("_serverFn") &&
+          (request.url.includes("revealRound") ||
+            request.url.includes("eyJmaWxlIjoiL3NyYy9saWIvcm91bmRzLmZ1bmN0aW9ucy50cy")))
+      ) {
+        let roundId = Number(url.searchParams.get("roundId") || 0);
+        if (!roundId && url.searchParams.has("_serverFnArgs")) {
+          try {
+            const parsed = JSON.parse(url.searchParams.get("_serverFnArgs")!);
+            roundId = Number(parsed?.data?.roundId || parsed?.roundId || 0);
+          } catch {
+            /* ignore parse failure */
+          }
+        }
+        if (roundId > 0) {
+          const { revealRoundDirect } = await import("./lib/rounds-direct");
+          const result = await revealRoundDirect(roundId);
+          return new Response(JSON.stringify(result), {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+              "cache-control": "no-store, no-cache, must-revalidate",
+            },
+          });
+        }
+      }
+
+      // Robust direct API and server function fallback for round clock
+      if (
+        url.pathname === "/api/rounds/clock" ||
+        (request.url.includes("_serverFn") && request.url.includes("getRoundClock"))
+      ) {
+        const { getRoundClockDirect } = await import("./lib/rounds-direct");
+        const clock = await getRoundClockDirect();
+        return new Response(JSON.stringify(clock), {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "cache-control": "no-store, no-cache, must-revalidate",
+          },
+        });
+      }
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       if (request.url.includes("_serverFn")) {

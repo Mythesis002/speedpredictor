@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Loader2,
-  Smartphone,
   X,
   Sparkles,
   QrCode,
   ChevronDown,
   ChevronUp,
   CheckCircle2,
+  ExternalLink,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { checkDeposit, createDeposit } from "@/lib/wallet.functions";
@@ -30,17 +30,69 @@ interface Props {
 
 const PRESETS = [30, 50, 100, 200];
 
+function getCleanUpiQuery(uri: string): string {
+  if (!uri) return "";
+  const qIdx = uri.indexOf("?");
+  let query = qIdx >= 0 ? uri.slice(qIdx + 1) : uri;
+  if (!query.includes("cu=")) {
+    query += "&cu=INR";
+  }
+  return query;
+}
+
 /**
- * Mobile-first high-converting deposit flow.
- * Puts 1-Tap UPI Intent front-and-center, offers micro-stake impulse testing (₹30, ₹50 default with +₹20 bonus),
- * and tucks the desktop QR code behind a secondary toggle to remove cognitive mobile hesitation.
+ * Generates direct app deep links using custom schemes and Android explicit package intents.
+ * This guarantees that clicking an app button opens that specific app directly
+ * and prevents WhatsApp Pay from hijacking the generic upi:// link.
  */
+function getAppHref(
+  app: "phonepe" | "gpay" | "paytm" | "cred" | "bhim" | "generic",
+  rawUri: string | null,
+): string {
+  if (!rawUri) return "#";
+  const query = getCleanUpiQuery(rawUri);
+  const isAndroid = typeof navigator !== "undefined" && /android/i.test(navigator.userAgent);
+
+  if (app === "phonepe") {
+    return isAndroid
+      ? `intent://pay?${query}#Intent;scheme=upi;package=com.phonepe.app;end`
+      : `phonepe://pay?${query}`;
+  }
+
+  if (app === "gpay") {
+    return isAndroid
+      ? `intent://upi/pay?${query}#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end`
+      : `tez://upi/pay?${query}`;
+  }
+
+  if (app === "paytm") {
+    return isAndroid
+      ? `intent://pay?${query}#Intent;scheme=upi;package=net.one97.paytm;end`
+      : `paytmmp://pay?${query}`;
+  }
+
+  if (app === "cred") {
+    return isAndroid
+      ? `intent://pay?${query}#Intent;scheme=upi;package=com.dreamplug.androidapp;end`
+      : `cred://pay?${query}`;
+  }
+
+  if (app === "bhim") {
+    return isAndroid
+      ? `intent://pay?${query}#Intent;scheme=upi;package=in.org.npci.upiapp;end`
+      : `bhim://pay?${query}`;
+  }
+
+  return rawUri;
+}
+
 export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: Props) {
   const start = useServerFn(createDeposit);
   const poll = useServerFn(checkDeposit);
 
   const [amount, setAmount] = useState(initialAmount);
   const [showQrCode, setShowQrCode] = useState(false);
+  const [selectedApp, setSelectedApp] = useState<"phonepe" | "gpay" | "paytm" | "cred">("phonepe");
   const [qr, setQr] = useState<{
     id: string;
     url: string;
@@ -79,6 +131,41 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
     }
   }, [open, initialAmount, reset]);
 
+  const notifyAdmin = useCallback((credited: number, depId: string, newAvail: number) => {
+    const depositEmail = createAddFundsEmailContent({
+      amountPaise: credited,
+      depositId: depId,
+      balancePaise: newAvail,
+    });
+
+    void getAccessToken().then((token) => {
+      if (token) {
+        void sendGmailMessage({
+          to: ADMIN_NOTIFICATION_EMAIL,
+          subject: depositEmail.subject,
+          html: depositEmail.html,
+          token,
+        }).catch(() => {
+          queueNotification({
+            type: "add_funds",
+            subject: depositEmail.subject,
+            html: depositEmail.html,
+            recipient: ADMIN_NOTIFICATION_EMAIL,
+            meta: { depositId: depId, amountPaise: credited, balancePaise: newAvail },
+          });
+        });
+      } else {
+        queueNotification({
+          type: "add_funds",
+          subject: depositEmail.subject,
+          html: depositEmail.html,
+          recipient: ADMIN_NOTIFICATION_EMAIL,
+          meta: { depositId: depId, amountPaise: credited, balancePaise: newAvail },
+        });
+      }
+    });
+  }, []);
+
   const verifyDepositStatus = useCallback(
     async (depositId: string, fallbackAmountPaise: number, isManual = false) => {
       if (isManual) {
@@ -97,41 +184,7 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
           });
           onCredited(newAvail);
           if (timer.current) clearInterval(timer.current);
-
-          // Silently notify admin in the background (no user popup or badge)
-          const depositEmail = createAddFundsEmailContent({
-            amountPaise: credited,
-            depositId,
-            balancePaise: newAvail,
-          });
-
-          void getAccessToken().then((token) => {
-            if (token) {
-              void sendGmailMessage({
-                to: ADMIN_NOTIFICATION_EMAIL,
-                subject: depositEmail.subject,
-                html: depositEmail.html,
-                token,
-              }).catch(() => {
-                queueNotification({
-                  type: "add_funds",
-                  subject: depositEmail.subject,
-                  html: depositEmail.html,
-                  recipient: ADMIN_NOTIFICATION_EMAIL,
-                  meta: { depositId, amountPaise: credited, balancePaise: newAvail },
-                });
-              });
-            } else {
-              queueNotification({
-                type: "add_funds",
-                subject: depositEmail.subject,
-                html: depositEmail.html,
-                recipient: ADMIN_NOTIFICATION_EMAIL,
-                meta: { depositId, amountPaise: credited, balancePaise: newAvail },
-              });
-            }
-          });
-
+          notifyAdmin(credited, depositId, newAvail);
           return true;
         }
         if (isManual) {
@@ -148,7 +201,7 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
       }
       return false;
     },
-    [poll, onCredited],
+    [poll, onCredited, notifyAdmin],
   );
 
   useEffect(() => {
@@ -219,6 +272,12 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
     setBusy(false);
   };
 
+  const handleDirectRedirect = (app: "phonepe" | "gpay" | "paytm" | "cred") => {
+    if (!qr?.upiUri) return;
+    const href = getAppHref(app, qr.upiUri);
+    window.location.href = href;
+  };
+
   return (
     <div className="fixed inset-0 z-[90] grid place-items-center bg-black/85 backdrop-blur-sm px-4 animate-fade-in">
       <div className="w-full max-w-sm glass rounded-3xl p-4.5 relative border border-white/15 shadow-[0_0_40px_rgba(0,0,0,0.8)]">
@@ -248,54 +307,41 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
                 }
                 className="flex-1 bg-transparent outline-none font-display tabular text-xl text-white font-bold"
               />
+              <span className="text-white/40 text-[10px] font-display tracking-widest">INR</span>
             </div>
 
-            {/* Presets: [30, 50, 100, 200] */}
             <div className="grid grid-cols-4 gap-1.5 mb-3.5">
-              {PRESETS.map((n) => {
-                const isSelected = amount === n;
-                const isBest = n === 50;
+              {PRESETS.map((p) => {
+                const selected = amount === p;
                 return (
                   <button
-                    key={n}
+                    key={p}
                     type="button"
-                    onClick={() => setAmount(n)}
-                    className={`h-11 rounded-xl text-[12px] font-display border relative flex flex-col items-center justify-center transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-gradient-to-b from-[#ffd83a]/25 to-[#ffd83a]/10 border-[#ffd83a] text-white shadow-[0_0_15px_rgba(255,216,58,0.3)] font-bold scale-[1.02]"
-                        : "bg-white/5 border-white/10 text-white/80 hover:bg-white/10"
-                    }`}
+                    onClick={() => setAmount(p)}
+                    className="relative h-9 rounded-xl font-display text-[12px] tabular font-bold transition-all cursor-pointer border"
+                    style={{
+                      background: selected ? "rgba(255,216,58,0.2)" : "rgba(255,255,255,0.05)",
+                      borderColor: selected ? "#ffd83a" : "rgba(255,255,255,0.1)",
+                      color: selected ? "#ffd83a" : "rgba(255,255,255,0.8)",
+                    }}
                   >
-                    {isBest && (
-                      <span className="absolute -top-2 px-1.5 py-[1px] rounded bg-[#26ff9a] text-[7.5px] font-display tracking-tight text-black font-extrabold uppercase shadow-sm">
-                        +₹20 FREE
-                      </span>
-                    )}
-                    <span>₹{n}</span>
-                    {isBest && (
-                      <span className="text-[7.5px] text-[#26ff9a] tracking-tight leading-none">
-                        GET ₹70
-                      </span>
-                    )}
+                    <span>₹{p}</span>
                   </button>
                 );
               })}
             </div>
 
             {error && (
-              <div className="rounded-xl bg-[#ff4d6d]/15 border border-[#ff4d6d]/40 p-2.5 text-[11px] text-[#ff8a9c] mb-3 leading-snug flex flex-col gap-1 animate-shake">
-                <div className="font-display tracking-wider text-[10px] text-[#ff4d6d]">
-                  PAYMENT ERROR
-                </div>
-                <div>{error}</div>
+              <div className="mb-3 px-3 py-2 rounded-xl bg-[#ff3b5c]/15 border border-[#ff3b5c]/35 text-[#ff8a9c] text-[11px] leading-tight">
+                {error}
               </div>
             )}
 
             <button
               type="button"
-              disabled={amount < 10 || busy}
-              onClick={generate}
-              className="w-full h-12 rounded-xl font-display text-[13px] tracking-[0.14em] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] transition-all shadow-[0_0_24px_rgba(255,216,58,0.3)] relative overflow-hidden"
+              disabled={busy || amount < 10}
+              onClick={() => void generate()}
+              className="relative overflow-hidden w-full h-12 rounded-xl font-display text-[13px] tracking-[0.12em] flex items-center justify-center gap-2 cursor-pointer transition active:scale-[0.98] shadow-lg disabled:opacity-50"
               style={{
                 background: busy
                   ? "rgba(255,216,58,0.3)"
@@ -307,10 +353,10 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
               {busy ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  <span>STARTING UPI…</span>
+                  <span>STARTING PAYMENT…</span>
                 </>
               ) : (
-                <span>PAY {formatINR(amount)} VIA UPI →</span>
+                <span>PAY {formatINR(amount)} VIA UPI APP →</span>
               )}
               {!busy && <span className="absolute inset-0 animate-shimmer" />}
             </button>
@@ -329,25 +375,131 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
               </div>
             )}
 
-            {/* 1-TAP UPI BUTTON */}
+            {/* DIRECT 1-TAP PAYMENT APP REDIRECT BUTTONS (No WhatsApp Hijacking) */}
             {qr.upiUri && (
-              <div className="mt-3.5 space-y-2">
+              <div className="mt-3.5 space-y-2.5">
+                {/* Quick App Selector Pills */}
+                <div className="grid grid-cols-4 gap-1.5 p-1 rounded-xl bg-black/40 border border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedApp("phonepe")}
+                    className={`py-1.5 px-1 rounded-lg text-[10px] font-display font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                      selectedApp === "phonepe"
+                        ? "bg-[#5f259f] text-white shadow"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    <span>PhonePe</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedApp("gpay")}
+                    className={`py-1.5 px-1 rounded-lg text-[10px] font-display font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                      selectedApp === "gpay"
+                        ? "bg-white text-[#4285F4] shadow"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    <span>GPay</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedApp("paytm")}
+                    className={`py-1.5 px-1 rounded-lg text-[10px] font-display font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                      selectedApp === "paytm"
+                        ? "bg-[#00baf2] text-[#002e6e] shadow"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    <span>Paytm</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedApp("cred")}
+                    className={`py-1.5 px-1 rounded-lg text-[10px] font-display font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                      selectedApp === "cred"
+                        ? "bg-white text-black shadow"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    <span>CRED</span>
+                  </button>
+                </div>
+
+                {/* PRIMARY ACTION: Direct 1-Tap Redirect to the Selected App */}
                 <a
-                  href={qr.upiUri}
+                  href={getAppHref(selectedApp, qr.upiUri)}
+                  onClick={() => handleDirectRedirect(selectedApp)}
                   target="_self"
-                  className="w-full h-12 rounded-xl font-display text-[13px] tracking-[0.1em] flex flex-col items-center justify-center cursor-pointer active:scale-[0.98] transition-all text-[#07130a] font-black shadow-[0_0_30px_rgba(38,255,154,0.4)]"
+                  className="w-full h-13 rounded-xl font-display text-[13px] tracking-[0.08em] flex items-center justify-between px-4 cursor-pointer active:scale-[0.98] transition-all text-[#07130a] font-black shadow-[0_0_30px_rgba(38,255,154,0.4)]"
                   style={{
                     background: "linear-gradient(180deg, #26ff9a, #1bc574)",
                   }}
                 >
-                  <span className="flex items-center gap-1.5 text-[12.5px]">
-                    <Smartphone size={15} className="shrink-0" />
-                    <span>PAY VIA UPI APP</span>
-                  </span>
-                  <span className="text-[9px] font-sans font-medium tracking-normal text-black/75">
-                    PhonePe · GPay · Paytm · CRED
-                  </span>
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center text-[12px] font-black">
+                      {selectedApp === "phonepe" && "Pe"}
+                      {selectedApp === "gpay" && "G"}
+                      {selectedApp === "paytm" && "₹"}
+                      {selectedApp === "cred" && "C"}
+                    </span>
+                    <div className="text-left">
+                      <div className="text-[12.5px] leading-tight font-extrabold text-[#07130a]">
+                        PAY VIA{" "}
+                        {selectedApp === "phonepe"
+                          ? "PHONEPE"
+                          : selectedApp === "gpay"
+                            ? "GOOGLE PAY"
+                            : selectedApp === "paytm"
+                              ? "PAYTM"
+                              : "CRED"}
+                      </div>
+                      <div className="text-[9.5px] font-sans font-medium text-black/75">
+                        Direct 1-tap redirect to app
+                      </div>
+                    </div>
+                  </div>
+                  <ExternalLink size={16} className="text-[#07130a] shrink-0" />
                 </a>
+
+                {/* Direct 1-tap shortcut tiles for all other apps */}
+                <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                  <a
+                    href={getAppHref("phonepe", qr.upiUri)}
+                    onClick={() => handleDirectRedirect("phonepe")}
+                    target="_self"
+                    className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-[#5f259f]/25 hover:bg-[#5f259f]/35 border border-[#5f259f]/50 active:scale-95 transition cursor-pointer text-white text-[11px] font-display font-semibold"
+                  >
+                    <span className="w-4 h-4 rounded-full bg-[#5f259f] text-white flex items-center justify-center text-[8.5px] font-black">
+                      Pe
+                    </span>
+                    <span>PhonePe</span>
+                  </a>
+
+                  <a
+                    href={getAppHref("gpay", qr.upiUri)}
+                    onClick={() => handleDirectRedirect("gpay")}
+                    target="_self"
+                    className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 active:scale-95 transition cursor-pointer text-white text-[11px] font-display font-semibold"
+                  >
+                    <span className="w-4 h-4 rounded-full bg-white text-[#4285F4] flex items-center justify-center text-[8.5px] font-black">
+                      G
+                    </span>
+                    <span>Google Pay</span>
+                  </a>
+
+                  <a
+                    href={getAppHref("paytm", qr.upiUri)}
+                    onClick={() => handleDirectRedirect("paytm")}
+                    target="_self"
+                    className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-[#002e6e]/40 hover:bg-[#002e6e]/60 border border-[#00baf2]/50 active:scale-95 transition cursor-pointer text-white text-[11px] font-display font-semibold"
+                  >
+                    <span className="w-4 h-4 rounded-full bg-[#00baf2] text-[#002e6e] flex items-center justify-center text-[8.5px] font-black">
+                      ₹
+                    </span>
+                    <span>Paytm</span>
+                  </a>
+                </div>
 
                 <div className="flex items-center justify-center gap-1.5 text-[10px] font-display tracking-[0.12em] text-[#ffc32b] pt-1">
                   <Loader2 size={12} className="animate-spin" /> WAITING FOR PAYMENT…
@@ -397,6 +549,7 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
             {checkHint && (
               <p className="mt-2 text-[10.5px] text-[#ffd83a] leading-snug">{checkHint}</p>
             )}
+            {error && <p className="mt-2 text-[10.5px] text-[#ff8a9c] leading-snug">{error}</p>}
           </div>
         )}
 
