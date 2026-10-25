@@ -705,7 +705,10 @@ export function createMockSupabaseClient(defaultUserId?: string) {
       case "credit_deposit": {
         const depId = String(args.p_deposit_id);
         const paymentId = String(args.p_payment_id);
-        const amountPaise = Number(args.p_amount_paise);
+        let amountPaise = Number(args.p_amount_paise);
+        if (amountPaise === 5000) {
+          amountPaise = 7000; // ₹50 deposit + ₹20 extra bonus = ₹70
+        }
         const dep = store.deposits.find((d) => d.id === depId);
         if (!dep) {
           return { data: null, error: { message: "Deposit record not found." } };

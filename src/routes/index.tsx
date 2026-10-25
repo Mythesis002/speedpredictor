@@ -670,56 +670,8 @@ function Game({ isGuest }: { isGuest: boolean }) {
         />
       </div>
 
-      <div className="mt-2 mx-2 pb-24 space-y-2.5">
+      <div className="mt-2 mx-2 pb-24">
         <Results entries={history} />
-
-        {/* High-trust, professional casino footer (no agency SEO jargon) */}
-        <div className="rounded-2xl glass p-3 border border-white/10 space-y-2.5 text-center shadow-lg">
-          <div className="grid grid-cols-3 gap-1.5 text-[9.5px] font-display text-white/75">
-            <div className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/5 border border-white/5">
-              <span className="text-[#26ff9a] text-sm">🛡️</span>
-              <span className="font-semibold text-white tracking-wider">PROVABLY FAIR</span>
-              <span className="text-[8px] text-white/45">SHA-256 AUDITED</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/5 border border-white/5">
-              <span className="text-[#ffd83a] text-sm">⚡</span>
-              <span className="font-semibold text-white tracking-wider">INSTANT UPI</span>
-              <span className="text-[8px] text-white/45">24×7 DIRECT CASHOUT</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/5 border border-white/5">
-              <span className="text-[#35e6ff] text-sm">🔒</span>
-              <span className="font-semibold text-white tracking-wider">BANK GRADE</span>
-              <span className="text-[8px] text-white/45">256-BIT ENCRYPTION</span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-center gap-3 text-[10px] font-display tracking-wider text-white/60 pt-0.5">
-            <a
-              href="/how-it-works"
-              className="hover:text-[#ffd83a] transition-colors underline decoration-white/20"
-            >
-              GAME RULES
-            </a>
-            <span>•</span>
-            <a
-              href="/how-it-works"
-              className="hover:text-[#26ff9a] transition-colors underline decoration-white/20"
-            >
-              FAIRNESS AUDIT
-            </a>
-            <span>•</span>
-            <a
-              href="/terms"
-              className="hover:text-white transition-colors underline decoration-white/20"
-            >
-              TERMS & CONDITIONS
-            </a>
-          </div>
-
-          <div className="text-[8.5px] text-white/35 font-sans">
-            Apex 2 · 18+ Responsible Gaming Only · Micro-Stake Fair Gaming Experience
-          </div>
-        </div>
       </div>
 
       {/* Shared Bottom Navigation */}

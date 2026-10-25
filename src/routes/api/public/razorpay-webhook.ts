@@ -69,10 +69,11 @@ export const Route = createFileRoute("/api/public/razorpay-webhook")({
           return new Response("underpaid");
         }
 
+        const bonusPaise = expectedPaise === 5000 ? 2000 : 0;
         const { error } = await supabaseAdmin.rpc("credit_deposit", {
           p_deposit_id: dep.id,
           p_payment_id: payment.id,
-          p_amount_paise: expectedPaise,
+          p_amount_paise: expectedPaise + bonusPaise,
         });
         if (error) return new Response("credit failed", { status: 500 });
 

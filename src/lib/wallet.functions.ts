@@ -344,11 +344,12 @@ export const verifyAndCreditDeposit = createServerFn({ method: "POST" })
         );
       }
 
-      // Credit deposit atomically in DB
+      // Credit deposit atomically in DB (including ₹20 promotional bonus for ₹50 deposits)
+      const bonusPaise = expectedPaise === 5000 ? 2000 : 0;
       await supabaseAdmin.rpc("credit_deposit", {
         p_deposit_id: dep.id,
         p_payment_id: data.razorpayPaymentId,
-        p_amount_paise: expectedPaise,
+        p_amount_paise: expectedPaise + bonusPaise,
       });
 
       if (dep.qr_id) {
@@ -399,10 +400,11 @@ export const checkDeposit = createServerFn({ method: "POST" })
           Number(p.amount) >= expectedPaise,
       );
       if (captured) {
+        const bonusPaise = expectedPaise === 5000 ? 2000 : 0;
         await supabaseAdmin.rpc("credit_deposit", {
           p_deposit_id: dep.id,
           p_payment_id: captured.id,
-          p_amount_paise: expectedPaise,
+          p_amount_paise: expectedPaise + bonusPaise,
         });
         await closeRazorpayQr(dep.qr_id);
       }

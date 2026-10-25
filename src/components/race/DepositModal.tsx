@@ -106,6 +106,7 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
   const [error, setError] = useState<string | null>(null);
   const [paidInfo, setPaidInfo] = useState<{
     creditedPaise: number;
+    bonusPaise?: number;
     newBalancePaise: number;
     depositId?: string;
   } | null>(null);
@@ -176,15 +177,18 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
         const res = await poll({ data: { depositId } });
         if (res.status === "paid") {
           const newAvail = res.availablePaise ?? res.balancePaise;
-          const credited = res.amountPaise || fallbackAmountPaise;
+          const rawAmount = res.amountPaise || fallbackAmountPaise;
+          const bonusPaise = rawAmount === 5000 ? 2000 : 0;
+          const totalCredited = rawAmount + bonusPaise;
           setPaidInfo({
-            creditedPaise: credited,
+            creditedPaise: totalCredited,
+            bonusPaise,
             newBalancePaise: newAvail,
             depositId,
           });
           onCredited(newAvail);
           if (timer.current) clearInterval(timer.current);
-          notifyAdmin(credited, depositId, newAvail);
+          notifyAdmin(totalCredited, depositId, newAvail);
           return true;
         }
         if (isManual) {
@@ -310,21 +314,39 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
               <span className="text-white/40 text-[10px] font-display tracking-widest">INR</span>
             </div>
 
-            <div className="grid grid-cols-4 gap-1.5 mb-3.5">
+            <div className="grid grid-cols-4 gap-1.5 mb-3 pt-2">
               {PRESETS.map((p) => {
                 const selected = amount === p;
+                const isPromo = p === 50;
                 return (
                   <button
                     key={p}
                     type="button"
                     onClick={() => setAmount(p)}
-                    className="relative h-9 rounded-xl font-display text-[12px] tabular font-bold transition-all cursor-pointer border"
+                    className="relative h-10 rounded-xl font-display text-[12px] tabular font-bold transition-all cursor-pointer border flex flex-col items-center justify-center pt-0.5"
                     style={{
-                      background: selected ? "rgba(255,216,58,0.2)" : "rgba(255,255,255,0.05)",
-                      borderColor: selected ? "#ffd83a" : "rgba(255,255,255,0.1)",
-                      color: selected ? "#ffd83a" : "rgba(255,255,255,0.8)",
+                      background: selected
+                        ? isPromo
+                          ? "rgba(38,255,154,0.18)"
+                          : "rgba(255,216,58,0.2)"
+                        : isPromo
+                          ? "rgba(38,255,154,0.06)"
+                          : "rgba(255,255,255,0.05)",
+                      borderColor: selected
+                        ? isPromo
+                          ? "#26ff9a"
+                          : "#ffd83a"
+                        : isPromo
+                          ? "rgba(38,255,154,0.4)"
+                          : "rgba(255,255,255,0.1)",
+                      color: selected ? (isPromo ? "#26ff9a" : "#ffd83a") : "rgba(255,255,255,0.8)",
                     }}
                   >
+                    {isPromo && (
+                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-1.5 py-0.2 rounded-full bg-[#26ff9a] text-[7.5px] font-black text-black tracking-wider uppercase whitespace-nowrap shadow-[0_0_8px_rgba(38,255,154,0.6)]">
+                        +₹20 EXTRA
+                      </span>
+                    )}
                     <span>₹{p}</span>
                   </button>
                 );
@@ -345,8 +367,10 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
               style={{
                 background: busy
                   ? "rgba(255,216,58,0.3)"
-                  : "linear-gradient(180deg,#ffd83a,#f0a415)",
-                color: busy ? "#ffd83a" : "#231a00",
+                  : amount === 50
+                    ? "linear-gradient(180deg,#26ff9a,#1bc574)"
+                    : "linear-gradient(180deg,#ffd83a,#f0a415)",
+                color: busy ? "#ffd83a" : amount === 50 ? "#07130a" : "#231a00",
                 fontWeight: 800,
               }}
             >
@@ -355,6 +379,8 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
                   <Loader2 size={16} className="animate-spin" />
                   <span>STARTING PAYMENT…</span>
                 </>
+              ) : amount === 50 ? (
+                <span>PAY ₹50 · GET ₹70 (+₹20 BONUS) →</span>
               ) : (
                 <span>PAY {formatINR(amount)} VIA UPI APP →</span>
               )}
@@ -368,12 +394,6 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
             <div className="font-display text-2xl tabular font-extrabold text-white">
               {formatINR(qr.amountPaise / 100)}
             </div>
-
-            {qr.amountPaise === 5000 && (
-              <div className="inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 rounded-full bg-[#26ff9a]/20 border border-[#26ff9a]/40 text-[#26ff9a] text-[10px] font-display font-semibold">
-                <Sparkles size={11} /> +₹20 Bonus (Total ₹70)
-              </div>
-            )}
 
             {/* DIRECT 1-TAP PAYMENT APP REDIRECT BUTTONS (No WhatsApp Hijacking) */}
             {qr.upiUri && (
@@ -455,51 +475,12 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
                               : "CRED"}
                       </div>
                       <div className="text-[9.5px] font-sans font-medium text-black/75">
-                        Direct 1-tap redirect to app
+                        Tap to open app & pay
                       </div>
                     </div>
                   </div>
                   <ExternalLink size={16} className="text-[#07130a] shrink-0" />
                 </a>
-
-                {/* Direct 1-tap shortcut tiles for all other apps */}
-                <div className="grid grid-cols-3 gap-1.5 pt-0.5">
-                  <a
-                    href={getAppHref("phonepe", qr.upiUri)}
-                    onClick={() => handleDirectRedirect("phonepe")}
-                    target="_self"
-                    className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-[#5f259f]/25 hover:bg-[#5f259f]/35 border border-[#5f259f]/50 active:scale-95 transition cursor-pointer text-white text-[11px] font-display font-semibold"
-                  >
-                    <span className="w-4 h-4 rounded-full bg-[#5f259f] text-white flex items-center justify-center text-[8.5px] font-black">
-                      Pe
-                    </span>
-                    <span>PhonePe</span>
-                  </a>
-
-                  <a
-                    href={getAppHref("gpay", qr.upiUri)}
-                    onClick={() => handleDirectRedirect("gpay")}
-                    target="_self"
-                    className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 active:scale-95 transition cursor-pointer text-white text-[11px] font-display font-semibold"
-                  >
-                    <span className="w-4 h-4 rounded-full bg-white text-[#4285F4] flex items-center justify-center text-[8.5px] font-black">
-                      G
-                    </span>
-                    <span>Google Pay</span>
-                  </a>
-
-                  <a
-                    href={getAppHref("paytm", qr.upiUri)}
-                    onClick={() => handleDirectRedirect("paytm")}
-                    target="_self"
-                    className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-[#002e6e]/40 hover:bg-[#002e6e]/60 border border-[#00baf2]/50 active:scale-95 transition cursor-pointer text-white text-[11px] font-display font-semibold"
-                  >
-                    <span className="w-4 h-4 rounded-full bg-[#00baf2] text-[#002e6e] flex items-center justify-center text-[8.5px] font-black">
-                      ₹
-                    </span>
-                    <span>Paytm</span>
-                  </a>
-                </div>
 
                 <div className="flex items-center justify-center gap-1.5 text-[10px] font-display tracking-[0.12em] text-[#ffc32b] pt-1">
                   <Loader2 size={12} className="animate-spin" /> WAITING FOR PAYMENT…
@@ -564,13 +545,29 @@ export function DepositModal({ open, onClose, onCredited, initialAmount = 50 }: 
 
             <div className="mt-3 rounded-xl bg-black/50 border border-[#26ff9a]/30 p-2.5 space-y-1.5 text-left">
               <div className="flex items-center justify-between text-[11px]">
-                <span className="text-white/50">Credited</span>
-                <span className="font-display tabular text-[#26ff9a] font-bold">
+                <span className="text-white/50">Deposit Paid</span>
+                <span className="font-display tabular text-white font-bold">
+                  {formatINR((paidInfo.creditedPaise - (paidInfo.bonusPaise || 0)) / 100)}
+                </span>
+              </div>
+              {paidInfo.bonusPaise ? (
+                <div className="flex items-center justify-between text-[11px] text-[#ffd83a]">
+                  <span className="flex items-center gap-1 font-display">
+                    <Sparkles size={11} className="text-[#ffd83a]" /> Extra VIP Bonus
+                  </span>
+                  <span className="font-display tabular font-bold text-[#26ff9a]">
+                    +{formatINR(paidInfo.bonusPaise / 100)}
+                  </span>
+                </div>
+              ) : null}
+              <div className="flex items-center justify-between text-[11px] border-t border-white/10 pt-1.5">
+                <span className="text-white/50">Total Credited</span>
+                <span className="font-display tabular text-[#26ff9a] font-black">
                   +{formatINR(paidInfo.creditedPaise / 100)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-[11px] border-t border-white/10 pt-1.5">
-                <span className="text-white/50">New Balance</span>
+                <span className="text-white/50">New Wallet Balance</span>
                 <span className="font-display tabular text-white font-bold">
                   {formatINR(paidInfo.newBalancePaise / 100)}
                 </span>
