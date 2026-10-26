@@ -124,7 +124,9 @@ export function AuthModal({ open, onClose, promptText }: Props) {
         <div className="mb-3 flex flex-col items-center">
           <img
             src="/apex-logo.svg"
-            alt="Apex logo"
+            alt="Apex2 Logo"
+            width={120}
+            height={44}
             referrerPolicy="no-referrer"
             className="h-11 w-auto drop-shadow-[0_0_18px_rgba(255,195,43,0.45)]"
           />

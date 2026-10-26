@@ -1,53 +1,8 @@
-# Robots.txt for Apex 2 (Apex2Bet)
-# Supports: apex2bet.lovable.app, apex2.online, apex2.live
-
+# Robots.txt for Apex2 (https://apex2.live)
 User-agent: *
 Allow: /
-Allow: /terms
-Allow: /how-it-works
-Allow: /auth
-Allow: /verify/
-Disallow: /admin
+Disallow: /_authenticated/
+Disallow: /auth
 Disallow: /api/
 
-# Major Search Engine Crawlers
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Yandex
-Allow: /
-
-User-agent: DuckDuckBot
-Allow: /
-
-User-agent: Applebot
-Allow: /
-
-# AI Answer Engines & Search Bots (AEO optimization)
-User-agent: GPTBot
-Allow: /
-
-User-agent: ChatGPT-User
-Allow: /
-
-User-agent: PerplexityBot
-Allow: /
-
-User-agent: ClaudeBot
-Allow: /
-
-User-agent: anthropic-ai
-Allow: /
-
-User-agent: Google-Extended
-Allow: /
-
-User-agent: cohere-ai
-Allow: /
-
-Sitemap: https://apex2bet.lovable.app/sitemap.xml
-Sitemap: https://apex2.online/sitemap.xml
 Sitemap: https://apex2.live/sitemap.xml

@@ -14,38 +14,40 @@ import { useState } from "react";
 export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
-      { title: "Apex 2 Terms and Conditions — Official Rules, Fairness & Betting Policy" },
+      { title: "Apex2 Terms and Conditions — Official Rules & Fair Play Policy" },
       {
         name: "description",
         content:
-          "Official Terms and Conditions for Apex 2 (Apex2Bet): Complete rules for the online car game, color prediction betting, provably fair SHA-256 audits, UPI withdrawals, and student earning guidelines.",
+          "Official Terms and Conditions for Apex2: Complete rules for the online car game, color prediction, provably fair SHA-256 audits, and UPI settlements.",
       },
       {
         name: "keywords",
         content:
-          "apex 2 terms and conditions, apex2bet terms of service, apex car game rules, color game betting rules, online money game terms, best betting game fair play, online earning for student terms, provably fair SHA-256, apex2.online, apex2.live",
+          "apex2 terms, apex2 conditions, apex2 game rules, apex 2 fair play, provably fair sha-256, apex2.live",
       },
-      { property: "og:site_name", content: "Apex 2 (Apex2Bet)" },
+      { property: "og:site_name", content: "Apex2" },
       {
         property: "og:title",
-        content: "Apex 2 Terms and Conditions — Official Game Rules & Legal Policy",
+        content: "Apex2 Terms and Conditions — Official Rules & Fair Play Policy",
       },
       {
         property: "og:description",
         content:
-          "Read the official terms and conditions for Apex 2 (Apex2Bet): Provably fair game rules, UPI deposit/withdrawal policy, color prediction multipliers, and 18+ player safety.",
+          "Read the official terms and conditions for Apex2: Provably fair game rules, UPI deposit/withdrawal policy, color prediction multipliers, and 18+ player safety.",
       },
       { property: "og:type", content: "article" },
-      { property: "og:url", content: "https://apex2bet.lovable.app/terms" },
-      { property: "og:image", content: "https://apex2bet.lovable.app/apex-logo.svg" },
+      { property: "og:url", content: "https://apex2.live/terms" },
+      { property: "og:image", content: "https://apex2.live/apex-logo.svg" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Apex 2 Terms and Conditions — Apex2Bet" },
+      { name: "twitter:title", content: "Apex2 Terms and Conditions" },
       {
         name: "twitter:description",
         content:
-          "Comprehensive terms of use, provably fair racing mechanics, UPI payment terms, and responsible gaming policy for Apex 2.",
+          "Comprehensive terms of use, provably fair racing mechanics, and responsible gaming policy for Apex2.",
       },
+      { name: "twitter:image", content: "https://apex2.live/apex-logo.svg" },
     ],
+    links: [{ rel: "canonical", href: "https://apex2.live/terms" }],
   }),
   component: TermsPage,
 });
@@ -54,11 +56,11 @@ const TERMS_SECTIONS = [
   {
     id: "overview",
     title: "1. Acceptance of Terms & Platform Identity",
-    summary: "Operating parameters of Apex 2 across official domains.",
+    summary: "Operating parameters of Apex2 on apex2.live.",
     content: [
-      "These Terms and Conditions ('Terms') constitute a legally binding agreement between you ('User', 'Player') and Apex 2 ('Apex', 'Apex2Bet', 'We', 'Us'), governing your access to and use of our live racing prediction platform accessible via apex2bet.lovable.app, apex2.online, and apex2.live.",
+      "These Terms and Conditions ('Terms') constitute a legally binding agreement between you ('User', 'Player') and Apex2 ('Apex', 'Apex2', 'We', 'Us'), governing your access to and use of our live racing prediction platform accessible via https://apex2.live.",
       "By accessing the platform, creating an account, or placing a bet on any race round, you confirm that you have read, understood, and agreed to be bound by these Terms and our Privacy Policy.",
-      "Apex 2 combines high-performance 60 FPS 3D neon car simulation with transparent color prediction mechanics, providing players an entertaining, provably fair skill-and-prediction online money game.",
+      "Apex2 combines high-performance 60 FPS 3D neon car simulation with transparent color prediction mechanics, providing players an entertaining, provably fair skill-and-prediction online game.",
     ],
   },
   {
@@ -202,18 +204,16 @@ function TermsPage() {
         <header className="border-b border-white/10 pb-3">
           <div className="flex items-center gap-1.5 text-[10px] font-display tracking-[0.2em] text-[#a24bff] uppercase">
             <Scale size={13} className="text-[#a24bff]" />
-            <span>Apex 2 · Legal & Fair Play Policy</span>
+            <span>Apex2 · Legal &amp; Fair Play Policy</span>
           </div>
           <h1 className="font-display text-xl font-bold mt-1 text-white leading-tight">
-            Terms and Conditions & Official Game Rules
+            Terms and Conditions &amp; Official Game Rules
           </h1>
           <p className="text-[11px] text-white/60 mt-1 leading-relaxed">
             The complete operational, legal, and provably fair guidelines for{" "}
-            <strong className="text-white">Apex 2 (Apex2Bet)</strong>, including live car game
-            mechanics, color prediction multipliers, UPI transactions, and player protections across{" "}
-            <span className="text-[#26ff9a]">apex2bet.lovable.app</span>,{" "}
-            <span className="text-[#26ff9a]">apex2.online</span>, and{" "}
-            <span className="text-[#26ff9a]">apex2.live</span>.
+            <strong className="text-white">Apex2</strong>, including live car game mechanics, color
+            prediction multipliers, UPI transactions, and player protections on{" "}
+            <span className="text-[#26ff9a]">https://apex2.live</span>.
           </p>
         </header>
 
@@ -343,9 +343,7 @@ function TermsPage() {
               Play Live Race
             </Link>
           </div>
-          <div>
-            © 2026 Apex 2 (Apex2Bet) · Domains: apex2bet.lovable.app · apex2.online · apex2.live
-          </div>
+          <div>© 2026 Apex2 · Official Platform: https://apex2.live</div>
         </footer>
       </div>
     </main>

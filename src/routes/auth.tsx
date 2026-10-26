@@ -15,19 +15,13 @@ import {
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Apex Racing Predictions" },
+      { title: "Sign in — Apex2" },
       {
         name: "description",
         content:
-          "Sign in or create your Apex account with a 10-digit mobile number or Google. New players receive a ₹28 welcome bonus and can bet from ₹10.",
+          "Sign in or create your Apex2 account with a 10-digit mobile number. New players receive a ₹28 welcome bonus and can bet from ₹10.",
       },
-      { property: "og:title", content: "Sign in to Apex" },
-      {
-        property: "og:description",
-        content: "Mobile number & Google sign-in, ₹28 welcome bonus, ₹10 minimum bet.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: AuthPage,
@@ -135,10 +129,12 @@ function AuthPage() {
     <main className="min-h-[100dvh] w-full bg-[#04060c] text-white flex flex-col justify-center px-5 py-10">
       <div className="mx-auto w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center">
-          <Link to="/" aria-label="Watch live races">
+          <Link to="/" aria-label="Apex2 Live Race">
             <img
               src="/apex-logo.svg"
-              alt="Apex logo"
+              alt="Apex2 Logo"
+              width={160}
+              height={64}
               referrerPolicy="no-referrer"
               className="h-16 w-auto drop-shadow-[0_0_24px_rgba(255,195,43,0.45)]"
             />

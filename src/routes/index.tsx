@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Highway } from "@/components/race/Highway";
@@ -26,44 +26,45 @@ import {
   playLaunchRoar,
   playWinChime,
 } from "@/lib/sound";
-
 import { SpecialOfferModal } from "@/components/race/SpecialOfferModal";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Apex 2 (Apex2Bet) — Best Car Game & Color Prediction Online Money Game" },
+      { title: "Apex2 – Live Neon Car Racing & Prediction Game" },
       {
         name: "description",
         content:
-          "Apex 2: Top live neon car racing color prediction game. Predict Red, Purple or Blue in 21s races. Win up to 6× real money with instant UPI payouts from ₹10. Best online earning game for students.",
+          "Play Apex2: fast-paced 3-car neon racing and color predictions with provably fair rounds, instant UPI transactions from ₹10, and 21-second live races.",
       },
       {
         name: "keywords",
         content:
-          "apex2, apex 2, apex2bet, apex, car game, online money game, betting app, best betting game, color game, best online earning for student, real money car game, colour prediction game, instant upi withdrawal game, apex2.online, apex2.live",
+          "apex2, apex 2, apex2 game, neon car game, color prediction, provably fair racing, live car game, apex2.live",
       },
-      { property: "og:site_name", content: "Apex 2 (Apex2Bet)" },
+      { property: "og:site_name", content: "Apex2" },
       {
         property: "og:title",
-        content: "Apex 2 — #1 Car Game & Online Money Game | Color Prediction Betting App",
+        content: "Apex2 – Live Neon Car Racing & Prediction Game",
       },
       {
         property: "og:description",
         content:
-          "Pick a colour, watch the live three-lane race and win up to 6× real money. Server-timed, provably fair racing predictions with instant UPI deposits and cashouts.",
+          "Play Apex2: fast-paced 3-car neon racing and color predictions with provably fair rounds, instant UPI transactions from ₹10, and 21-second live races.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://apex2bet.lovable.app" },
-      { property: "og:image", content: "https://apex2bet.lovable.app/apex-logo.svg" },
+      { property: "og:url", content: "https://apex2.live/" },
+      { property: "og:image", content: "https://apex2.live/apex-logo.svg" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Apex 2 — Best Car Game & Color Prediction Betting App" },
+      { name: "twitter:title", content: "Apex2 – Live Neon Car Racing & Prediction Game" },
       {
         name: "twitter:description",
         content:
-          "Live 3-car neon racing color prediction game. Win real money with 95% RTP, instant UPI payouts from ₹10. Best online earning game for students.",
+          "Play Apex2: fast-paced 3-car neon racing and color predictions with provably fair rounds, instant UPI transactions from ₹10, and 21-second live races.",
       },
+      { name: "twitter:image", content: "https://apex2.live/apex-logo.svg" },
     ],
+    links: [{ rel: "canonical", href: "https://apex2.live/" }],
   }),
   component: SpeedPredict,
 });
@@ -670,8 +671,63 @@ function Game({ isGuest }: { isGuest: boolean }) {
         />
       </div>
 
-      <div className="mt-2 mx-2 pb-24">
+      <div className="mt-2 mx-2 pb-24 space-y-4">
         <Results entries={history} />
+
+        <section
+          aria-labelledby="apex2-overview-title"
+          className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-white/90 backdrop-blur-md"
+        >
+          <div className="flex items-center gap-1.5 text-[10px] font-display uppercase tracking-widest text-[#26ff9a]">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#26ff9a] animate-pulse" />
+            <span>Official Game Hub</span>
+          </div>
+
+          <h1
+            id="apex2-overview-title"
+            className="mt-1 font-display text-sm font-bold text-white tracking-wide leading-snug"
+          >
+            Apex2 – Live Neon Car Racing &amp; Prediction Game
+          </h1>
+
+          <p className="mt-2 text-[11px] leading-relaxed text-white/70">
+            Apex2 is a fast-paced multiplayer neon car racing game featuring continuous 21-second
+            live rounds. Players predict the winning vehicle across three dynamic neon lanes—Red
+            (2×), Purple (3×), or Blue (6×)—sprinting down a futuristic cyberpunk highway with
+            provably fair cryptographic verification.
+          </p>
+
+          <div className="mt-3.5 border-t border-white/10 pt-3">
+            <h2 className="font-display text-[11px] font-semibold text-white uppercase tracking-wider">
+              How Live Races Work
+            </h2>
+            <p className="mt-1 text-[10.5px] leading-relaxed text-white/65">
+              Every round offers a 6-second betting countdown where players select their lane and
+              stake starting from ₹10. Once locked, the live physics simulation powers the cars
+              through the finish line, with instant wallet settlements.
+            </p>
+          </div>
+
+          <div className="mt-3 border-t border-white/10 pt-3">
+            <h2 className="font-display text-[11px] font-semibold text-white uppercase tracking-wider">
+              Provably Fair Cryptography
+            </h2>
+            <p className="mt-1 text-[10.5px] leading-relaxed text-white/65">
+              Race outcomes are cryptographically committed via SHA-256 before betting begins. Once
+              the race concludes, the secret seed is published, enabling independent audit and
+              verification in any browser.
+            </p>
+          </div>
+
+          <div className="mt-3 border-t border-white/10 pt-3 flex flex-wrap items-center gap-3 text-[11px]">
+            <Link to="/how-it-works" className="text-[#26ff9a] hover:underline font-medium">
+              Game Rules &amp; Fairness &rarr;
+            </Link>
+            <Link to="/terms" className="text-white/60 hover:underline">
+              Terms &amp; Policies
+            </Link>
+          </div>
+        </section>
       </div>
 
       {/* Shared Bottom Navigation */}

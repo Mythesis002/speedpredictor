@@ -11,12 +11,9 @@ import { WithdrawModal } from "@/components/race/WithdrawModal";
 export const Route = createFileRoute("/_authenticated/history")({
   head: () => ({
     meta: [
-      { title: "Bet History — Apex" },
-      { name: "description", content: "Your Apex bet history, win rate, and net profit." },
-      { property: "og:title", content: "Bet History — Apex" },
-      { property: "og:description", content: "Bet history and verified race results." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { title: "Bet History — Apex2" },
+      { name: "description", content: "Your Apex2 bet history, win rate, and net profit." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: HistoryPage,

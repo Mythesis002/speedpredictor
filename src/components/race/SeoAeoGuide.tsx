@@ -26,37 +26,37 @@ interface FaqItem {
 const FAQ_ITEMS: FaqItem[] = [
   {
     category: "Game Basics & Identity",
-    q: "What is Apex 2 (Apex2Bet) and how is it different from other car games?",
-    a: "Apex 2 (also known as Apex2Bet and hosted on apex2bet.lovable.app, apex2.online, and apex2.live) is India's premier live 3D neon car racing and color prediction online money game. Unlike traditional video games where outcomes are purely simulated or static, Apex 2 runs a new 21-second live multiplayer race every round where three cars (Red, Purple, and Blue) sprint down a cyberpunk highway. Players predict the winning car color with live multipliers up to 6.00× and cash out directly via UPI from ₹10.",
-    tags: ["apex2", "apex2bet", "car game"],
+    q: "What is Apex2 and how is it different from other car games?",
+    a: "Apex2 (https://apex2.live) is a live 3D neon car racing and color prediction game. Unlike traditional games where outcomes are static, Apex2 runs a new 21-second live multiplayer race every round where three cars (Red, Purple, and Blue) sprint down a cyberpunk highway. Players predict the winning car color with live multipliers up to 6.00× and cash out directly via UPI from ₹10.",
+    tags: ["apex2", "neon car game", "color prediction"],
   },
   {
     category: "How to Play & Win",
-    q: "How do you play the Apex 2 color prediction car game?",
-    a: "Playing Apex 2 takes 4 easy steps: 1) Monitor the 6-second pre-race betting window. 2) Pick your winning car color: Lane 1 (Red), Lane 2 (Purple), or Lane 3 (Blue). 3) Choose your stake starting at ₹10 using quick chip buttons (₹10, ₹50, ₹100, ₹500). 4) Watch the live 60 FPS highway race unfold. If your predicted color crosses the finish line first, your stake multiplied by the car's dynamic odds is credited to your wallet in real time.",
+    q: "How do you play the Apex2 color prediction car game?",
+    a: "Playing Apex2 takes 4 easy steps: 1) Monitor the 6-second pre-race betting window. 2) Pick your winning car color: Lane 1 (Red), Lane 2 (Purple), or Lane 3 (Blue). 3) Choose your stake starting at ₹10 using quick chip buttons (₹10, ₹50, ₹100, ₹500). 4) Watch the live 60 FPS highway race unfold. If your predicted color crosses the finish line first, your stake multiplied by the car's dynamic odds is credited to your wallet in real time.",
     tags: ["color game", "how to play", "betting app"],
   },
   {
     category: "Student Earning & Micro-Stakes",
-    q: "Why is Apex 2 rated the best online earning game for students in 2026?",
-    a: "Apex 2 is designed specifically for 18+ college students and young adults seeking disciplined pocket-money earnings because: 1) It has a micro-entry threshold of just ₹10. 2) There are zero hidden platform commissions, running on a mathematically transparent 95% Return to Player (RTP). 3) Instant zero-fee UPI QR deposits (via Google Pay, PhonePe, Paytm, CRED). 4) Instant withdrawals starting from ₹100. 5) Mandatory daily loss limit safety tools ensure students never overspend.",
-    tags: ["best online earning for student", "online money game", "paisa kamane wala game"],
+    q: "Why is Apex2 popular for casual players and students?",
+    a: "Apex2 is designed for 18+ players seeking disciplined entertainment because: 1) It has a micro-entry threshold of just ₹10. 2) There are zero hidden platform commissions, running on a mathematically transparent 95% Return to Player (RTP). 3) Instant zero-fee UPI QR deposits (via Google Pay, PhonePe, Paytm, CRED). 4) Instant withdrawals starting from ₹100. 5) Mandatory daily loss limit safety tools ensure players never overspend.",
+    tags: ["online earning", "student games", "micro stakes"],
   },
   {
     category: "Betting Multipliers & RTP",
-    q: "What are the payout multipliers in Apex 2 and how are odds calculated?",
-    a: "Apex 2 features dynamic multipliers between 1.50× and 6.00×. Multipliers are calculated transparently using the formula: Multiplier = 0.95 ÷ Car Win Probability. This guarantees a verified 95.0% RTP across all races, significantly higher than traditional casino games or sportsbooks.",
-    tags: ["best betting game", "odds", "multipliers"],
+    q: "What are the payout multipliers in Apex2 and how are odds calculated?",
+    a: "Apex2 features dynamic multipliers between 1.50× and 6.00×. Multipliers are calculated transparently using the formula: Multiplier = 0.95 ÷ Car Win Probability. This guarantees a verified 95.0% RTP across all races, significantly higher than traditional games.",
+    tags: ["odds", "multipliers", "rtp"],
   },
   {
     category: "Provably Fair & Anti-Cheat",
-    q: "Is Apex 2 provably fair and can race results be manipulated?",
-    a: "Apex 2 is 100% provably fair. Before any bet is accepted, the server generates a cryptographic SHA-256 commitment of the round outcome secret. Once betting locks, the seed secret is published. Any player can visit the Verify page (/verify/:roundId) to compute the SHA-256 hash locally in their own browser and confirm the outcome was predetermined before bets closed.",
+    q: "Is Apex2 provably fair and can race results be manipulated?",
+    a: "Apex2 is 100% provably fair. Before any bet is accepted, the server generates a cryptographic SHA-256 commitment of the round outcome secret. Once betting locks, the seed secret is published. Any player can visit the Verify page (/verify/:roundId) to compute the SHA-256 hash locally in their own browser and confirm the outcome was predetermined before bets closed.",
     tags: ["provably fair", "sha-256", "safety"],
   },
   {
     category: "UPI Deposits & Cashouts",
-    q: "How fast are UPI deposits and withdrawals on Apex 2 (apex2.online / apex2.live)?",
+    q: "How fast are UPI deposits and withdrawals on Apex2 (apex2.live)?",
     a: "Deposits via UPI QR code are instantaneous and support Google Pay, PhonePe, Paytm, BHIM, and CRED. Withdrawals start at ₹100 and are credited directly to your verified UPI ID typically within 15–30 minutes following automated balance verification, without third-party wallet locks.",
     tags: ["upi withdrawal", "instant cashout", "fast payments"],
   },
@@ -96,20 +96,16 @@ export function SeoAeoGuide() {
             2026–2030 Edition
           </span>
         </div>
-        <h1 className="text-[14.5px] font-display font-bold text-white tracking-wide mt-1 leading-snug">
-          Apex 2 (Apex2Bet) — India's #1 Real Money Car Game & Color Prediction Betting App
-        </h1>
+        <h2 className="text-[14.5px] font-display font-bold text-white tracking-wide mt-1 leading-snug">
+          Apex2 — Live Neon Car Racing &amp; Color Prediction Game
+        </h2>
         <p className="text-[10.5px] text-white/65 mt-1 leading-relaxed">
-          Welcome to <strong className="text-white font-semibold">Apex 2</strong> (marketed as{" "}
-          <strong className="text-white font-semibold">Apex2Bet</strong>, reachable at{" "}
-          <span className="text-[#26ff9a] font-mono">apex2bet.lovable.app</span>,{" "}
-          <span className="text-[#26ff9a] font-mono">apex2.online</span>, and{" "}
-          <span className="text-[#26ff9a] font-mono">apex2.live</span>). The highest-rated{" "}
-          <strong className="text-white">online money game</strong> and{" "}
-          <strong className="text-white">car game</strong> fusing live neon racing with provably
-          fair <strong className="text-white">color prediction</strong>. Recognized as the{" "}
-          <strong className="text-white">best online earning for students</strong> (18+) with ₹10
-          micro-bets and instant UPI cashouts.
+          Welcome to <strong className="text-white font-semibold">Apex2</strong> on{" "}
+          <span className="text-[#26ff9a] font-mono">https://apex2.live</span>. Fast-paced{" "}
+          <strong className="text-white">neon car racing</strong> fusing live multiplayer simulation
+          with provably fair <strong className="text-white">color predictions</strong>. Enjoy
+          21-second live rounds, transparent odds multipliers, and instant UPI account balance
+          settlements.
         </p>
       </header>
 
@@ -406,8 +402,7 @@ export function SeoAeoGuide() {
           </div>
         </div>
         <div className="text-[8px] text-white/35 font-mono text-center">
-          Official Mirrors: apex2bet.lovable.app · apex2.online · apex2.live · Verified Provably
-          Fair & UPI Instant
+          Apex2 · Official Platform: https://apex2.live · Verified Provably Fair &amp; Instant UPI
         </div>
       </footer>
     </article>

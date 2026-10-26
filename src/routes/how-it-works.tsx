@@ -4,35 +4,36 @@ import { ArrowLeft, ShieldCheck, Zap, Trophy, HelpCircle, GraduationCap } from "
 export const Route = createFileRoute("/how-it-works")({
   head: () => ({
     meta: [
-      { title: "Apex 2 (Apex2Bet) Rules, Fairness & Guide — Best Car Game & Color Prediction" },
+      { title: "How Apex2 Works – Game Rules, Odds & Fairness Guide" },
       {
         name: "description",
         content:
-          "Official guide to Apex 2 (Apex2Bet): How the live neon car racing color game works, 95% RTP odds, provably fair SHA-256 verification, and online earning guide for students.",
+          "Official guide to Apex2: Learn how live 3-car neon racing predictions work, dynamic odds multipliers, provably fair SHA-256 verification, and player safety.",
       },
       {
         name: "keywords",
         content:
-          "apex2, apex 2, apex2bet, apex, car game, online money game, betting app, best betting game, color game, best online earning for student, provably fair car game, apex2.online, apex2.live",
+          "apex2, how apex2 works, apex 2 game rules, neon car game, color prediction rules, provably fair sha-256, apex2.live",
       },
-      { property: "og:site_name", content: "Apex 2 (Apex2Bet)" },
-      { property: "og:title", content: "Apex 2 Rules, Fairness & Earning Guide — Apex2Bet" },
+      { property: "og:site_name", content: "Apex2" },
+      { property: "og:title", content: "How Apex2 Works – Game Rules & Fairness Guide" },
       {
         property: "og:description",
         content:
-          "Understand how Apex 2 races work, dynamic color multipliers, provably fair SHA-256 commitments, instant UPI deposits, and safe gameplay.",
+          "Understand how Apex2 races work, dynamic color multipliers, provably fair SHA-256 commitments, instant UPI deposits, and safe gameplay.",
       },
       { property: "og:type", content: "article" },
-      { property: "og:url", content: "https://apex2bet.lovable.app/how-it-works" },
-      { property: "og:image", content: "https://apex2bet.lovable.app/apex-logo.svg" },
+      { property: "og:url", content: "https://apex2.live/how-it-works" },
+      { property: "og:image", content: "https://apex2.live/apex-logo.svg" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Apex 2 Game Guide & Fairness — Apex2Bet" },
+      { name: "twitter:title", content: "How Apex2 Works – Game Rules & Fairness Guide" },
       {
         name: "twitter:description",
-        content:
-          "Rules, provably fair race audits, terms of use, and student earning guide for Apex 2 (Apex2Bet).",
+        content: "Rules, provably fair race audits, terms of use, and player guide for Apex2.",
       },
+      { name: "twitter:image", content: "https://apex2.live/apex-logo.svg" },
     ],
+    links: [{ rel: "canonical", href: "https://apex2.live/how-it-works" }],
   }),
   component: InfoPage,
 });
@@ -44,13 +45,13 @@ const sections: {
   body: string[];
 }[] = [
   {
-    title: "What is Apex 2 & How the Car Game Works",
+    title: "What is Apex2 & How the Car Game Works",
     badge: "Game Rules",
     body: [
-      "Apex 2 (Apex2Bet) is India's premier live 3-car neon racing color prediction game, running on apex2bet.lovable.app, apex2.online, and apex2.live.",
+      "Apex2 is a live 3-car neon racing color prediction game hosted at apex2.live.",
       "A new race begins every ~21 seconds. Players have a 6-second betting countdown before start lights turn green.",
-      "Select your car color: Red, Purple, or Blue. Each car displays its real-time payout multiplier (e.g., 2.85×, 3.40×, or up to 6.00×). If your selected car crosses the finish line first, you instantly win your stake × multiplier.",
-      "Minimum bet is only ₹10, making it an accessible online money game for entertainment and pocket money earnings.",
+      "Select your car color: Red, Purple, or Blue. Each car displays its real-time payout multiplier (e.g., 2.00×, 3.00×, or up to 6.00×). If your selected car crosses the finish line first, you instantly win your stake × multiplier.",
+      "Minimum bet is only ₹10, making it an accessible game for casual entertainment.",
     ],
   },
   {
@@ -111,19 +112,19 @@ function InfoPage() {
           to="/"
           className="inline-flex items-center gap-1.5 text-[12px] text-white/55 hover:text-white min-h-[44px] transition-colors"
         >
-          <ArrowLeft size={14} /> Back to Apex 2 Race
+          <ArrowLeft size={14} /> Back to Apex2 Race
         </Link>
 
         <header className="border-b border-white/10 pb-3">
           <div className="text-[10px] font-display tracking-[0.2em] text-[#a24bff] uppercase">
-            Apex 2 · Official Guide
+            Apex2 · Official Guide
           </div>
           <h1 className="font-display text-xl font-bold mt-1 text-white">
-            How Apex 2 Works — Rules, Fairness & Earning Guide
+            How Apex2 Works — Rules, Odds &amp; Fairness Guide
           </h1>
           <p className="text-[11px] text-white/60 mt-1 leading-relaxed">
-            Everything you need to know about playing the Apex 2 (Apex2Bet) live car game, color
-            prediction strategies, provably fair verification, and responsible online earning.
+            Everything you need to know about playing the Apex2 live neon car racing game, color
+            prediction mechanics, provably fair SHA-256 verification, and responsible play.
           </p>
         </header>
 
@@ -150,10 +151,10 @@ function InfoPage() {
         <div className="pt-2 text-center text-[10.5px] text-white/50 space-x-2">
           <span>Read our full</span>
           <Link to="/terms" className="text-white/80 hover:text-white underline font-medium">
-            Terms & Conditions Policy
+            Terms &amp; Conditions Policy
           </Link>
           <div className="text-[9.5px] text-white/35 mt-1">
-            Apex 2 (Apex2Bet) · Domains: apex2bet.lovable.app · apex2.online · apex2.live
+            Apex2 · Official Platform: https://apex2.live
           </div>
         </div>
       </div>

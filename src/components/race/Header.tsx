@@ -26,10 +26,12 @@ export function Header({
   return (
     <div className="flex items-center gap-1.5 px-2.5 py-2">
       {/* Official Golden SVG Logo */}
-      <Link to="/" className="shrink-0 flex items-center" aria-label="Apex live race">
+      <Link to="/" className="shrink-0 flex items-center" aria-label="Apex2 Live Race">
         <img
           src="/apex-logo.svg"
-          alt="Apex"
+          alt="Apex2 Logo"
+          width={90}
+          height={28}
           referrerPolicy="no-referrer"
           className="h-7 w-auto object-contain drop-shadow-[0_0_12px_rgba(255,195,43,0.45)]"
         />
